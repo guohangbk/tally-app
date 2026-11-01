@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 4.5l8.2 14H3.8z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF16211D"
+        android:strokeWidth="1.7"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12 9.8v4.2"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF16211D"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+    <!-- 原稿用零长度描边画点，Android 描边不渲染零长度线段，改为等径实心圆。 -->
+    <path
+        android:pathData="M11 16.4a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"
+        android:fillColor="#FF16211D" />
+</vector>

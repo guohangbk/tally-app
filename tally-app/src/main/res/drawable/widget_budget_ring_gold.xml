@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 预算圆环（WG-07）三档之二：达阈值金晕。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape
+            android:shape="ring"
+            android:innerRadiusRatio="3.1"
+            android:thicknessRatio="11"
+            android:useLevel="false">
+            <solid android:color="@color/widget_budget_track" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <rotate
+            android:fromDegrees="270"
+            android:toDegrees="270"
+            android:pivotX="50%"
+            android:pivotY="50%">
+            <shape
+                android:shape="ring"
+                android:innerRadiusRatio="3.1"
+                android:thicknessRatio="11"
+                android:useLevel="true">
+                <solid android:color="@color/widget_gold" />
+            </shape>
+        </rotate>
+    </item>
+</layer-list>

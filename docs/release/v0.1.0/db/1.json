@@ -1,0 +1,1805 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "8178793ac793e2877b59ef25b7deb10a",
+    "entities": [
+      {
+        "tableName": "ledger",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `icon_key` TEXT NOT NULL, `is_default` INTEGER NOT NULL, `is_archived` INTEGER NOT NULL, `sort_order` REAL NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iconKey",
+            "columnName": "icon_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDefault",
+            "columnName": "is_default",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "is_archived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ledger_is_default",
+            "unique": false,
+            "columnNames": [
+              "is_default"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ledger_is_default` ON `${TABLE_NAME}` (`is_default`)"
+          },
+          {
+            "name": "index_ledger_deleted_at",
+            "unique": false,
+            "columnNames": [
+              "deleted_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ledger_deleted_at` ON `${TABLE_NAME}` (`deleted_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "category",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `parent_id` TEXT, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `icon_key` TEXT NOT NULL, `color` TEXT, `sort_order` REAL NOT NULL, `is_system` INTEGER NOT NULL, `is_archived` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentId",
+            "columnName": "parent_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iconKey",
+            "columnName": "icon_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "color",
+            "columnName": "color",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSystem",
+            "columnName": "is_system",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "is_archived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_category_parent_id",
+            "unique": false,
+            "columnNames": [
+              "parent_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_category_parent_id` ON `${TABLE_NAME}` (`parent_id`)"
+          },
+          {
+            "name": "index_category_type_sort_order",
+            "unique": false,
+            "columnNames": [
+              "type",
+              "sort_order"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_category_type_sort_order` ON `${TABLE_NAME}` (`type`, `sort_order`)"
+          }
+        ]
+      },
+      {
+        "tableName": "bill",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ledger_id` TEXT NOT NULL, `category_l1_id` TEXT, `category_l2_id` TEXT, `type` TEXT NOT NULL, `amount_minor` INTEGER NOT NULL, `currency` TEXT NOT NULL, `occurred_at` INTEGER NOT NULL, `time_precision` TEXT NOT NULL, `note` TEXT, `source` TEXT NOT NULL, `external_id` TEXT, `fingerprint` TEXT, `reimbursed` TEXT NOT NULL, `reimbursed_at` INTEGER, `is_refund` INTEGER NOT NULL, `refund_of_bill_id` TEXT, `is_reimbursement` INTEGER NOT NULL, `excluded_from_stats` INTEGER NOT NULL, `recorder` TEXT, `linked_external_id` TEXT, `recurrence_rule_id` TEXT, `installment_plan_id` TEXT, `period_index` INTEGER, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ledgerId",
+            "columnName": "ledger_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryL1Id",
+            "columnName": "category_l1_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryL2Id",
+            "columnName": "category_l2_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amountMinor",
+            "columnName": "amount_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currency",
+            "columnName": "currency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occurredAt",
+            "columnName": "occurred_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timePrecision",
+            "columnName": "time_precision",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "externalId",
+            "columnName": "external_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fingerprint",
+            "columnName": "fingerprint",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "reimbursed",
+            "columnName": "reimbursed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reimbursedAt",
+            "columnName": "reimbursed_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isRefund",
+            "columnName": "is_refund",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "refundOfBillId",
+            "columnName": "refund_of_bill_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isReimbursement",
+            "columnName": "is_reimbursement",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "excludedFromStats",
+            "columnName": "excluded_from_stats",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recorder",
+            "columnName": "recorder",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "linkedExternalId",
+            "columnName": "linked_external_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "recurrenceRuleId",
+            "columnName": "recurrence_rule_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "installmentPlanId",
+            "columnName": "installment_plan_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "periodIndex",
+            "columnName": "period_index",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_bill_external_id",
+            "unique": true,
+            "columnNames": [
+              "external_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_bill_external_id` ON `${TABLE_NAME}` (`external_id`)"
+          },
+          {
+            "name": "index_bill_fingerprint",
+            "unique": false,
+            "columnNames": [
+              "fingerprint"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bill_fingerprint` ON `${TABLE_NAME}` (`fingerprint`)"
+          },
+          {
+            "name": "index_bill_ledger_id_occurred_at",
+            "unique": false,
+            "columnNames": [
+              "ledger_id",
+              "occurred_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bill_ledger_id_occurred_at` ON `${TABLE_NAME}` (`ledger_id`, `occurred_at`)"
+          },
+          {
+            "name": "index_bill_category_l1_id_category_l2_id",
+            "unique": false,
+            "columnNames": [
+              "category_l1_id",
+              "category_l2_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bill_category_l1_id_category_l2_id` ON `${TABLE_NAME}` (`category_l1_id`, `category_l2_id`)"
+          },
+          {
+            "name": "index_bill_deleted_at",
+            "unique": false,
+            "columnNames": [
+              "deleted_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bill_deleted_at` ON `${TABLE_NAME}` (`deleted_at`)"
+          },
+          {
+            "name": "index_bill_refund_of_bill_id",
+            "unique": false,
+            "columnNames": [
+              "refund_of_bill_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bill_refund_of_bill_id` ON `${TABLE_NAME}` (`refund_of_bill_id`)"
+          },
+          {
+            "name": "index_bill_recurrence_rule_id_period_index",
+            "unique": true,
+            "columnNames": [
+              "recurrence_rule_id",
+              "period_index"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_bill_recurrence_rule_id_period_index` ON `${TABLE_NAME}` (`recurrence_rule_id`, `period_index`)"
+          },
+          {
+            "name": "index_bill_installment_plan_id_period_index",
+            "unique": true,
+            "columnNames": [
+              "installment_plan_id",
+              "period_index"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_bill_installment_plan_id_period_index` ON `${TABLE_NAME}` (`installment_plan_id`, `period_index`)"
+          }
+        ]
+      },
+      {
+        "tableName": "budget",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ledger_id` TEXT NOT NULL, `category_id` TEXT, `period` TEXT NOT NULL, `period_start` INTEGER NOT NULL, `auto_renew` INTEGER NOT NULL, `amount_minor` INTEGER NOT NULL, `alert_ratio` INTEGER NOT NULL, `is_active` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ledgerId",
+            "columnName": "ledger_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "category_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "period",
+            "columnName": "period",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "periodStart",
+            "columnName": "period_start",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoRenew",
+            "columnName": "auto_renew",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amountMinor",
+            "columnName": "amount_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alertRatio",
+            "columnName": "alert_ratio",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "is_active",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_budget_ledger_id_period",
+            "unique": false,
+            "columnNames": [
+              "ledger_id",
+              "period"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budget_ledger_id_period` ON `${TABLE_NAME}` (`ledger_id`, `period`)"
+          },
+          {
+            "name": "index_budget_category_id",
+            "unique": false,
+            "columnNames": [
+              "category_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_budget_category_id` ON `${TABLE_NAME}` (`category_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "attachment",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `bill_id` TEXT NOT NULL, `relative_path` TEXT NOT NULL, `sha256` TEXT NOT NULL, `mime_type` TEXT NOT NULL, `size_bytes` INTEGER NOT NULL, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billId",
+            "columnName": "bill_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relativePath",
+            "columnName": "relative_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sha256",
+            "columnName": "sha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mime_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "size_bytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_attachment_bill_id",
+            "unique": false,
+            "columnNames": [
+              "bill_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_attachment_bill_id` ON `${TABLE_NAME}` (`bill_id`)"
+          },
+          {
+            "name": "index_attachment_sha256",
+            "unique": false,
+            "columnNames": [
+              "sha256"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_attachment_sha256` ON `${TABLE_NAME}` (`sha256`)"
+          },
+          {
+            "name": "index_attachment_deleted_at",
+            "unique": false,
+            "columnNames": [
+              "deleted_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_attachment_deleted_at` ON `${TABLE_NAME}` (`deleted_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "import_batch",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `source_type` TEXT NOT NULL, `ledger_id` TEXT NOT NULL, `file_name` TEXT NOT NULL, `source_sha256` TEXT NOT NULL, `total_rows` INTEGER NOT NULL, `imported_rows` INTEGER NOT NULL, `skipped_rows` INTEGER NOT NULL, `failed_rows` INTEGER NOT NULL, `report_json` TEXT, `status` TEXT NOT NULL, `started_at` INTEGER NOT NULL, `finished_at` INTEGER, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceType",
+            "columnName": "source_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ledgerId",
+            "columnName": "ledger_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileName",
+            "columnName": "file_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceSha256",
+            "columnName": "source_sha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalRows",
+            "columnName": "total_rows",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "importedRows",
+            "columnName": "imported_rows",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "skippedRows",
+            "columnName": "skipped_rows",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "failedRows",
+            "columnName": "failed_rows",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reportJson",
+            "columnName": "report_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "started_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "finishedAt",
+            "columnName": "finished_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_import_batch_ledger_id",
+            "unique": false,
+            "columnNames": [
+              "ledger_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_import_batch_ledger_id` ON `${TABLE_NAME}` (`ledger_id`)"
+          },
+          {
+            "name": "index_import_batch_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_import_batch_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_import_batch_source_sha256",
+            "unique": false,
+            "columnNames": [
+              "source_sha256"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_import_batch_source_sha256` ON `${TABLE_NAME}` (`source_sha256`)"
+          }
+        ]
+      },
+      {
+        "tableName": "recurring_rule",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ledger_id` TEXT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `amount_minor` INTEGER NOT NULL, `category_l1_id` TEXT, `category_l2_id` TEXT, `note` TEXT, `frequency` TEXT NOT NULL, `day_of_month` INTEGER, `day_of_week` INTEGER, `month_of_year` INTEGER, `start_at` INTEGER NOT NULL, `end_at` INTEGER, `max_periods` INTEGER, `last_executed_at` INTEGER, `last_reminded_at` INTEGER, `next_due_at` INTEGER NOT NULL, `executed_periods` INTEGER NOT NULL, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ledgerId",
+            "columnName": "ledger_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amountMinor",
+            "columnName": "amount_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryL1Id",
+            "columnName": "category_l1_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryL2Id",
+            "columnName": "category_l2_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "frequency",
+            "columnName": "frequency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dayOfMonth",
+            "columnName": "day_of_month",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dayOfWeek",
+            "columnName": "day_of_week",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "monthOfYear",
+            "columnName": "month_of_year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "startAt",
+            "columnName": "start_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endAt",
+            "columnName": "end_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "maxPeriods",
+            "columnName": "max_periods",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastExecutedAt",
+            "columnName": "last_executed_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastRemindedAt",
+            "columnName": "last_reminded_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "nextDueAt",
+            "columnName": "next_due_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "executedPeriods",
+            "columnName": "executed_periods",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_recurring_rule_ledger_id",
+            "unique": false,
+            "columnNames": [
+              "ledger_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recurring_rule_ledger_id` ON `${TABLE_NAME}` (`ledger_id`)"
+          },
+          {
+            "name": "index_recurring_rule_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recurring_rule_status` ON `${TABLE_NAME}` (`status`)"
+          }
+        ]
+      },
+      {
+        "tableName": "installment_plan",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ledger_id` TEXT NOT NULL, `name` TEXT NOT NULL, `note` TEXT, `type` TEXT NOT NULL, `principal_minor` INTEGER NOT NULL DEFAULT 0, `fee_minor` INTEGER NOT NULL DEFAULT 0, `fee_mode` TEXT NOT NULL DEFAULT 'INCLUDED', `total_minor` INTEGER NOT NULL, `period_count` INTEGER NOT NULL, `per_period_minor` INTEGER NOT NULL, `tail_minor` INTEGER NOT NULL, `category_l1_id` TEXT, `category_l2_id` TEXT, `first_occurred_at` INTEGER NOT NULL, `interval_months` INTEGER NOT NULL, `repayment_method` TEXT NOT NULL DEFAULT 'PLAIN', `annual_rate_bp` INTEGER NOT NULL DEFAULT 0, `rate_changes_json` TEXT, `generated_periods` INTEGER NOT NULL, `last_reminded_at` INTEGER, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ledgerId",
+            "columnName": "ledger_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "principalMinor",
+            "columnName": "principal_minor",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "feeMinor",
+            "columnName": "fee_minor",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "feeMode",
+            "columnName": "fee_mode",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'INCLUDED'"
+          },
+          {
+            "fieldPath": "totalMinor",
+            "columnName": "total_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "periodCount",
+            "columnName": "period_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "perPeriodMinor",
+            "columnName": "per_period_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tailMinor",
+            "columnName": "tail_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryL1Id",
+            "columnName": "category_l1_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryL2Id",
+            "columnName": "category_l2_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "firstOccurredAt",
+            "columnName": "first_occurred_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intervalMonths",
+            "columnName": "interval_months",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "repaymentMethod",
+            "columnName": "repayment_method",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'PLAIN'"
+          },
+          {
+            "fieldPath": "annualRateBp",
+            "columnName": "annual_rate_bp",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "rateChangesJson",
+            "columnName": "rate_changes_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "generatedPeriods",
+            "columnName": "generated_periods",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastRemindedAt",
+            "columnName": "last_reminded_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_installment_plan_ledger_id",
+            "unique": false,
+            "columnNames": [
+              "ledger_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_installment_plan_ledger_id` ON `${TABLE_NAME}` (`ledger_id`)"
+          },
+          {
+            "name": "index_installment_plan_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_installment_plan_status` ON `${TABLE_NAME}` (`status`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ai_config",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `provider` TEXT NOT NULL, `base_url` TEXT, `model` TEXT, `key_reference` TEXT, `active` INTEGER NOT NULL, `status` TEXT NOT NULL, `vision_capable` INTEGER NOT NULL, `last_error` TEXT, `consecutive_failures` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "provider",
+            "columnName": "provider",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseUrl",
+            "columnName": "base_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "model",
+            "columnName": "model",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "keyReference",
+            "columnName": "key_reference",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "active",
+            "columnName": "active",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "visionCapable",
+            "columnName": "vision_capable",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "last_error",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "consecutiveFailures",
+            "columnName": "consecutive_failures",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "ai_conversation",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `context_summary` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `archived_at` INTEGER, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contextSummary",
+            "columnName": "context_summary",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archivedAt",
+            "columnName": "archived_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ai_conversation_updated_at",
+            "unique": false,
+            "columnNames": [
+              "updated_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ai_conversation_updated_at` ON `${TABLE_NAME}` (`updated_at`)"
+          },
+          {
+            "name": "index_ai_conversation_archived_at",
+            "unique": false,
+            "columnNames": [
+              "archived_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ai_conversation_archived_at` ON `${TABLE_NAME}` (`archived_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ai_message",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `conversation_id` TEXT NOT NULL, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `message_type` TEXT NOT NULL, `status` TEXT NOT NULL, `sequence` INTEGER NOT NULL, `error_code` TEXT, `duration_ms` INTEGER, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationId",
+            "columnName": "conversation_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "messageType",
+            "columnName": "message_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sequence",
+            "columnName": "sequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "errorCode",
+            "columnName": "error_code",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "duration_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ai_message_conversation_id_sequence",
+            "unique": false,
+            "columnNames": [
+              "conversation_id",
+              "sequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ai_message_conversation_id_sequence` ON `${TABLE_NAME}` (`conversation_id`, `sequence`)"
+          },
+          {
+            "name": "index_ai_message_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ai_message_status` ON `${TABLE_NAME}` (`status`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ai_message_attachment",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `message_id` TEXT NOT NULL, `relative_path` TEXT NOT NULL, `sha256` TEXT NOT NULL, `mime_type` TEXT NOT NULL, `size_bytes` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "messageId",
+            "columnName": "message_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relativePath",
+            "columnName": "relative_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sha256",
+            "columnName": "sha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mime_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "size_bytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ai_message_attachment_message_id",
+            "unique": false,
+            "columnNames": [
+              "message_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ai_message_attachment_message_id` ON `${TABLE_NAME}` (`message_id`)"
+          },
+          {
+            "name": "index_ai_message_attachment_sha256",
+            "unique": false,
+            "columnNames": [
+              "sha256"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ai_message_attachment_sha256` ON `${TABLE_NAME}` (`sha256`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ai_report",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ledger_id` TEXT NOT NULL, `month_key` TEXT NOT NULL, `input_sha256` TEXT NOT NULL, `summary_json` TEXT NOT NULL, `content` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ledgerId",
+            "columnName": "ledger_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "monthKey",
+            "columnName": "month_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inputSha256",
+            "columnName": "input_sha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "summaryJson",
+            "columnName": "summary_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ai_report_ledger_id_month_key",
+            "unique": false,
+            "columnNames": [
+              "ledger_id",
+              "month_key"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ai_report_ledger_id_month_key` ON `${TABLE_NAME}` (`ledger_id`, `month_key`)"
+          },
+          {
+            "name": "index_ai_report_input_sha256",
+            "unique": true,
+            "columnNames": [
+              "input_sha256"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_ai_report_input_sha256` ON `${TABLE_NAME}` (`input_sha256`)"
+          }
+        ]
+      },
+      {
+        "tableName": "keyword_rule",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `keyword` TEXT NOT NULL, `category_id` TEXT NOT NULL, `source` TEXT NOT NULL, `priority` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, `device_id` TEXT NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "keyword",
+            "columnName": "keyword",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "category_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priority",
+            "columnName": "priority",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceId",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_keyword_rule_keyword",
+            "unique": false,
+            "columnNames": [
+              "keyword"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_keyword_rule_keyword` ON `${TABLE_NAME}` (`keyword`)"
+          },
+          {
+            "name": "index_keyword_rule_category_id",
+            "unique": false,
+            "columnNames": [
+              "category_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_keyword_rule_category_id` ON `${TABLE_NAME}` (`category_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "app_setting",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`setting_key` TEXT NOT NULL, `setting_value` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`setting_key`))",
+        "fields": [
+          {
+            "fieldPath": "key",
+            "columnName": "setting_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "setting_value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "setting_key"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8178793ac793e2877b59ef25b7deb10a')"
+    ]
+  }
+}

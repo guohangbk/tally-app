@@ -1,0 +1,33 @@
+# Android / Gradle
+.gradle/
+.gradle-user*/
+**/build/
+local.properties
+.idea/
+.idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/shelf/
+
+# 签名与本地秘密：
+# 仓库里只有一把**测试钥匙** tally-app/keystore/tally-unified.jks（用 Android 调试那套公开常量，
+# store/key 口令 android、别名 androiddebugkey），任何克隆都能直接 assembleDebug。
+# 真要正式发版，请在 local.properties 里覆盖四项指向你自己的钥匙，并保证下面那条白名单仍然生效
+# ——白名单必须排在 *.jks 之后，否则会被通配符盖掉。
+*.jks
+*.keystore
+!tally-app/keystore/tally-unified.jks
+*.hprof
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# 本地临时目录（截图、探针脚本、QA 素材）
+.tmp/
+.kotlin/
+
+# Room 导出的 schema 是 KSP 编译期产物，不入库；发版时把对应版本冻结到 docs/release/<ver>/db/
+tally-app/schemas/
+
+# IDE / 工具本地设置
+.qoder/

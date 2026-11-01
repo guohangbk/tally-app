@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+      通知小图标：状态栏只取 alpha 通道再按系统主题染色，所以这里必须是
+      不透明的纯形状、不能依赖描边颜色。用的是 App 自己的茉莉标记（与 ic_jasmine 同一路径），
+      改成白色填充——图标库里那些 1.7dp 描边的线性图标直接拿来会在深色状态栏上看不见。
+    -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12 10.8C10.4 9.6 10.4 6.6 12 5.6 13.6 6.6 13.6 9.6 12 10.8z M13.2 12C14.4 10.4 17.4 10.4 18.4 12 17.4 13.6 14.4 13.6 13.2 12z M12 13.2C13.6 14.4 13.6 17.4 12 18.4 10.4 17.4 10.4 14.4 12 13.2z M10.8 12C9.6 13.6 6.6 13.6 5.6 12 6.6 10.4 9.6 10.4 10.8 12z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.1 12a1.9 1.9 0 1 0 3.8 0a1.9 1.9 0 1 0 -3.8 0" />
+</vector>

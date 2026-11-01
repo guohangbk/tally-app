@@ -1,0 +1,14 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      预 Compose 阶段（进程启动、系统闪屏、DataStore 读到偏好前的 paper 占位）都用应用纸色 #F6F3EB，
+      与 TallyColors.paper 一致。这样冷启动不再是「白屏 → 黄屏 → 数据」三段跳，而是一段连续纸面。
+    -->
+    <color name="tally_paper">#FFF6F3EB</color>
+
+    <style name="Theme.Tally" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/tally_paper</item>
+        <item name="android:colorBackground">@color/tally_paper</item>
+        <!-- Android 12+ 系统闪屏底色；低版本会自动忽略该属性。 -->
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/tally_paper</item>
+    </style>
+</resources>

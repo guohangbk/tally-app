@@ -1,0 +1,145 @@
+// 【已停用 / PARKED】随 SherpaOnnxSpeechPort.kt.txt 一起停用，恢复方法见那个文件头部。
+package io.github.guohangbk.tally.data.speech
+
+import android.content.Context
+import io.github.guohangbk.tally.data.debug.DebugLog
+import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
+import java.util.zip.ZipInputStream
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+/** 离线语音包的就绪状态；页面据此决定「直接按住说」还是「先咨询下载」。 */
+sealed interface SpeechModelState {
+    data object Absent : SpeechModelState
+    data class Downloading(val percent: Int) : SpeechModelState
+    data object Ready : SpeechModelState
+    data class Failed(val reason: String) : SpeechModelState
+}
+
+/**
+ * 一个可下载的离线语音包：zip 地址、sha256、以及解压后必须存在的推理文件。
+ *
+ * 官方分发是 `.tar.bz2`，Android 无内置 bzip2 解压，所以这里约定 **必须是 zip**：
+ * 由我们自己把选定模型的文件打成 zip 传到可控的 CDN（[url]），App 只管下载与校验。
+ */
+data class SpeechModelBundle(
+    val url: String,
+    val sha256: String,
+    val requiredFiles: List<String>,
+)
+
+/**
+ * 双语流式 Zipformer 语音包的按需下载：下载 zip → 校验 sha256 → 解压到应用私有目录。
+ *
+ * - 全程走 [Context.getFilesDir]，卸载即清、不进外部存储、不需要存储权限，只用 RECORD_AUDIO；
+ * - 可重入：残留的临时 zip 在每次下载前清理，失败置 [SpeechModelState.Failed] 可重试；
+ * - [state] 是热流，UI 观察它驱动进度条。
+ */
+class SpeechModelManager(
+    context: Context,
+    private val client: OkHttpClient,
+    private val bundle: SpeechModelBundle,
+) {
+    private val appContext = context.applicationContext
+    private val modelDir = File(appContext.filesDir, "speech/zipformer-zh-en-int8")
+    private val zipTmp = File(appContext.filesDir, "speech/_download.zip")
+
+    private val _state = MutableStateFlow<SpeechModelState>(if (isReady()) SpeechModelState.Ready else SpeechModelState.Absent)
+    val state: StateFlow<SpeechModelState> = _state.asStateFlow()
+
+    /** 推理必需的四个文件都在且非零字节，才算就绪。 */
+    fun isReady(): Boolean = bundle.requiredFiles.all { name ->
+        val f = File(modelDir, name)
+        f.isFile && f.length() > 0
+    }
+
+    /** 供引擎拼绝对路径加载模型。 */
+    fun file(name: String): String = File(modelDir, name).absolutePath
+
+    /** 下载并解压语音包；已就绪直接跳过。整个过程在 IO 线程。 */
+    suspend fun download(): SpeechModelState = withContext(Dispatchers.IO) {
+        if (isReady()) return@withContext SpeechModelState.Ready.also { _state.value = it }
+        try {
+            modelDir.parentFile?.mkdirs()
+            runCatching { zipTmp.delete() }
+            DebugLog.log(TAG, "开始下载语音包 → ${bundle.url}")
+            val request = Request.Builder().url(bundle.url).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) error("HTTP ${response.code}")
+                val total = response.body?.contentLength() ?: -1L
+                response.body?.byteStream()?.use { input ->
+                    FileOutputStream(zipTmp).use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        var written = 0L
+                        while (true) {
+                            val read = input.read(buf)
+                            if (read <= 0) break
+                            out.write(buf, 0, read)
+                            written += read
+                            if (total > 0) {
+                                _state.value = SpeechModelState.Downloading(((written * 100) / total).toInt().coerceIn(0, 100))
+                            }
+                        }
+                    }
+                }
+            }
+            verify(bundle.sha256, sha256Of(zipTmp))
+            unzip(zipTmp, modelDir)
+            runCatching { zipTmp.delete() }
+            if (!isReady()) error("解压后模型文件缺失")
+            DebugLog.log(TAG, "语音包就绪：${modelDir.absolutePath}")
+            SpeechModelState.Ready.also { _state.value = it }
+        } catch (failure: Throwable) {
+            runCatching { zipTmp.delete() }
+            DebugLog.log(TAG, "语音包下载失败：${failure.message}")
+            SpeechModelState.Failed(failure.message ?: "语音包下载失败").also { _state.value = it }
+        }
+    }
+
+    private fun verify(expected: String, actual: String) {
+        // 允许空 sha256 表示开发期先跳过校验（生产必须填）。
+        if (expected.isBlank()) return
+        if (!expected.equals(actual, ignoreCase = true)) error("校验和不匹配，语音包可能已损坏")
+    }
+
+    private fun sha256Of(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buf)
+                if (read <= 0) break
+                digest.update(buf, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun unzip(zip: File, target: File) {
+        target.mkdirs()
+        ZipInputStream(zip.inputStream()).use { zis ->
+            while (true) {
+                val entry = zis.nextEntry ?: break
+                if (entry.isDirectory) {
+                    zis.closeEntry()
+                    continue
+                }
+                // 扁平化：只取文件名，忽略 zip 里可能存在的目录层级。
+                val out = File(target, File(entry.name).name)
+                FileOutputStream(out).use { os -> zis.copyTo(os) }
+                zis.closeEntry()
+            }
+        }
+    }
+
+    private companion object {
+        const val TAG = "TallySpeechModel"
+    }
+}

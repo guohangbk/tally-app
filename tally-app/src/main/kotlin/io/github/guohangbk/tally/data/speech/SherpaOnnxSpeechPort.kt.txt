@@ -1,0 +1,172 @@
+// ============================================================================
+// 【已停用 / PARKED】端侧 sherpa-onnx 识别引擎。
+// 现在语音识别走系统 SpeechRecognizer（SystemSpeechPort），识别率更高，且不再把
+// sherpa-onnx 的 native runtime（.so）打进 APK，省存储。
+// 想切回端侧：① build.gradle.kts 重新加回 com.github.k2-fsa:sherpa-onnx 依赖
+// （并 exclude sherpa-onnx-jvm、保留 ndk abiFilters）；② 把本目录及 ui/common 下的
+// *.kt.txt 改回 *.kt；③ AppGraph.speechPort 换回 SherpaOnnxSpeechPort + speechModelManager；
+// ④ HomeScreen / QuickNoteViewModel / AssistantChatScreen 恢复下载门控（见 git 历史）。
+// ============================================================================
+package io.github.guohangbk.tally.data.speech
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import androidx.core.content.ContextCompat
+import com.k2fsa.sherpa.onnx.OnlineModelConfig
+import com.k2fsa.sherpa.onnx.OnlineRecognizer
+import com.k2fsa.sherpa.onnx.OnlineRecognizerConfig
+import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
+import io.github.guohangbk.tally.data.debug.DebugLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
+
+/**
+ * sherpa-onnx 双语流式 Zipformer 端侧识别（方案 A）。
+ *
+ * 与 [SystemSpeechPort] 的根本区别：识别引擎完全内置，只依赖应用自己的 RECORD_AUDIO，
+ * 不再被各家 ROM 的系统语音服务授权 / 语言包牵连（error=9/11 那类），音频也不出机。
+ *
+ * 自持 [AudioRecord] 采 16kHz 单声道 PCM，边喂 [OnlineRecognizer] 边解码；
+ * [stopListening] 表示「松手结束」——取当前累计文本收尾，而不是丢弃。
+ * 识别器按模型目录懒建并复用（模型就绪后路径固定），避免每次按住都重建 native 引擎。
+ */
+class SherpaOnnxSpeechPort(
+    context: Context,
+    private val modelManager: SpeechModelManager,
+) : SpeechPort {
+    private val appContext = context.applicationContext
+
+    @Volatile
+    private var stopRequested = false
+
+    @Volatile
+    private var cached: OnlineRecognizer? = null
+
+    override fun hasPermission(): Boolean =
+        ContextCompat.checkSelfPermission(appContext, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    override fun isAvailable(): Boolean = hasPermission() && modelManager.isReady()
+
+    override fun stopListening() {
+        stopRequested = true
+    }
+
+    private fun recognizer(): OnlineRecognizer {
+        cached?.let { return it }
+        synchronized(this) {
+            cached?.let { return it }
+            val config = OnlineRecognizerConfig(
+                // 关掉端点自动切段：按住说一句是一次完整语音，默认 endpoint 会在句中短停顿处
+                // 误判「句子结束」并 reset，导致只留下前半句（表现为「只识别出前几个字」）。
+                enableEndpoint = false,
+                modelConfig = OnlineModelConfig(
+                    transducer = OnlineTransducerModelConfig(
+                        encoder = modelManager.file(ENCODER),
+                        decoder = modelManager.file(DECODER),
+                        joiner = modelManager.file(JOINER),
+                    ),
+                    tokens = modelManager.file(TOKENS),
+                    numThreads = 4,
+                    modelType = "zipformer",
+                ),
+            )
+            // 用文件绝对路径加载，不走 assets：assetManager 传 null。
+            val recognizer = OnlineRecognizer(assetManager = null, config = config)
+            cached = recognizer
+            return recognizer
+        }
+    }
+
+    override suspend fun listen(onLevel: (Float) -> Unit): SpeechOutcome = withContext(Dispatchers.IO) {
+        if (!hasPermission()) {
+            return@withContext SpeechOutcome.Unavailable("需要麦克风权限才能语音记账，也可以直接打字")
+        }
+        if (!modelManager.isReady()) {
+            return@withContext SpeechOutcome.Unavailable("离线语音包还没下载")
+        }
+
+        val recognizer = try {
+            recognizer()
+        } catch (failure: Throwable) {
+            DebugLog.log(TAG, "引擎初始化失败：${failure.message}")
+            return@withContext SpeechOutcome.Unavailable("语音引擎初始化失败，可改用文字输入")
+        }
+
+        val stream = try {
+            recognizer.createStream()
+        } catch (failure: Throwable) {
+            return@withContext SpeechOutcome.Unavailable("语音引擎初始化失败，可改用文字输入")
+        }
+
+        val minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        if (minBuffer <= 0) {
+            return@withContext SpeechOutcome.Unavailable("麦克风被占用或不可用，关掉别的录音应用再试")
+        }
+        val record = try {
+            @Suppress("MissingPermission") // 前面已判定 RECORD_AUDIO 已授权
+            AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, minBuffer * 4)
+        } catch (failure: Throwable) {
+            return@withContext SpeechOutcome.Unavailable("麦克风被占用或不可用，关掉别的录音应用再试")
+        }
+        if (record.state != AudioRecord.STATE_INITIALIZED) {
+            runCatching { record.release() }
+            return@withContext SpeechOutcome.Unavailable("麦克风被占用或不可用，关掉别的录音应用再试")
+        }
+
+        stopRequested = false
+        try {
+            record.startRecording()
+            val shorts = ShortArray(SAMPLES_PER_CHUNK)
+            val floats = FloatArray(SAMPLES_PER_CHUNK)
+            while (!stopRequested) {
+                val read = record.read(shorts, 0, shorts.size)
+                if (read <= 0) continue
+                for (i in 0 until read) floats[i] = shorts[i] / 32768f
+                onLevel(rms(floats, read))
+                stream.acceptWaveform(floats.copyOfRange(0, read), sampleRate = SAMPLE_RATE)
+                while (recognizer.isReady(stream)) recognizer.decode(stream)
+            }
+            // 松手收尾：再喂一段静音把分块解码器里剩余的特征全部推完，最后取整句结果。
+            // 不这么做的话，尾部不足一个 chunk 的音频永远不会被解码，整句被截断。
+            val pad = FloatArray(SAMPLES_PER_CHUNK)
+            repeat(8) {
+                stream.acceptWaveform(pad, sampleRate = SAMPLE_RATE)
+                while (recognizer.isReady(stream)) recognizer.decode(stream)
+            }
+            val final = recognizer.getResult(stream).text.orEmpty().trim()
+            DebugLog.log(TAG, "端侧识别结果「$final」")
+            if (final.isBlank()) {
+                SpeechOutcome.NothingHeard("没有听清，请重试或输入文字")
+            } else {
+                SpeechOutcome.Heard(final)
+            }
+        } catch (failure: Throwable) {
+            DebugLog.log(TAG, "识别异常：${failure.message}")
+            SpeechOutcome.NothingHeard("识别失败，可改用文字输入")
+        } finally {
+            runCatching { record.stop() }
+            runCatching { record.release() }
+        }
+    }
+
+    private fun rms(buffer: FloatArray, length: Int): Float {
+        var sum = 0.0
+        for (i in 0 until length) sum += buffer[i] * buffer[i]
+        return sqrt(sum / length).toFloat().coerceIn(0f, 1f)
+    }
+
+    private companion object {
+        const val TAG = "TallySherpaSpeech"
+        const val SAMPLE_RATE = 16000
+        const val SAMPLES_PER_CHUNK = 1600 // 100ms @ 16kHz
+        const val ENCODER = "encoder-epoch-99-avg-1.int8.onnx"
+        const val DECODER = "decoder-epoch-99-avg-1.int8.onnx"
+        const val JOINER = "joiner-epoch-99-avg-1.int8.onnx"
+        const val TOKENS = "tokens.txt"
+    }
+}

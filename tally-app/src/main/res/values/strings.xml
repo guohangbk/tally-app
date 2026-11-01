@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">Tally 塔莉</string>
+
+    <!-- 长按图标的快捷方式。短标签放不下时 launcher 会截断，两条都控制在四个字。 -->
+    <string name="shortcut_new_bill">记一笔</string>
+    <string name="shortcut_new_bill_long">记一笔</string>
+    <string name="shortcut_stats">统计</string>
+    <string name="shortcut_stats_long">查看统计</string>
+
+    <!-- 桌面组件（WG-06/07/08）：组件里的文字走资源，深色模式由 values-night 的同一组颜色接管。 -->
+    <string name="widget_budget_setup">未设预算 · 点这里设置</string>
+    <string name="widget_currency">¥</string>
+    <string name="widget_add_bill">记一笔</string>
+    <string name="widget_foot_today">今天</string>
+    <string name="widget_failure_hint">数据没读到，点开 App 看</string>
+    <string name="widget_period_stale">%1$s · 未更新</string>
+    <string name="widget_month_tag">%1$d 月</string>
+
+    <!-- 新增三枚桌面组件：近七日柱状 / 预算圆环 / 当日当月 -->
+    <string name="widget_seven_day_label">近七日</string>
+    <string name="widget_seven_day_description">最近 7 天支出柱状图，点柱条看统计</string>
+    <string name="widget_budget_label">预算</string>
+    <string name="widget_budget_description">本月预算已用占比与剩余，点开看预算</string>
+    <string name="widget_day_month_label">当日当月</string>
+    <string name="widget_day_month_description">今天与本月支出，点 ＋ 记一笔</string>
+    <string name="widget_seven_day_header">Tally · 近七日支出</string>
+    <string name="widget_sd_total_label">合计</string>
+    <string name="widget_sd_avg_label">日均</string>
+    <string name="widget_sd_period_range">%1$s – %2$s</string>
+    <string name="widget_budget_ring_title">本月预算</string>
+    <string name="widget_budget_percent_fmt">%1$d%%</string>
+    <string name="widget_budget_remaining">剩余 %1$s</string>
+    <string name="widget_budget_over">超 %1$s</string>
+    <string name="widget_today_expense_label">今日支出</string>
+    <string name="widget_month_expense_label">本月支出</string>
+    <string name="widget_foot_stale_suffix">未更新</string>
+</resources>

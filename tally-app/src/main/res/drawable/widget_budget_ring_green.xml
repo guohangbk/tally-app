@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 预算圆环（WG-07）三档之一：<80% 墨绿。RemoteViews 画不了任意扇区，用 ProgressBar + ring drawable：
+     轨道 useLevel=false 铺满一圈，进度 useLevel=true 让系统按 level（=progress）扫出扇区，
+     rotate 的 from/to 同值只把起点从 3 点钟挪到 12 点钟。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape
+            android:shape="ring"
+            android:innerRadiusRatio="3.1"
+            android:thicknessRatio="11"
+            android:useLevel="false">
+            <solid android:color="@color/widget_budget_track" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <rotate
+            android:fromDegrees="270"
+            android:toDegrees="270"
+            android:pivotX="50%"
+            android:pivotY="50%">
+            <shape
+                android:shape="ring"
+                android:innerRadiusRatio="3.1"
+                android:thicknessRatio="11"
+                android:useLevel="true">
+                <solid android:color="@color/widget_brand" />
+            </shape>
+        </rotate>
+    </item>
+</layer-list>

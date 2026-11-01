@@ -1,0 +1,12 @@
+<resources>
+    <!-- 桌面组件「近七日」柱条列（WG-06）：七列同形，柱高用 weightSum=10 的权重表达，
+         这样柱条随组件实际高度一起长，不再固定在 26dp（2026-10-28 走查：组件看着很矮）。 -->
+    <style name="WidgetSevenDayColumn">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:weightSum">10</item>
+        <item name="android:gravity">bottom</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+</resources>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Tally 塔莉 · 只存在手机里的记账本</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="description" content="Tally 塔莉：只存在手机里的记账本。本地优先的 Android 应用，没有账号、没有服务端、一条数据都不上传。手打 / 语音 / 截图 / 小莉四种录入只出草稿等人确认，周期、分期与房贷到期自动入账；有预算、多账本与「全部账本」合并视角，统计一页四段同源。Kotlin + Jetpack Compose 原生实现，源码可用（BUSL-1.1），提供 v0.1.0 APK 下载。">
+<meta property="og:title" content="Tally 塔莉 · 只存在手机里的记账本">
+<meta property="og:description" content="本地优先的 Android 记账应用：周期与房贷自动入账、预算、多账本合并视角，数据一条都不上传。">
+<style>
+/* ============ Ink & Jasmine · 与 App 同一套令牌 ============ */
+:root{
+  --paper:#F6F3EB; --card:#FFFDF8; --ink:#16211D; --ink2:#4C5A53; --ink3:#8D978F;
+  --line:rgba(22,33,29,.10); --brand:#1F4A38; --brand-soft:rgba(31,74,56,.08);
+  --exp:#BF4E3B; --exp-soft:#F6E4DF; --slate:#5E7A8A;
+  --gold:#B98A34; --gold-hi:#E8C57A; --glow:#F5E3BE; --on-glow:#7A5A18;
+  --serif:Georgia,"Times New Roman","Songti SC","Noto Serif SC","Source Han Serif SC",SimSun,serif;
+  --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",-apple-system,sans-serif;
+  --max:1120px;
+}
+body:has(#ink:checked){
+  --paper:#131A17; --card:#1A2320; --ink:#E9E5DA; --ink2:#B9C2BB; --ink3:#93A09A;
+  --line:rgba(233,229,218,.13); --brand:#7ECBA9; --brand-soft:rgba(126,203,169,.12);
+  --exp:#E8917B; --exp-soft:rgba(232,145,123,.14); --slate:#8FA8B6;
+  --gold:#D7B263; --gold-hi:#F0D49A; --glow:rgba(185,138,52,.16); --on-glow:#F0D49A;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;
+}
+/* 骨白纸面上的纸纹：只有这一层点阵，透明度 2.8%，不用渐变造氛围 */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  opacity:.03;background-image:radial-gradient(var(--ink) .6px,transparent .7px);background-size:5px 5px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 28px;position:relative;z-index:1}
+
+/* ---------- 顶栏 ---------- */
+header.top{position:sticky;top:0;z-index:9;background:var(--paper);background:color-mix(in srgb,var(--paper) 92%,transparent);
+  backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.topin{display:flex;align-items:center;gap:16px;height:58px;max-width:var(--max);margin:0 auto;padding:0 28px}
+.mark{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-size:17px;letter-spacing:.02em}
+.mark svg{width:19px;height:19px}
+nav.tn{margin-left:auto;display:flex;gap:19px;font-size:12.5px;color:var(--ink2)}
+nav.tn a{padding-bottom:2px;border-bottom:1px solid transparent;transition:.18s}
+nav.tn a:hover{color:var(--ink);border-color:var(--ink)}
+.gh{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);flex:none}
+.gh:hover{border-color:var(--ink)}
+.gh svg{width:15px;height:15px;stroke:var(--ink2);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.gh:hover svg{stroke:var(--ink)}
+.theme{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);cursor:pointer;user-select:none}
+.theme i{width:30px;height:16px;border-radius:16px;border:1px solid var(--line);position:relative;background:var(--card)}
+.theme i::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--ink);transition:.2s}
+#ink:checked ~ * .theme i::after,.theme i::after{}
+body:has(#ink:checked) .theme i::after{left:16px;background:var(--gold-hi)}
+
+/* ---------- 首屏 ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:56px;align-items:start;padding:56px 0 62px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--serif);font-size:11px;letter-spacing:.34em;color:var(--ink3);text-transform:uppercase}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(34px,5.6vw,58px);line-height:1.14;margin:16px 0 0;letter-spacing:-.01em}
+h1 em{font-style:normal;color:var(--brand)}
+.sub{margin:20px 0 0;max-width:47ch;color:var(--ink2);font-size:15.5px}
+.factline{display:flex;flex-wrap:wrap;gap:0;margin:34px 0 0;border-top:1px solid var(--line)}
+.fact{padding:15px 26px 3px 0;margin-right:26px;border-right:1px solid var(--line)}
+.fact:last-child{border-right:0}
+.fact b{display:block;font-family:var(--serif);font-size:30px;font-weight:400;line-height:1.1;font-variant-numeric:tabular-nums}
+.fact span{font-size:11.5px;color:var(--ink3);letter-spacing:.06em}
+.acts{display:flex;gap:11px;flex-wrap:wrap;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:11px;
+  font-size:13.5px;font-weight:600;border:1px solid var(--line);transition:.18s}
+.btn.solid{background:var(--brand);border-color:var(--brand);color:var(--paper)}
+.btn.solid:hover{filter:brightness(1.14)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* ---------- 模块清单：一行一件，不写 bullet ---------- */
+.milist{display:grid;grid-template-columns:1fr;gap:0 58px;margin-top:26px}
+@media(min-width:800px){.milist{grid-template-columns:1fr 1fr}}
+.mi{display:grid;grid-template-columns:24px 1fr;gap:0 13px;padding:16px 0;border-top:1px solid var(--line)}
+.milist>.mi:nth-child(-n+2){border-top:0}
+@media(max-width:799px){.milist>.mi:nth-child(2){border-top:0}}
+.mi .n{font-family:var(--serif);font-size:11px;color:var(--ink3);letter-spacing:.1em;padding-top:4px}
+.mi h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 4px;letter-spacing:.01em}
+.mi p{font-size:13.5px;color:var(--ink2);margin:0;line-height:1.8}
+.mi p b{color:var(--ink);font-weight:600}
+
+/* ---------- 三屏真机截图 ---------- */
+.shots{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;align-items:flex-start;margin-top:38px}
+.shot{width:min(302px,100%)}
+.shot .phone{margin:0;width:100%;border-radius:40px;padding:10px;background:#12191C;
+  box-shadow:0 30px 60px rgba(18,25,28,.28),inset 0 1px 0 rgba(255,255,255,.07);
+  transition:transform .25s ease,box-shadow .25s ease}
+.shot .phone:hover{transform:translateY(-4px);box-shadow:0 38px 72px rgba(18,25,28,.34),inset 0 1px 0 rgba(255,255,255,.07)}
+.shot .phone img{display:block;width:100%;height:auto;border-radius:30px}
+.shot .cap{margin-top:16px;text-align:center;font-size:12.5px;color:var(--ink2);line-height:1.75}
+.shot .cap b{display:block;font-family:var(--serif);font-size:14.5px;color:var(--ink);font-weight:600;margin-bottom:3px}
+@media(max-width:720px){.shots{gap:26px}}
+.more{display:grid;grid-template-columns:repeat(2,minmax(0,302px));justify-content:center;gap:38px 44px;margin-top:38px}
+.more .shot{width:100%}
+@media(max-width:720px){.more{grid-template-columns:minmax(0,302px);gap:30px}}
+.stage{display:flex;justify-content:flex-end;padding-top:4px}
+.stage .phone{margin:0;width:min(322px,100%);border-radius:44px;padding:10px;background:#12191C;
+  box-shadow:0 34px 64px rgba(18,25,28,.3),inset 0 1px 0 rgba(255,255,255,.07)}
+.stage .phone img{display:block;width:100%;height:auto;border-radius:34px}
+
+/* ---------- 通用节 ---------- */
+section.blk{padding:66px 0;border-bottom:1px solid var(--line)}
+.sh{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.sh .no{font-family:var(--serif);font-size:11px;letter-spacing:.24em;color:var(--ink3)}
+.sh h2{font-family:var(--serif);font-weight:400;font-size:clamp(23px,3.4vw,31px);margin:0;letter-spacing:-.005em}
+.sh .tag{font-size:11px;color:var(--ink3);letter-spacing:.06em;margin-left:auto}
+.lead{max-width:70ch;margin:16px 0 0;color:var(--ink2);font-size:15.5px}
+.lead b{color:var(--ink);font-weight:600}
+
+/* 三张主张卡 */
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:32px}
+.three>div{background:var(--card);padding:20px 19px 22px}
+.three h3{font-family:var(--serif);font-weight:400;font-size:17px;margin:0 0 8px}
+.three p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.72}
+.three .k{font-family:var(--serif);font-size:10px;letter-spacing:.2em;color:var(--ink3);display:block;margin-bottom:11px}
+
+/* 功能六格 */
+.grid6{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:34px}
+.cell{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:17px 17px 18px;transition:.2s}
+.cell:hover{border-color:var(--ink3);transform:translateY(-2px)}
+.cell .hd{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.cell .hd svg{width:16px;height:16px;stroke:var(--ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.cell h3{font-size:14.5px;margin:0;font-weight:600;letter-spacing:.01em}
+.cell p{margin:0;font-size:13px;color:var(--ink2);line-height:1.72}
+.cell ul{margin:9px 0 0;padding:0;list-style:none;font-size:12px;color:var(--ink3)}
+.cell li{padding:3px 0 3px 13px;position:relative}
+.cell li::before{content:"";position:absolute;left:2px;top:11px;width:4px;height:1px;background:var(--ink3)}
+.cell li b{color:var(--ink2);font-weight:600}
+
+/* 数据表 */
+table.spec{width:100%;border-collapse:collapse;margin-top:30px;font-size:13.5px}
+table.spec th{text-align:left;font-family:var(--serif);font-weight:400;font-size:11px;letter-spacing:.16em;
+  color:var(--ink3);text-transform:uppercase;padding:0 12px 9px 0;border-bottom:1px solid var(--ink)}
+table.spec td{padding:13px 12px 13px 0;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink2)}
+table.spec td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+table.spec td b{color:var(--ink);font-weight:600}
+
+/* 小莉：全站唯一一处金晕 */
+.jasmine{position:relative;overflow:hidden;border:1px solid rgba(185,138,52,.34);border-radius:16px;background:var(--card);padding:24px 24px 25px;margin-top:30px}
+.jasmine::before{content:"";position:absolute;inset:-40% -10% auto auto;width:60%;height:150%;
+  background:radial-gradient(closest-side,var(--glow),transparent 72%);opacity:.85;pointer-events:none}
+.jasmine>*{position:relative}
+.jasmine h3{font-family:var(--serif);font-weight:400;font-size:19px;margin:0 0 10px;display:flex;align-items:center;gap:9px}
+.jasmine svg.petal{width:17px;height:17px}
+.jasmine p{margin:0;font-size:13.5px;color:var(--ink2);max-width:62ch}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px}
+.chips span{font-size:11.5px;padding:4px 10px;border-radius:20px;border:1px solid rgba(185,138,52,.34);color:var(--on-glow);background:var(--glow)}
+
+/* 代码块 */
+pre{margin:26px 0 0;background:var(--ink);color:#EFEDE4;border-radius:13px;padding:16px 18px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;line-height:1.85}
+pre .c{color:#93A09A}
+pre .p{color:var(--gold-hi)}
+.tech{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:28px}
+.tech div{background:var(--card);padding:14px 15px}
+.tech b{display:block;font-family:var(--serif);font-size:15px;font-weight:400}
+.tech span{font-size:11.5px;color:var(--ink3)}
+
+/* 路线 */
+.steps{margin-top:30px;border-top:1px solid var(--line)}
+.step{display:grid;grid-template-columns:132px minmax(0,1fr) auto;gap:18px;padding:17px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.step .when{font-family:var(--serif);font-size:13px;letter-spacing:.04em}
+.step .what{color:var(--ink2);font-size:13.5px}
+.step .what b{color:var(--ink);font-weight:600}
+.step .st{font-size:11px;color:var(--ink3);letter-spacing:.1em;white-space:nowrap}
+.step.now .st{color:var(--brand)}
+
+/* 文档列表 */
+.docs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 34px;margin-top:26px}
+.docs a{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:baseline;transition:.16s}
+.docs a:hover{padding-left:6px}
+.docs a .u{font-family:var(--serif);font-size:11px;color:var(--ink3);min-width:38px;font-variant-numeric:tabular-nums}
+.docs a .n{color:var(--ink);font-size:14px;font-weight:600}
+.docs a .d{color:var(--ink3);font-size:12px;margin-left:auto;text-align:right}
+
+footer.ft{padding:44px 0 66px;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end}
+footer.ft .big{font-family:var(--serif);font-size:22px}
+footer.ft .rt{margin-left:auto;font-size:12px;color:var(--ink3);text-align:right;line-height:1.9}
+.note{font-size:12.5px;color:var(--ink3);margin-top:14px}
+
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr;gap:40px}
+  .stage{justify-content:center}
+  .three,.grid6,.tech{grid-template-columns:1fr 1fr}
+  .docs{grid-template-columns:1fr}
+  .step{grid-template-columns:1fr;gap:4px}
+}
+@media (max-width:560px){
+  .three,.grid6,.tech{grid-template-columns:1fr}
+  nav.tn{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .fade>*{animation:up .62s cubic-bezier(.2,.7,.3,1) both}
+  .fade>*:nth-child(2){animation-delay:.06s}.fade>*:nth-child(3){animation-delay:.12s}
+  .fade>*:nth-child(4){animation-delay:.18s}.fade>*:nth-child(5){animation-delay:.24s}
+  @keyframes up{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<svg class="svgsym" width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-signal" viewBox="0 0 24 24"><path d="M3 20h2.5M8 20V14M12.5 20V10M17 20V6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3 9.5a14 14 0 0118 0M6 13a9 9 0 0112 0M9 16.4a4.4 4.4 0 016 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="19.4" r="1" fill="currentColor"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-food" viewBox="0 0 24 24"><path d="M6 3.5v7.5a2.5 2.5 0 005 0V3.5M8.5 11v9.5M17.5 3.5c-1.7 1.5-2.5 3.5-2.5 6s.8 3 2.5 3v8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-snack" viewBox="0 0 24 24"><path d="M7 8.5h10l-.9 12H7.9z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 8.5l1.3-3h7.4l1.3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 11.6l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+<symbol id="i-shirt" viewBox="0 0 24 24"><path d="M9 4.5L4.5 7 6 11l2-.8V20h8v-9.8l2 .8 1.5-4L15 4.5a3 3 0 01-6 0z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="i-bus" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 10.5h14M8 17v2.5M16 17v2.5M8.5 14h.01M15.5 14h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-plane" viewBox="0 0 24 24"><path d="M3 12.5l18-7.5-6 16-3.2-6.4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+<symbol id="i-tea" viewBox="0 0 24 24"><path d="M5.5 8.5h11v6a5.5 5.5 0 01-11 0z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M16.5 10h1.6a2.2 2.2 0 010 4.4h-1.6M3.5 20.5h15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-cup" viewBox="0 0 24 24"><path d="M4.5 6.5h12v7a4.5 4.5 0 01-9 0z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M16.5 8h1.8a2.2 2.2 0 010 4.5h-1.8M4 20h13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-water" viewBox="0 0 24 24"><path d="M9.5 3.5h5v2.6l1.6 2.9a5 5 0 01-4.1 7.8 5 5 0 01-4.1-7.8L9.5 6.1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7.6 14.5c1.6 1 3.2 1 4.8 0s3.2-1 4.2.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 20.5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-fruit" viewBox="0 0 24 24"><path d="M12 8.5c3.6 0 6.5 2.7 6.5 6.2S15.6 21 12 21s-6.5-2.8-6.5-6.3S8.4 8.5 12 8.5z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8.5c0-2.6 1.6-4.6 4.4-5.2-.3 2.7-1.7 4.5-4.4 5.2zM5.8 13.4l4.6 4.4M10.4 12.2l5.6 5.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-soda" viewBox="0 0 24 24"><path d="M6.5 6.5h11l-1.2 13a1.6 1.6 0 01-1.6 1.5H9.3a1.6 1.6 0 01-1.6-1.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M6.9 11.6h10.2M14.5 6.5l1.6-3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-pet" viewBox="0 0 24 24"><circle cx="12" cy="15" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="6.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="6.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 18h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4.5 5.5A2 2 0 016.5 4H19v14.5H6.5a2 2 0 00-2 2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4.5 19.5a2 2 0 012-2h12.5M9 8h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><path d="M3.5 4.5h2.6l2.4 11h9.2l2.3-8H7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="19.4" r="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="19.4" r="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+<symbol id="i-house-yen" viewBox="0 0 24 24"><path d="M4 10.5L12 5l8 5.5V19a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 19z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.4 12.5l2.6 3 2.6-3M12 15.5v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-brush" viewBox="0 0 24 24"><path d="M15.5 4.5l4 4-8 8-4-1.5.5-4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 15c-2 .5-3 2-3.2 4.2 2.4-.2 3.8-1.4 4.2-3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="i-med" viewBox="0 0 24 24"><path d="M3.5 12.5h4l2-4.5 3 9 2.2-4.5h5.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 5.5h-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-hongbao" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 8.5c2.6 2 4.6 3 7 3s4.4-1 7-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="13.4" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+<symbol id="i-fuel" viewBox="0 0 24 24"><path d="M5 20.5V5.5A2 2 0 017 3.5h5a2 2 0 012 2v15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 20.5h11M5 11h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 8.5h2.5a2 2 0 012 2v5a1.6 1.6 0 003.2 0V9l-2.2-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-game" viewBox="0 0 24 24"><path d="M7.5 8.5h9a4.5 4.5 0 014.4 5.4l-.7 3A3 3 0 0117 18l-1.5-2h-7L7 18a3 3 0 01-3.2-1.1l-.7-3A4.5 4.5 0 017.5 8.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 12.5h.01M16 12.5h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+<symbol id="i-note" viewBox="0 0 24 24"><path d="M5 5.5h14v9l-4.5 4.5H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 9.5h7M8.5 13h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15.5V4.5M8.5 8L12 4.5 15.5 8M5.5 13.5v5a1 1 0 001 1h11a1 1 0 001-1v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 11v5.2M12 7.9h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h11M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-chevd" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-5M13 16V8M18 16v-8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15 15l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol></defs></svg>
+<input type="checkbox" id="ink" class="sr">
+
+<header class="top">
+  <div class="topin">
+    <a class="mark" href="#hero">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#B98A34" stroke-width="1.5" stroke-linejoin="round">
+        <path d="M12 12c0-3.4 1.1-5.3 3.3-5.7 1.9-.3 3 1 3 2.7 0 2-1.6 3-3.6 3.1"/><path d="M12 12c-3.4 0-5.3-1.1-5.7-3.3-.3-1.9 1-3 2.7-3 2 0 3 1.6 3.1 3.6"/>
+        <path d="M12 12c0 3.4-1.1 5.3-3.3 5.7-1.9.3-3-1-3-2.7 0-2 1.6-3 3.6-3.1"/><path d="M12 12c3.4 0 5.3 1.1 5.7 3.3.3 1.9-1 3-2.7 3-2 0-3-1.6-3.1-3.6"/>
+      </g><circle cx="12" cy="12" r="1.5" fill="#B98A34"/></svg>
+      Tally 塔莉
+    </a>
+    <nav class="tn">
+      <a class="gh" href="https://github.com/guohangbk/tally-app" title="GitHub"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a9.5 9.5 0 0 0-5 0C7.5 2.8 6.4 3.1 6.4 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 5 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a>
+      <a class="gh" href="https://github.com/guohangbk/tally-app/releases" title="下载 APK"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></a>
+    </nav>
+    <label class="theme" for="ink" title="纸面 / 墨纸"><i></i>墨纸</label>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="hero fade" id="hero">
+  <div>
+    <div class="eyebrow">Local-first &middot; Android &middot; No account</div>
+    <h1>一本<em>只存在手机里</em><br>的账本。</h1>
+    <p class="sub">记账、看账、备份，全部在这台手机里完成。没有账号，没有服务器，<b style="color:var(--ink)">一条数据都不上传</b>。</p>
+    <div class="acts">
+      <a class="btn solid" href="https://github.com/guohangbk/tally-app/releases"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>下载 APK</a>
+      <a class="btn ghost" href="https://github.com/guohangbk/tally-app"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a9.5 9.5 0 0 0-5 0C7.5 2.8 6.4 3.1 6.4 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 5 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>GitHub</a>
+      <a class="btn ghost" href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/界面设计图.html">界面设计图</a>
+    </div>
+    <div class="factline">
+      <div class="fact"><b>6</b><span>种记账方式</span></div>
+      <div class="fact"><b>自动</b><span>周期 · 分期 · 房贷入账</span></div>
+      <div class="fact"><b>多账本</b><span>也能合起来看</span></div>
+      <div class="fact"><b>0</b><span>上传的字节</span></div>
+    </div>
+  </div>
+  <div class="stage">
+    <figure class="phone"><img src="assets/shot-home.jpg" width="720" height="1600" alt="首页：本月支出与收入、预算已用 86%，下方是当天的账单"></figure>
+  </div>
+</section>
+
+<section class="blk" id="modules">
+  <div class="sh"><span class="no">01</span><h2>它替你做的八件事</h2><span class="tag">一件一句</span></div>
+  <div class="milist">
+    <div class="mi"><span class="n">01</span><div><h3>记一笔很快</h3><p>点 <b>＋</b>，输金额，选分类。键盘支持 <b>38+12</b> 这样直接算，按保存就是等号。</p></div></div>
+    <div class="mi"><span class="n">02</span><div><h3>说一句就行</h3><p>长按 ＋ 上滑，说「二十九块八毛五」就出 29.85。<b>手机自己解析，不联网也能用。</b></p></div></div>
+    <div class="mi"><span class="n">03</span><div><h3>截图也能记</h3><p>从相册挑几张支付截图，手机自己认出金额和商户，一次最多 9 张。<b>图片不出这台手机。</b></p></div></div>
+    <div class="mi"><span class="n">04</span><div><h3>到期自动入账</h3><p>房租、订阅、工资设一次就好；大额分期、<b>房贷</b>也替你按期记，到点和没记上都提醒一声。</p></div></div>
+    <div class="mi"><span class="n">05</span><div><h3>预算心里有数</h3><p>给这个月或这年设个上限，可以细到分类。快用完时提醒你，<b>但不会满屏红字骂你</b>。</p></div></div>
+    <div class="mi"><span class="n">06</span><div><h3>几个本子，也能合起来看</h3><p>日常、装修、买车各记各的；顶栏切到<b>「全部账本」</b>，看的就是总账。</p></div></div>
+    <div class="mi"><span class="n">07</span><div><h3>统计看得懂</h3><p>任意选一段时间，趋势、分类、星期分布一次给全。<b>每个数字怎么算的，设置里逐条写着。</b></p></div></div>
+    <div class="mi"><span class="n">08</span><div><h3>删错了能找回</h3><p>删除先进<b>回收站</b>，按删除日期分组，保留期你自己定；桌面还能直接看今天和本月。</p></div></div>
+  </div>
+</section>
+
+<section class="blk" id="shots">
+  <div class="sh"><span class="no">02</span><h2>界面长这样</h2><span class="tag">纸与墨 · 一处金晕</span></div>
+  <p class="lead">纸面底色、墨绿主操作、支出陶土、收入墨绿。全站只有一处金色，留给可选的小莉。下面三屏是手机上的真实截图，示例账本记了 2025 到 2026 的每一笔；117 屏完整设计图在文档那一节。</p>
+  <div class="shots">
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-entry.jpg" width="720" height="1600" alt="记账页：选中零食与咖啡，键盘上方显示 18.00 加 12.00 等于 30.00"></figure>
+      <div class="cap"><b>记账页</b>分类在上，金额与键盘固定在下。按「再记」清掉金额留下分类，连着记不用退出。</div>
+    </div>
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-stats.jpg" width="720" height="1600" alt="统计页：年视图的收支总览、每月柱状、星期分布与分类环"></figure>
+      <div class="cap"><b>统计页</b>年视图的每月柱、星期分布与分类环来自同一次计算，不会出现两处对不上。</div>
+    </div>
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-budget.jpg" width="720" height="1600" alt="预算页：总额预算与四条分类预算，超支的交通标红"></figure>
+      <div class="cap"><b>预算页</b>总额加若干分类，快用完的那条自己变颜色，超支的那条直接变红。</div>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="more">
+  <div class="sh"><span class="no">03</span><h2>还有这些</h2><span class="tag">分期 · 周期 · 多账本 · 小莉</span></div>
+  <p class="lead">一笔大额可以拆成每月一期，固定开销交给周期记账，装修和旅行各开一本；想少敲几下，就把一句话交给小莉。</p>
+  <div class="more">
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-installment.jpg" width="720" height="1600" alt="分期明细：100 万房贷按等额本金分 360 期，本金每期 2,777.77，利息逐月递减，已入账 5 期"></figure>
+      <div class="cap"><b>分期与房贷</b>100 万、30 年、年利率 3.0% 的房贷按等额本金排期：本金每期 2,777.77，利息按剩余本金逐月递减，每期金额自己就能核对。</div>
+    </div>
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-recurring.jpg" width="720" height="1600" alt="周期记账：房租每月 5 日 3,800 元、保险每月 12 日 680 元、停车费每月 1 日 300 元"></figure>
+      <div class="cap"><b>周期记账</b>房租、保险、停车费各设一次，到点提醒入账；错过的执行日按原来的日期补记，不会把整段历史挪到今天。</div>
+    </div>
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-ledgers.jpg" width="720" height="1600" alt="我的账本：日常账本、装修 17,490 元、冰岛旅行 30,940 元三本并列"></figure>
+      <div class="cap"><b>多账本</b>装修、冰岛旅行各开一本，日常账本照旧。顶栏切到「全部账本」时，看的是三本合起来的数。</div>
+    </div>
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-chat.jpg" width="720" height="1600" alt="小莉对话：说一句「火锅 168，打车 26」，返回一张两笔待确认的账单卡"></figure>
+      <div class="cap"><b>小莉记账</b>说一句「火锅 168，打车 26」，她先给一张待确认的卡；分类、金额、日期都能改，点「全部记入」才落账。</div>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="desk">
+  <div class="sh"><span class="no">04</span><h2>桌面上那一小块</h2><span class="tag">只看不动</span></div>
+  <p class="lead">提供三枚桌面小组件，可以在桌面直观地看到账目信息；长按 App 图标还有「记一笔」和「查看统计」两个快捷入口。</p>
+  <div class="shots">
+    <div class="shot">
+      <figure class="phone"><img src="assets/shot-widgets.jpg" width="720" height="1600" alt="桌面小组件：近七日支出柱状图、本月预算 87%、今日支出 30 元与本月支出 8,269 元"></figure>
+      <div class="cap"><b>三枚组件</b>近七日支出、本月预算、今天与本月。不打开 App，也能在桌面上看一眼。</div>
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="jasmine">
+  <div class="sh"><span class="no">05</span><h2>小莉（可选）</h2><span class="tag">你的AI财务</span></div>
+  <div class="jasmine">
+    <h3><svg class="petal" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#B98A34" stroke-width="1.6" stroke-linejoin="round"><path d="M12 12c0-3.4 1.1-5.3 3.3-5.7 1.9-.3 3 1 3 2.7 0 2-1.6 3-3.6 3.1"/><path d="M12 12c-3.4 0-5.3-1.1-5.7-3.3-.3-1.9 1-3 2.7-3 2 0 3 1.6 3.1 3.6"/><path d="M12 12c0 3.4-1.1 5.3-3.3 5.7-1.9.3-3-1-3-2.7 0-2 1.6-3 3.6-3.1"/><path d="M12 12c3.4 0 5.3 1.1 5.7 3.3.3 1.9-1 3-2.7 3-2 0-3-1.6-3.1-3.6"/></g></svg>智能靠「什么时候出现」表达</h3>
+    <p>不开小莉，在界面里寻找不到一丝金色的她。她只做两件事：对话里把一句话或几张图变成<b>等你确认的账单卡</b>，以及在统计页<b>点一下才算</b>一份分析。配置要自己填 Key，测通了才保存——不配置，前面那些功能照样用得完。</p>
+    <div class="chips"><span>服务商与模型自选</span><span>Key 只存在这台手机里</span><span>一次最多发 3 张图</span><span>不配置也不影响记账</span></div>
+  </div>
+</section>
+
+<section class="blk" id="data">
+  <div class="sh"><span class="no">06</span><h2>数据只在你手里</h2><span class="tag">没有账号 · 没有服务器</span></div>
+  <div class="three">
+    <div><span class="k">STORAGE</span><h3>都在本机</h3><p>账单、凭证图、偏好全存在这台手机的数据库里。App 没有账号体系，也没有自己的服务器——<b>它想上传也没地方可传</b>。</p></div>
+    <div><span class="k">MOVE</span><h3>换手机是一个文件</h3><p>导一个加密备份包出来，到新机上恢复，账就过去了；也可以导出 CSV 或 Excel，日后原样导回。<b>备份包还能设置不含图片</b>，先说清楚里面有什么。</p></div>
+    <div><span class="k">PERMISSIONS</span><h3>只申请用得着的</h3><p>麦克风（语音记账）、通知（到期与失败提醒）、网络（只在你主动用小莉或 WebDAV 时用）。<b>不申请存储、定位、通讯录。</b></p></div>
+  </div>
+</section>
+
+<section class="blk" id="get">
+  <div class="sh"><span class="no">07</span><h2>拿去用</h2><span class="tag">没有商店 · 源码公开</span></div>
+  <p class="lead">直接下载编好的 APK，装到 Android 9 及以上的手机；或者自己从这个仓库构建——签名文件随仓库带着，克隆下来就能出包，环境要求与构建命令写在 README 里。</p>
+  <p class="note">安装包只含 <b>arm64-v8a</b>：2018 年后的主流机型都是这个架构，32 位老机器与 x86 模拟器装不上。</p>
+  <div class="acts">
+    <a class="btn solid" href="https://github.com/guohangbk/tally-app/releases"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>下载 APK</a>
+    <a class="btn ghost" href="https://github.com/guohangbk/tally-app"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a9.5 9.5 0 0 0-5 0C7.5 2.8 6.4 3.1 6.4 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 5 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>GitHub</a>
+  </div>
+  <div class="chips"><span>无需注册</span><span>离线可记</span><span>无广告</span><span>无内购</span><span>数据不上传</span><span>源码可查</span></div>
+</section>
+
+<section class="blk" id="road">
+  <div class="sh"><span class="no">08</span><h2>不做什么</h2><span class="tag">边界写死</span></div>
+  <div class="steps">
+    <div class="step"><span class="when">不做</span><span class="what">账号体系、云同步、多端合并、账户与资产、转账、多币种、iOS、应用商店上架。系统已经提供的能力（如应用锁、通知中心）不在 App 里做第二套。</span><span class="st">v0.1.0</span></div>
+  </div>
+</section>
+
+<section class="blk" id="docs">
+  <div class="sh"><span class="no">09</span><h2>文档</h2><span class="tag">都在 docs/release/v0.1.0/</span></div>
+  <div class="docs">
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/需求规格说明书.md"><span class="u">规格</span><span class="n">需求规格说明书</span><span class="d">FR / NFR / AC</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/概要设计说明书.md"><span class="u">架构</span><span class="n">概要设计说明书</span><span class="d">模块与构建基线</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/详细设计说明书.md"><span class="u">细节</span><span class="n">详细设计说明书</span><span class="d">逐模块处理与边界</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/数据库设计文档.md"><span class="u">数据</span><span class="n">数据库设计文档</span><span class="d">表结构 · 索引 · 口径</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/界面与交互规范.md"><span class="u">规范</span><span class="n">界面与交互规范</span><span class="d">设计语言 · 组件 · 判据</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/设计决策.md"><span class="u">取舍</span><span class="n">设计决策</span><span class="d">为什么这么设计</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/用户操作手册.md"><span class="u">用法</span><span class="n">用户操作手册</span><span class="d">给使用者看</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/v0.1.0/界面设计图.html"><span class="u">图</span><span class="n">界面设计图</span><span class="d">自包含 · 下载后本地打开</span></a>
+    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/LICENSE"><span class="u">法律</span><span class="n">LICENSE</span><span class="d">BUSL-1.1 源码可用许可</span></a>
+  </div>
+</section>
+
+<section class="blk" id="license" style="border-bottom:0">
+  <div class="sh"><span class="no">10</span><h2>许可与可获得性</h2><span class="tag">说清楚，不藏着</span></div>
+  <p class="lead">本项目采用 <b>Business Source License 1.1</b>（BUSL-1.1）。它是 <b>Source-Available</b>——中文规范叫法是「源码可用许可 / 商业源码许可」，
+    <b>不是 OSI 定义的开源许可</b>：源码可以读、可以改、可以构建、可以装到自己手机上用；不能拿它做成商品或服务提供给第三方。
+    每个版本在 Change Date（最早 2030-11-01，或该版本首次公开分发满四年，取更早者）自动转为 GPL-2.0-or-later，届时它就是真正的开源软件。</p>
+  <p class="note">没有应用商店版本，Release 上提供编好的 APK，源码与构建方式都在这个仓库里。依赖全部 Apache-2.0，136 枚图标与界面图形都是本仓库手画的矢量，字体用系统字体族——App 内「设置 → 许可与依赖」有同一份清单。</p>
+</section>
+
+<footer class="ft">
+  <div>
+    <div class="big">小莉帮你管好每一笔收支</div>
+    <div class="note">Tally 塔莉 · 数据只存在这台手机里</div>
+  </div>
+  <div class="rt">
+    原生 Android · Kotlin + Jetpack Compose<br>
+    源码公开，许可见 <a href="https://github.com/guohangbk/tally-app/blob/HEAD/LICENSE" style="border-bottom:1px solid var(--line)">BUSL-1.1</a><br>
+    源码公开 · 也提供编好的 APK
+  </div>
+</footer>
+
+</main>
+</body>
+</html>

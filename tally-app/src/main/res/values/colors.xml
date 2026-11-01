@@ -1,0 +1,25 @@
+<resources>
+    <!-- 桌面组件用的纸墨色。组件是 RemoteViews，吃不到 Compose 的 TallyColors，
+         这里手抄同一组值；深色在 values-night/colors.xml。改配色时两处一起改。 -->
+    <color name="widget_card">#FFFFFDF8</color>
+    <color name="widget_ink">#FF16211D</color>
+    <color name="widget_ink2">#FF4C5A53</color>
+    <color name="widget_ink3">#FF8D978F</color>
+    <color name="widget_line">#FFE0DED6</color>
+    <color name="widget_brand">#FF1F4A38</color>
+    <color name="widget_brand_surface">#FFEDEFE9</color>
+    <color name="widget_expense">#FFBF4E3B</color>
+    <color name="widget_expense_surface">#FFF6E4DF</color>
+    <color name="widget_income">#FF1F4A38</color>
+    <color name="widget_ripple">#1F16211D</color>
+    <!-- 2×2 近 7 天柱条：墨色 17%，0 支出那根 8%。 -->
+    <color name="widget_bar_dim">#2B16211D</color>
+    <color name="widget_bar_zero">#1416211D</color>
+    <!-- 品牌底上的 ＋ 图形：亮色纸白，深色转墨。 -->
+    <color name="widget_on_brand">#FFF6F3EB</color>
+    <!-- 预算条：轨道、刻度、金晕三档填充。金晕那一支是板上定的阈值提醒色。 -->
+    <color name="widget_gold">#FFB98A34</color>
+    <color name="widget_gold_hi">#FFE8C57A</color>
+    <color name="widget_budget_track">#1416211D</color>
+    <color name="widget_budget_tick">#6616211D</color>
+</resources>

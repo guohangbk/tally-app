@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:icon="@drawable/shortcut_new_bill"
+        android:shortcutId="new_bill"
+        android:shortcutLongLabel="@string/shortcut_new_bill_long"
+        android:shortcutShortLabel="@string/shortcut_new_bill">
+        <intent
+            android:action="io.github.guohangbk.tally.action.NEW_BILL"
+            android:targetClass="io.github.guohangbk.tally.MainActivity"
+            android:targetPackage="io.github.guohangbk.tally" />
+    </shortcut>
+
+    <shortcut
+        android:icon="@drawable/shortcut_stats"
+        android:shortcutId="stats"
+        android:shortcutLongLabel="@string/shortcut_stats_long"
+        android:shortcutShortLabel="@string/shortcut_stats">
+        <intent
+            android:action="io.github.guohangbk.tally.action.STATS"
+            android:targetClass="io.github.guohangbk.tally.MainActivity"
+            android:targetPackage="io.github.guohangbk.tally" />
+    </shortcut>
+</shortcuts>

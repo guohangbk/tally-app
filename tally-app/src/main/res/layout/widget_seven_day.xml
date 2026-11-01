@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 4×2「近七日汇总 · 柱状图」（WG-06）：标题用品牌绿、顶部数字放大一档；
+     柱条按 weightSum=10 的权重占满图表区（走查：26dp 定高让组件看着很矮），
+     三档 3/6/10 = 30% / 60% / 满格，今天陶土、其余墨色，0 支出只留 4dp 底条。
+     RemoteViews 不能改 layout_weight，所以每档预置「垫高的空段 + 柱」两条，靠 visibility 选档。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card"
+    android:orientation="vertical"
+    android:paddingStart="14dp"
+    android:paddingTop="11dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="true"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.04"
+            android:maxLines="1"
+            android:text="@string/widget_seven_day_header"
+            android:textColor="@color/widget_brand"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_sd_period"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_ink2"
+            android:textSize="9.5sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:baselineAligned="true"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="@string/widget_sd_total_label"
+            android:textColor="@color/widget_ink3"
+            android:textSize="9.5sp" />
+
+        <TextView
+            android:id="@+id/widget_sd_total"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:fontFamily="serif"
+            android:fontFeatureSettings="'tnum'"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_expense"
+            android:textSize="16sp" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="@string/widget_sd_avg_label"
+            android:textColor="@color/widget_ink3"
+            android:textSize="9.5sp" />
+
+        <TextView
+            android:id="@+id/widget_sd_avg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:fontFamily="serif"
+            android:fontFeatureSettings="'tnum'"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_ink"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_sd_chart"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="7dp"
+        android:layout_weight="1"
+        android:baselineAligned="false"
+        android:gravity="bottom"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            style="@style/WidgetSevenDayColumn"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp">
+
+            <FrameLayout android:id="@+id/widget_sd_bar_0_zero" android:layout_width="match_parent" android:layout_height="4dp" android:background="@drawable/widget_bar_zero" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_0_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_0_l1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_0_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="4" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_0_l2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="6" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_0_l3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/WidgetSevenDayColumn"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp">
+
+            <FrameLayout android:id="@+id/widget_sd_bar_1_zero" android:layout_width="match_parent" android:layout_height="4dp" android:background="@drawable/widget_bar_zero" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_1_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_1_l1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_1_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="4" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_1_l2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="6" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_1_l3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/WidgetSevenDayColumn"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp">
+
+            <FrameLayout android:id="@+id/widget_sd_bar_2_zero" android:layout_width="match_parent" android:layout_height="4dp" android:background="@drawable/widget_bar_zero" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_2_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_2_l1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_2_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="4" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_2_l2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="6" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_2_l3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/WidgetSevenDayColumn"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp">
+
+            <FrameLayout android:id="@+id/widget_sd_bar_3_zero" android:layout_width="match_parent" android:layout_height="4dp" android:background="@drawable/widget_bar_zero" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_3_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_3_l1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_3_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="4" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_3_l2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="6" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_3_l3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/WidgetSevenDayColumn"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp">
+
+            <FrameLayout android:id="@+id/widget_sd_bar_4_zero" android:layout_width="match_parent" android:layout_height="4dp" android:background="@drawable/widget_bar_zero" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_4_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_4_l1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_4_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="4" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_4_l2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="6" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_4_l3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/WidgetSevenDayColumn"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp">
+
+            <FrameLayout android:id="@+id/widget_sd_bar_5_zero" android:layout_width="match_parent" android:layout_height="4dp" android:background="@drawable/widget_bar_zero" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_5_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_5_l1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_5_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="4" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_5_l2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="6" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_5_l3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" android:background="@drawable/widget_bar_dim" android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 今天那一列只有陶土档（t1/t2/t3），不再叠一份墨色柱。 -->
+        <LinearLayout
+            style="@style/WidgetSevenDayColumn"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp">
+
+            <FrameLayout android:id="@+id/widget_sd_bar_6_zero" android:layout_width="match_parent" android:layout_height="4dp" android:background="@drawable/widget_bar_zero" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_6_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_6_t1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@drawable/widget_bar_today" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_6_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="4" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_6_t2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="6" android:background="@drawable/widget_bar_today" android:visibility="gone" />
+            <FrameLayout android:id="@+id/widget_sd_bar_6_t3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" android:background="@drawable/widget_bar_today" android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <TextView android:id="@+id/widget_sd_day_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:includeFontPadding="false" android:maxLines="1" android:textColor="@color/widget_ink3" android:textSize="9sp" />
+        <TextView android:id="@+id/widget_sd_day_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:includeFontPadding="false" android:maxLines="1" android:textColor="@color/widget_ink3" android:textSize="9sp" />
+        <TextView android:id="@+id/widget_sd_day_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:includeFontPadding="false" android:maxLines="1" android:textColor="@color/widget_ink3" android:textSize="9sp" />
+        <TextView android:id="@+id/widget_sd_day_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:includeFontPadding="false" android:maxLines="1" android:textColor="@color/widget_ink3" android:textSize="9sp" />
+        <TextView android:id="@+id/widget_sd_day_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:includeFontPadding="false" android:maxLines="1" android:textColor="@color/widget_ink3" android:textSize="9sp" />
+        <TextView android:id="@+id/widget_sd_day_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:includeFontPadding="false" android:maxLines="1" android:textColor="@color/widget_ink3" android:textSize="9sp" />
+        <TextView android:id="@+id/widget_sd_day_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:includeFontPadding="false" android:maxLines="1" android:textColor="@color/widget_expense" android:textSize="9sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="@string/widget_failure_hint"
+        android:textColor="@color/widget_ink3"
+        android:textSize="8.5sp"
+        android:visibility="gone" />
+</LinearLayout>
