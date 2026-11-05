@@ -1,6 +1,7 @@
 package io.github.guohangbk.tally
 
 import android.app.Application
+import io.github.guohangbk.tally.data.debug.CrashInfo
 import io.github.guohangbk.tally.data.debug.DebugLog
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.work.AutomationWorker
@@ -8,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.io.File
 
 class TallyApplication : Application() {
     lateinit var graph: AppGraph
@@ -18,6 +20,13 @@ class TallyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         val createAt = System.currentTimeMillis()
+        // 日志目录与崩溃钩子要在第一行日志之前接上——最先那几条往往正是最想看的。
+        DebugLog.attach(File(filesDir, "logs"))
+        CrashInfo.version = runCatching {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0)
+        }.getOrNull()?.versionName ?: "-"
+        installCrashRecorder()
         DebugLog.log("Perf", "Application.onCreate 开始")
         graph = AppGraph(this)
         DebugLog.log("Perf", "AppGraph 构建 +${System.currentTimeMillis() - createAt}ms")
@@ -41,6 +50,18 @@ class TallyApplication : Application() {
             DebugLog.log("Perf", "prewarmCategories +${System.currentTimeMillis() - warmAt}ms · 距 onCreate +${System.currentTimeMillis() - createAt}ms")
         }
         AutomationWorker.schedule(this)
+    }
+
+    /**
+     * 崩溃前同步落一份栈。内存环会随进程一起消失，文件不会；
+     * 写完仍把异常交回系统原来的处理器，不改变崩溃行为，也不吞异常。
+     */
+    private fun installCrashRecorder() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, cause ->
+            runCatching { DebugLog.recordCrash(thread, cause) }
+            previous?.uncaughtException(thread, cause)
+        }
     }
 
     companion object {

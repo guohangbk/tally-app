@@ -130,7 +130,7 @@ import kotlinx.coroutines.launch
 fun TallyHomeScreen(
     currentRoute: String? = "home",
     onOpenLedgers: () -> Unit,
-    onOpenStats: (String?) -> Unit = {},
+    onOpenStats: (String?, Long) -> Unit = { _, _ -> },
     onOpenBill: (String?, String?, BillType?) -> Unit = { _, _, _ -> },
     onOpenDraftBill: (VoiceCapture) -> Unit = {},
     /** ＋ 右臂＝小莉。原来这是底部导航的一格，入口撤了之后只剩这一条路。 */
@@ -443,7 +443,7 @@ fun TallyHomeScreen(
                     onTitleClick = { viewModel.loadLedgerStats(); showLedgerSheet = true },
                     leading = { TallyIconAction(iconKey = "menu", contentDescription = "菜单", onClick = { scope.launch { drawerState.open() } }) },
                     trailing = {
-                        TallyIconAction(iconKey = "chart", contentDescription = "统计", onClick = { onOpenStats(state.ledgerId) })
+                        TallyIconAction(iconKey = "chart", contentDescription = "统计", onClick = { onOpenStats(state.ledgerId, state.monthStart) })
                         TallyIconAction(iconKey = "search", contentDescription = "搜索账单", onClick = { onOpenSearch(state.ledgerId) })
                     },
                 )

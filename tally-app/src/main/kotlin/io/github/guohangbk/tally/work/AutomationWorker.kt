@@ -11,6 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import io.github.guohangbk.tally.TallyApplication
 import io.github.guohangbk.tally.data.debug.DebugLog
+import io.github.guohangbk.tally.ui.widget.InsightWidgets
 import io.github.guohangbk.tally.ui.widget.TallyWidgets
 import java.util.concurrent.TimeUnit
 
@@ -43,6 +44,7 @@ class AutomationWorker(
             }
             // 桌面组件每天补刷一次；桌面上没有组件时这一步直接返回，不查库。
             runCatching { TallyWidgets.updateAll(applicationContext) }
+            runCatching { InsightWidgets.updateAll(applicationContext) }
             Result.success()
         }.getOrElse { Result.retry() }
     }

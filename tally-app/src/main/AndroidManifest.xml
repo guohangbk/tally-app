@@ -48,7 +48,7 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
-        <!-- 桌面组件（WG-06/07/08）：三枚都是只读，点了落回 MainActivity 走 pendingLink。 -->
+        <!-- 桌面组件（WG-06）：近七日只读，点了落回 MainActivity 走 pendingLink。 -->
         <receiver
             android:name=".ui.widget.SevenDayWidgetProvider"
             android:exported="true"
@@ -60,28 +60,87 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_seven_day" />
         </receiver>
+
+        <!-- 三期新增七枚（docs/v3 桌面组件板）：与近七日并存，各占独立 provider。
+             同样只读，点击一律落回 MainActivity 走现成深链。 -->
         <receiver
-            android:name=".ui.widget.BudgetWidgetProvider"
+            android:name=".ui.widget.FlowSmallWidgetProvider"
             android:exported="true"
-            android:label="@string/widget_budget_label">
+            android:label="@string/widget_flow_s_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_budget" />
+                android:resource="@xml/widget_flow_s" />
         </receiver>
         <receiver
-            android:name=".ui.widget.DayMonthWidgetProvider"
+            android:name=".ui.widget.FlowWideWidgetProvider"
             android:exported="true"
-            android:label="@string/widget_day_month_label">
+            android:label="@string/widget_flow_m_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_day_month" />
+                android:resource="@xml/widget_flow_m" />
         </receiver>
+        <receiver
+            android:name=".ui.widget.QuickSmallWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_quick_s_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_s" />
+        </receiver>
+        <receiver
+            android:name=".ui.widget.QuickWideWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_quick_m_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_m" />
+        </receiver>
+        <receiver
+            android:name=".ui.widget.BudgetRingWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_budget_ring_v2_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_budget_v2" />
+        </receiver>
+        <receiver
+            android:name=".ui.widget.RhythmWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_rhythm_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_rhythm" />
+        </receiver>
+        <receiver
+            android:name=".ui.widget.StreakWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_streak_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_streak" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

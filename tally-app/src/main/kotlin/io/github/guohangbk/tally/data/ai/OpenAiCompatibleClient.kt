@@ -13,6 +13,7 @@ import io.github.guohangbk.tally.domain.ai.AiToolChoice
 import io.github.guohangbk.tally.domain.ai.AiTurn
 import io.github.guohangbk.tally.domain.ai.AiUsage
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -44,18 +45,73 @@ class OpenAiCompatibleClient(
     /**
      * 连通性探测：能不能鉴权、能不能路由到模型，与「这次有没有吐出文字」是两件事。
      *
-     * 推理型模型会把极小的 `max_tokens` 全部花在 `reasoning_content` 上，`content` 回空字符串——
-     * 平台侧这次调用是成功的（HTTP 200），但严格按内容判就会把配置流程挡在「测试并保存」这一步。
-     * 所以探测走 [tolerant]：200 且有正常的 choices 就算通，空内容只记日志不改判。
+     * 先打 `GET {base}/models`——不生成 token、几百毫秒就回，地址与 Key 一次验完；
+     * 列表里点名了目标模型就算通，不必再等一个 ping 想几十秒。
+     * 网关没实现这个端点、或者列表里没有这个模型，才退回真实补全。
+     *
+     * 退回那条不带 `max_tokens`：推理型模型会把小额预算全花在 `reasoning_content` 上，
+     * 限额反而可能把回复截断成空 content。平台按 200 返回即算链路正常，所以走 [tolerant]。
      */
     override suspend fun testConnection(target: AiTarget): AiResult<AiConnectionReport> {
+        val startedAt = System.nanoTime()
+        if (modelsListContains(target)) {
+            return AiResult.success(
+                AiConnectionReport(
+                    model = target.model,
+                    usage = AiUsage(promptTokens = null, completionTokens = null),
+                    latencyMillis = (System.nanoTime() - startedAt) / 1_000_000L,
+                ),
+            )
+        }
         val request = AiRequest(
             instruction = PING_INSTRUCTION,
             turns = listOf(AiTurn.user("ping")),
-            maxTokens = PROBE_MAX_TOKENS,
         )
-        return send(target, request, tolerant = true, callTimeoutMillis = CONNECT_TIMEOUT_MS).map { completion ->
-            AiConnectionReport(model = target.model, usage = completion.usage, latencyMillis = completion.latencyMillis)
+        return send(target, request, tolerant = true, budgetMillis = PROBE_BUDGET_MS)
+            .map { completion ->
+                AiConnectionReport(model = target.model, usage = completion.usage, latencyMillis = completion.latencyMillis)
+            }
+            .asProbeFailure()
+    }
+
+    /** 探测失败在配置页上就是「没测通」，别把 Unable to resolve host 这类英文异常直接甩给用户。 */
+    private fun <T> AiResult<T>.asProbeFailure(): AiResult<T> = when (this) {
+        is AiResult.Failure if failure.kind == AiErrorKind.NETWORK -> AiResult.failed(AiErrorKind.NETWORK, PROBE_NETWORK_MESSAGE)
+        else -> this
+    }
+
+    /**
+     * `GET {base}/models`：200 且列表里点名了目标模型才算验通。
+     * 端点不存在、返回看不懂、超时一律 false 交给真实补全去判——探测多花几秒，
+     * 也比把一个好配置误判成不通强。
+     */
+    private suspend fun modelsListContains(target: AiTarget): Boolean = withContext(Dispatchers.IO) {
+        val url = modelsEndpoint(target.baseUrl) ?: return@withContext false
+        val http = client.newBuilder()
+            .connectTimeout(MODELS_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .readTimeout(MODELS_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .callTimeout(MODELS_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .build()
+        val call = http.newCall(
+            Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Authorization", "Bearer ${target.apiKey}")
+                .build(),
+        )
+        runCatching {
+            call.execute().use { response ->
+                if (!response.isSuccessful) {
+                    DebugLog.log("小莉探测", "GET models → HTTP ${response.code}，退回 chat/completions 探测")
+                    return@use false
+                }
+                val listed = response.body?.string().orEmpty().contains("\"${target.model}\"")
+                DebugLog.log("小莉探测", "GET models → 200 · 列表含「${target.model}」=$listed")
+                listed
+            }
+        }.getOrElse {
+            DebugLog.log("小莉探测", "GET models 失败 ${it.javaClass.simpleName}，退回 chat/completions 探测")
+            false
         }
     }
 
@@ -122,13 +178,13 @@ class OpenAiCompatibleClient(
         request: AiRequest,
     ): AiResult<AiCompletion> {
         if (request.tools.isNotEmpty()) {
-            val viaTools = send(target, request, responseFormat = null, callTimeoutMillis = 0L)
+            val viaTools = send(target, request, responseFormat = null)
             if (viaTools !is AiResult.Failure || viaTools.kind != AiErrorKind.SCHEMA) return viaTools
             // 最先被网关拒掉的往往是 tool_choice:"required" 和 parallel_tool_calls 这两个字段，
             // 不是 tools 本身。先摘掉它们再走下一级：一步跳到 JSON Schema 就只能返回一个对象，
             // "一句话三笔"当场被压成一张卡——那正是卡片少一笔的来处。
             val relaxed = request.copy(toolChoice = AiToolChoice.Auto, allowParallelTools = false)
-            val viaRelaxed = send(target, relaxed, responseFormat = null, callTimeoutMillis = 0L)
+            val viaRelaxed = send(target, relaxed, responseFormat = null)
             if (viaRelaxed !is AiResult.Failure || viaRelaxed.kind != AiErrorKind.SCHEMA) return viaRelaxed
             if (request.jsonSchema == null) return viaRelaxed
             return sendSchemaFallbacks(target, relaxed.copy(tools = emptyList()))
@@ -141,19 +197,19 @@ class OpenAiCompatibleClient(
         request: AiRequest,
     ): AiResult<AiCompletion> {
         val schema = request.jsonSchema
-        if (schema == null) return send(target, request, callTimeoutMillis = 0L)
+        if (schema == null) return send(target, request)
 
         val plain = request.copy(jsonSchema = null)
-        val first = send(target, plain, responseFormat = jsonSchemaFormat(schema), callTimeoutMillis = 0L)
+        val first = send(target, plain, responseFormat = jsonSchemaFormat(schema))
         if (first !is AiResult.Failure || first.kind != AiErrorKind.SCHEMA) return first
 
         val embedded = plain.copy(
             instruction = request.instruction + "\n\n只按以下 JSON Schema 输出，不要输出别的内容：\n" + schema,
         )
-        val second = send(target, embedded, responseFormat = jsonObjectFormat(), callTimeoutMillis = 0L)
+        val second = send(target, embedded, responseFormat = jsonObjectFormat())
         if (second !is AiResult.Failure || second.kind != AiErrorKind.SCHEMA) return second
 
-        return send(target, embedded, responseFormat = null, callTimeoutMillis = 0L)
+        return send(target, embedded, responseFormat = null)
     }
 
     private suspend fun send(
@@ -161,10 +217,16 @@ class OpenAiCompatibleClient(
         request: AiRequest,
         responseFormat: JsonElement? = structuredFormat(request.jsonSchema),
         tolerant: Boolean = false,
-        callTimeoutMillis: Long,
+        budgetMillis: Long = 0L,
     ): AiResult<AiCompletion> {
-        val http = if (callTimeoutMillis > 0L) {
-            client.newBuilder().callTimeout(callTimeoutMillis, TimeUnit.MILLISECONDS).build()
+        // 探测给的是整次调用的预算，三个超时都要抬起来：OkHttp 默认 readTimeout 是 10 秒，
+        // 只设 callTimeout 的话，网关 10 秒没吐字节就先被判成网络异常，15 秒那条线根本走不到。
+        val http = if (budgetMillis > 0L) {
+            client.newBuilder()
+                .connectTimeout(budgetMillis, TimeUnit.MILLISECONDS)
+                .readTimeout(budgetMillis, TimeUnit.MILLISECONDS)
+                .callTimeout(budgetMillis, TimeUnit.MILLISECONDS)
+                .build()
         } else {
             client.newBuilder().readTimeout(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
         }
@@ -221,9 +283,15 @@ class OpenAiCompatibleClient(
             } catch (cancel: CancellationException) {
                 throw cancel
             } catch (io: IOException) {
-                // OkHttp 取消时同样抛 IOException("Canceled")，用 call 状态区分主动取消与断网。
-                DebugLog.log("小莉请求", "网络失败 canceled=${call.isCanceled()} ${io.message}")
-                if (call.isCanceled()) AiResult.failed(AiErrorKind.CANCELLED) else AiResult.failed(AiErrorKind.NETWORK, io.message)
+                // callTimeout 到点是「取消这次 call」实现的，抛出来的也是 IOException("canceled")。
+                // 这一条链路上没有任何地方 call.cancel()（协程 Job 取消传不进阻塞的 execute()），
+                // 所以到这里只可能是超时——以前按 isCanceled 判成「已取消」，用户就以为是自己点了停止。
+                DebugLog.log("小莉请求", "网络失败 ${io.javaClass.simpleName} ${io.message}")
+                if (io.isTimeout()) {
+                    AiResult.failed(AiErrorKind.NETWORK, TIMEOUT_MESSAGE)
+                } else {
+                    AiResult.failed(AiErrorKind.NETWORK, io.message)
+                }
             }
         }
 
@@ -382,8 +450,14 @@ class OpenAiCompatibleClient(
     }
 
     companion object {
-        private const val CONNECT_TIMEOUT_MS = 15_000L
+        /** 正常调用的读超时：网关边想边吐字节时每次读到数据都会重置，60 秒够推理型模型想。 */
         private const val READ_TIMEOUT_MS = 60_000L
+
+        /** 探测的整次预算。以前是 15 秒，而推理型模型回一个 ping 就能想二十几秒，时不时撞线。 */
+        private const val PROBE_BUDGET_MS = 45_000L
+
+        /** 模型列表端点的预算：这一条本该几百毫秒回，8 秒还不回就说明网关没实现它。 */
+        private const val MODELS_TIMEOUT_MS = 8_000L
 
         /** SSE 的行前缀与收尾帧。整包响应以它开头就说明这个网关在按流式回话。 */
         private const val SSE_DATA_PREFIX = "data:"
@@ -394,15 +468,16 @@ class OpenAiCompatibleClient(
         /** 空内容时打进调试控制台的原文长度——只够看形状，不放大段用户数据。 */
         private const val MAX_EMPTY_BODY = 400
 
-        /**
-         * 探测用的 token 预算。1 个 token 在推理型模型上会被 `reasoning_content` 吃干净，
-         * 留下空 `content`，那是模型的习惯而不是链路故障，所以给到够说一个词的量。
-         */
-        private const val PROBE_MAX_TOKENS = 16
-        private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
+        /** 给用户看的措辞，不带秒数：超时多少是我们自己的配置，不是他要决策的事。 */
+        private const val TIMEOUT_MESSAGE = "连接超时，请稍后重试"
+        private const val PROBE_NETWORK_MESSAGE = "测试连接超时，请检查网络或服务地址后重试"
 
         private const val PING_INSTRUCTION = "只回复一个字符 ok，不要解释。"
+        private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
+        /** OkHttp 的读超时与 callTimeout 都归到 [InterruptedIOException]，取消式超时则只有消息可认。 */
+        private fun IOException.isTimeout(): Boolean =
+            this is InterruptedIOException || message.equals("canceled", ignoreCase = true)
         /** 尾斜杠可有可无；协议路径固定拼在 `/chat/completions`。 */
         fun chatEndpoint(baseUrl: String): String? {
             val trimmed = baseUrl.trim().trimEnd('/')
@@ -410,6 +485,10 @@ class OpenAiCompatibleClient(
             if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return null
             return if (trimmed.endsWith("/chat/completions")) trimmed else "$trimmed/chat/completions"
         }
+
+        /** 列表端点从 chat 端点退回去拼，两处对 baseUrl 的校验因此只有一份。 */
+        fun modelsEndpoint(baseUrl: String): String? =
+            chatEndpoint(baseUrl)?.removeSuffix("/chat/completions")?.plus("/models")
 
         private fun structuredFormat(schema: String?): JsonElement? =
             schema?.let { jsonSchemaFormat(it) }

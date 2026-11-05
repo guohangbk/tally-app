@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 4×2「消费节奏」（WG-R1）：近 30 天按日期顺序排成 3 行 10 列，最后一格是今天。
+     不按周对齐——补空格子比不补更难看。深浅只有四张 drawable，RemoteViews 不能按比例染色。
+     这一枚只描述节奏、不评价消费是否合理，所以四档全是茉莉金，不放红也不放绿。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:layout_marginEnd="7dp"
+            android:background="@drawable/widget_dot" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.04"
+            android:maxLines="1"
+            android:text="@string/widget_rhythm_title"
+            android:textColor="@color/widget_brand"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/widget_rhythm_window"
+            android:textColor="@color/widget_ink3"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="9dp"
+        android:layout_weight="1"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <ImageView android:id="@+id/wrh_c00" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c01" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c02" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c03" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c04" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c05" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c06" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c07" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c08" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c09" style="@style/WidgetHeatCell" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="3dp"
+        android:layout_weight="1"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <ImageView android:id="@+id/wrh_c10" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c11" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c12" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c13" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c14" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c15" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c16" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c17" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c18" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c19" style="@style/WidgetHeatCell" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="3dp"
+        android:layout_weight="1"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <ImageView android:id="@+id/wrh_c20" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c21" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c22" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c23" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c24" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c25" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c26" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c27" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <ImageView android:id="@+id/wrh_c28" style="@style/WidgetHeatCell" android:layout_marginEnd="3dp" />
+        <!-- 今天这一格：外面再压一圈墨色描边，深浅与「哪格是今天」两件事互不遮挡。 -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <ImageView
+                android:id="@+id/wrh_c29"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_heat_0"
+                android:contentDescription="@null" />
+
+            <ImageView
+                android:id="@+id/wrh_today_ring"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_comb_today"
+                android:contentDescription="@null" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/wrh_foot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/widget_ink3"
+        android:textSize="10sp" />
+
+    <TextView
+        android:id="@+id/widget_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:includeFontPadding="false"
+        android:maxLines="2"
+        android:text="@string/widget_failure_hint"
+        android:textColor="@color/widget_ink3"
+        android:textSize="9sp"
+        android:visibility="gone" />
+</LinearLayout>

@@ -84,10 +84,11 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
         .flatMapLatest { query ->
             if (!query.ready) emptyFlow()
             else {
-                val queryAt = System.currentTimeMillis()
                 val range = Period.monthRange(query.month, query.startDay)
                 graph.billRepository.observeMonth(query.ledger, range).onEach { snap ->
-                    DebugLog.log("Perf", since("本月查询完成 取数${System.currentTimeMillis() - queryAt}ms · 账本=${query.ledger?.take(6) ?: "全部"} 笔=${snap.summary.billCount}"))
+                    // 这里不记耗时：失效驱动的 Flow 一条订阅会发很多次，拿订阅时刻算差值
+                    // 会把「后台放了 123 秒」写成「取数 123 秒」。真实读写耗时看 [Lock] 探针。
+                    DebugLog.log("Perf", since("本月查询完成 · 账本=${query.ledger?.take(6) ?: "全部"} 笔=${snap.summary.billCount}"))
                 }.flowOn(Dispatchers.Default)
             }
         }
@@ -143,9 +144,8 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
 
     // 抽屉标题的「这本账 N 笔」：单账本 COUNT 走索引，比整表聚合轻得多。
     private val ledgerBillCount = ledgerId.flatMapLatest { ledger ->
-        val queryAt = System.currentTimeMillis()
         graph.billRepository.observeBillCount(ledger).onEach { count ->
-            DebugLog.log("Perf", since("billCount=$count 取数${System.currentTimeMillis() - queryAt}ms · 账本=${ledger?.take(6) ?: "全部(整表扫)"}"))
+            DebugLog.log("Perf", since("billCount=$count · 账本=${ledger?.take(6) ?: "全部(整表扫)"}"))
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, graph.cachedHomeBillCount)
 
@@ -154,9 +154,8 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     val ledgerStats: StateFlow<List<LedgerListItem>> = statsRequested.flatMapLatest { requested ->
         if (!requested) flowOf(emptyList())
         else {
-            val queryAt = System.currentTimeMillis()
             graph.ledgerRepository.items.map { list -> list.filter { !it.ledger.isArchived } }
-                .onEach { DebugLog.log("Perf", since("账本统计(整表聚合)完成 取数${System.currentTimeMillis() - queryAt}ms · ${it.size}本")) }
+                .onEach { DebugLog.log("Perf", since("账本统计(整表聚合)完成 · ${it.size}本")) }
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

@@ -1,5 +1,17 @@
-﻿package io.github.guohangbk.tally.ui.settings
+package io.github.guohangbk.tally.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageInfo
+import android.net.Uri
+import android.os.Build
+import androidx.compose.runtime.rememberCoroutineScope
+import io.github.guohangbk.tally.data.debug.Diagnostics
+import io.github.guohangbk.tally.ui.design.TallyToast
+import io.github.guohangbk.tally.ui.design.ToastTone
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -42,7 +54,36 @@ import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
 
-private const val APP_VERSION = "0.1.0"
+/** 项目主页：站点上有下载、截图与文档入口，App 里只留这一个出口，不再重复一遍链接。 */
+private const val PROJECT_HOME = "https://tally.guohang.asia"
+
+/**
+ * 版本号取 APK 自己的，**不在这里手写一份**——手写的那份一定会被忘掉：
+ * 上一版就停在 `"0.1.0"`，而产物早就换号了，用户报问题时报的版本号是错的。
+ * 括号里带上 versionCode（公式 `major*10000 + minor*100 + patch`），
+ * 这样即使 versionName 是 `0.1.1-dev` 这种也能一眼定位到具体构建。
+ */
+private fun appVersionInfo(context: Context): PackageInfo? = runCatching {
+    @Suppress("DEPRECATION")
+    context.packageManager.getPackageInfo(context.packageName, 0)
+}.getOrNull()
+
+/** 顶栏那枚 chip 只放版本名（`v0.1.1`），放不下也不该显示成一串号。 */
+private fun appVersionLabel(context: Context): String = appVersionInfo(context)?.versionName ?: "-"
+
+/** 关于页那一行带上 versionCode：用户报问题时能一眼定位到具体构建。 */
+private fun appVersion(context: Context): String {
+    val info = appVersionInfo(context) ?: return "-"
+    @Suppress("DEPRECATION")
+    val code = if (Build.VERSION.SDK_INT >= 33) info.longVersionCode else info.versionCode.toLong()
+    return "${info.versionName} ($code)"
+}
+
+/** 打不开浏览器不是错误路径（可能只是没装浏览器），提示一句就够，不添第二套 UI。 */
+private fun openProjectHome(context: Context) {
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_HOME))) }
+        .onFailure { TallyToast.show("打不开浏览器：${it.message ?: "未知原因"}", ToastTone.ERROR) }
+}
 
 /**
  * P20 设置与关于：功能开关 / 小莉 / 外观 / 数据 / 恢复默认 / 关于。
@@ -72,6 +113,35 @@ fun SettingsScreen(
     val colors = tallyColors
     val settings = state.settings
     val assistantOn = settings.assistantEnabled
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var exporting by remember { mutableStateOf(false) }
+
+    // 生成 → 落进公共下载目录 → 直接顶系统分享。诊断包不是留着给自己看的东西，
+    // 发出去才算完成；写不进去（权限被拒 / 空间不足）就地报错，不躲气泡。
+    fun exportDiagnostics() {
+        if (exporting) return
+        exporting = true
+        scope.launch {
+            val outcome = runCatching { withContext(Dispatchers.IO) { Diagnostics.export(context, graph) } }
+            exporting = false
+            outcome.onSuccess { file ->
+                TallyToast.show("诊断包已生成 · ${file.name}", ToastTone.INFO)
+                context.startActivity(
+                    Intent.createChooser(
+                        Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_STREAM, file.uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        },
+                        "发送诊断包",
+                    ),
+                )
+            }.onFailure {
+                TallyToast.show("诊断包没写出去：${it.message ?: "未知原因"}", ToastTone.ERROR)
+            }
+        }
+    }
     var monthStartPicker by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().background(colors.paper)) {
@@ -79,7 +149,7 @@ fun SettingsScreen(
             title = "设置",
             onBack = onBack,
             trailing = {
-                TallyTag(text = "v$APP_VERSION")
+                TallyTag(text = "v${appVersionLabel(context)}")
             },
         )
 
@@ -242,6 +312,14 @@ fun SettingsScreen(
                     iconKey = "recycle",
                     onClick = onOpenRecycle,
                 )
+                SettingsDivider()
+                TallyListRow(
+                    title = "导出诊断包",
+                    subtitle = if (exporting) "正在生成…" else "版本 · 机型 · 日志尾巴 · 不含任何账单内容",
+                    iconKey = "note",
+                    iconSize = 30,
+                    onClick = ::exportDiagnostics,
+                )
             }
 
             SettingsSection(title = "恢复默认") {
@@ -256,7 +334,14 @@ fun SettingsScreen(
             }
 
             SettingsSection(title = "关于") {
-                SettingsInfoRow(label = "版本", value = APP_VERSION)
+                SettingsInfoRow(label = "版本", value = appVersion(context))
+                SettingsDivider()
+                SettingsNavRow(
+                    title = "项目主页",
+                    subtitle = "tally.guohang.asia · 用浏览器打开",
+                    iconKey = "link",
+                    onClick = { openProjectHome(context) },
+                )
                 SettingsDivider()
                 DebugEntry(
                     packageName = LocalContext.current.packageName,

@@ -122,9 +122,11 @@ data class StatsUiState(
 class StatsViewModel(
     private val graph: AppGraph,
     initialLedgerId: String? = null,
+    initialAnchor: Long? = null,
 ) : ViewModel() {
     private val granularity = MutableStateFlow(StatsGranularity.MONTH)
-    private val anchorStart = MutableStateFlow(Period.monthRange(System.currentTimeMillis()).startAt)
+    // 首页翻到哪个月，统计就从那个月起步；没给才按「今天所在月」。
+    private val anchorStart = MutableStateFlow(initialAnchor ?: Period.monthRange(System.currentTimeMillis()).startAt)
     private val rangeEnd = MutableStateFlow<Long?>(null)
     private val bucket = MutableStateFlow<StatsBucket?>(null)
     private val startDay = MutableStateFlow(Period.DEFAULT_START_DAY)
@@ -334,15 +336,29 @@ class StatsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             graph.preferences.settings.collect { aiEntry.value = graph.aiGateway.availability().showsEntry }
         }
-        // 起始日一改，月维度落到新的当前周期；区间仍是空的话也按新起点重算。
+        // 起始日一改，当前看的那段按月重新切一刀。这里必须跟着 anchorStart 走而不是「今天」：
+        // 这个流首次回读也会发一次，写死今天就会把首页带进来的那个月当场冲掉。
         viewModelScope.launch(Dispatchers.IO) {
             graph.settingRepository.monthStartDay.collect { day ->
                 startDay.value = day
-                anchorStart.value = Period.monthRange(System.currentTimeMillis(), day).startAt
+                anchorStart.value = Period.monthRange(anchorStart.value, day).startAt
                 if (granularity.value == StatsGranularity.RANGE && rangeEnd.value == null) {
                     rangeEnd.value = defaultRange(day).endAtExclusive
                 }
             }
+        }
+    }
+
+    /**
+     * 首页带着某个月进来时重新落锚点。统计的 ViewModel 按目的地缓存且不带 key，
+     * 只在构造参数里读一次的话，第二次从首页翻到别的月份进来仍是上一段——所以每次进页调一次。
+     * 区间维度不跟着改：它有自己的预设，不该被首页那一段月份覆盖。
+     */
+    fun anchorAt(anchor: Long) {
+        anchorStart.value = when (granularity.value) {
+            StatsGranularity.MONTH -> Period.monthRange(anchor, startDay.value).startAt
+            StatsGranularity.YEAR -> Period.yearRange(anchor).startAt
+            StatsGranularity.RANGE -> return
         }
     }
 

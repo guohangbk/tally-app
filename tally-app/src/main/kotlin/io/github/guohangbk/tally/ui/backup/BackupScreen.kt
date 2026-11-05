@@ -72,7 +72,7 @@ import java.time.ZoneId
  * 导出的包会写进本机存储目录，路径直接印在屏上；恢复先校验，失败不动现有数据。
  */
 @Composable
-fun BackupScreen(onBack: () -> Unit) {
+fun BackupScreen(onBack: () -> Unit, onRestored: () -> Unit = {}) {
     val graph = rememberAppGraph()
     val context = LocalContext.current
     val viewModel = tallyViewModel { BackupViewModel(graph, context.applicationContext) }
@@ -257,7 +257,7 @@ fun BackupScreen(onBack: () -> Unit) {
         RestoreDialog(
             manifest = pending.manifest,
             busy = state.busy,
-            onConfirm = viewModel::restore,
+            onConfirm = { password -> viewModel.restore(password, onRestored) },
             onDismiss = viewModel::cancelRestore,
         )
     }

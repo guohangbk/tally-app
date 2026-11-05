@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 消费节奏第 0 档：这天没有支出。RemoteViews 不能按比例染色，所以四档就是四张 drawable。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#1A16211D" />
+    <corners android:radius="3dp" />
+</shape>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 「＋ 记一笔」那一格：品牌绿实底，与其余分类格同尺寸，所以它一眼是同一排按钮里的一个。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_brand" />
+    <corners android:radius="10dp" />
+</shape>

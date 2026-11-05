@@ -165,15 +165,21 @@ class BackupViewModel(
         local.value = local.value.copy(pendingRestore = null)
     }
 
-    fun restore(password: String) {
+    /**
+     * 恢复成功后顺带替用户收尾首次引导：库里已经有账本和账单了，
+     * 再把 `onboarding_completed` 留着 false 会让每次冷启动都退回引导页。
+     */
+    fun restore(password: String, onRestored: () -> Unit = {}) {
         val pending = local.value.pendingRestore ?: return
         runAction {
             val result = graph.backupService.restore(pending.bytes, password)
+            graph.preferences.completeOnboarding()
             graph.notifyDataReplaced()
             local.value = local.value.copy(
                 pendingRestore = null,
                 notice = "恢复完成 · ${result.restoredBills} 笔账单",
             )
+            onRestored()
         }
     }
 

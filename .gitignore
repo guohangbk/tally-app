@@ -26,8 +26,11 @@ Thumbs.db
 .tmp/
 .kotlin/
 
-# Room 导出的 schema 是 KSP 编译期产物，不入库；发版时把对应版本冻结到 docs/release/<ver>/db/
+# Room 导出的 schema 是 KSP 编译期产物，不入库；发版时把当前结构冻结到 docs/release/db/
 tally-app/schemas/
+
+# 本地日志：编辑器/宿主程序（Electron 的 crashpad 之类）会把 debug.log 落在工作目录
+*.log
 
 # IDE / 工具本地设置
 .qoder/

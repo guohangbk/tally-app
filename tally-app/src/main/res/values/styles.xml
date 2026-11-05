@@ -9,4 +9,52 @@
         <item name="android:gravity">bottom</item>
         <item name="android:orientation">vertical</item>
     </style>
+
+    <!-- 桌面组件「快速记账」八格版（WG-Q2）：八个槽位同形。尺寸三件套留在布局里——
+         权重放进样式后 lint 认不出 0dp 是带权重的，会报 Suspicious0dp。 -->
+    <style name="WidgetQuickTile">
+        <item name="android:background">@drawable/widget_tile</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+    <style name="WidgetQuickTileBrand" parent="WidgetQuickTile">
+        <item name="android:background">@drawable/widget_tile_brand</item>
+    </style>
+    <style name="WidgetQuickIcon">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:contentDescription">@null</item>
+    </style>
+    <style name="WidgetQuickName">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:gravity">center</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/widget_ink2</item>
+        <item name="android:textSize">9.5sp</item>
+    </style>
+    <style name="WidgetQuickNameBrand" parent="WidgetQuickName">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/widget_on_brand</item>
+    </style>
+
+    <!-- 热力格与蜂迹格（WG-R1 / WG-K1）：RemoteViews 没有网格容器，格子按行分组排，
+         每格同权重同高，深浅由代码换 backgroundResource。 -->
+    <style name="WidgetHeatCell">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/widget_heat_0</item>
+    </style>
+    <style name="WidgetCombCell">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/widget_comb_off</item>
+    </style>
 </resources>

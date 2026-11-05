@@ -8,6 +8,7 @@ import androidx.room.Update
 import io.github.guohangbk.tally.data.db.entity.BillEntity
 import io.github.guohangbk.tally.data.db.query.BillListItemRow
 import io.github.guohangbk.tally.data.db.query.LedgerStat
+import io.github.guohangbk.tally.data.db.query.PlanPeriodRow
 import io.github.guohangbk.tally.data.db.query.RecycleSummary
 import io.github.guohangbk.tally.domain.model.BillSummary
 import io.github.guohangbk.tally.domain.model.RefundEntry
@@ -438,6 +439,34 @@ interface BillDao {
             "AND deleted_at IS NULL LIMIT 1",
     )
     suspend fun findByInstallmentPeriod(planId: String, periodIndex: Int): BillEntity?
+
+    // ---- 幂等判定用的「含回收站」版本 --------------------------------
+    //
+    // 上面两个查询滤掉了 deleted_at，只适合「这一期有没有活账」这种展示用途。
+    // **幂等判定不能只用它们**：同一期在回收站里还留着一行时，只看有效行会判定成
+    // 「还没生成过」，于是插一条新行 —— 而 (rule|plan, period_index) 上是全量唯一索引，
+    // @Insert(REPLACE) 会先把回收站那一行**物理删掉**再插新的，用户就再也找不回那笔了。
+    // 所以判重一律走下面这两个：只要这一期存在过（哪怕已软删），就不再写第二次。
+
+    @Query(
+        "SELECT * FROM bill WHERE recurrence_rule_id = :ruleId AND period_index = :periodIndex LIMIT 1",
+    )
+    suspend fun findRecurringPeriodAny(ruleId: String, periodIndex: Int): BillEntity?
+
+    @Query(
+        "SELECT * FROM bill WHERE installment_plan_id = :planId AND period_index = :periodIndex LIMIT 1",
+    )
+    suspend fun findInstallmentPeriodAny(planId: String, periodIndex: Int): BillEntity?
+
+    /**
+     * 所有分期计划下**有效**账单的期号：明细弹层用它核对「这一期到底入没入账」。
+     * 一次查全部计划，不做成 per-plan 查询——列表页要同时给多张卡算口径。
+     */
+    @Query(
+        "SELECT installment_plan_id AS planId, period_index AS periodIndex FROM bill " +
+            "WHERE installment_plan_id IS NOT NULL AND deleted_at IS NULL",
+    )
+    fun observeDepositedPlanPeriods(): Flow<List<PlanPeriodRow>>
 
     // ---- 退款与原单关联 ------
 

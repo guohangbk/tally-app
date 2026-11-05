@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 2×2「预算 · 圆环占比」（WG-07）：环 = 已用 / 预算额，中心写百分比，下面一整行只一个结论数。
-     环用系统圆形 ProgressBar + ring drawable（轨道 + 按 level 扫出的进度扇区），无预算时换成 setup 那一行。 -->
+<!-- 2×2「预算环（圈内已用）」（WG-B1 / WG-B2）：圈内两行——百分比与「已用」二字，
+     圈下一行写「剩 ¥1,158 / ¥8,000」，超支时整行转陶土并把结论词换成「超」。
+     环本身沿用已上线那枚的三档 ProgressBar 画法（真弧 + useLevel），只是圈内多了一行。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -11,18 +12,22 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="18dp"
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <FrameLayout
-            android:layout_width="5dp"
-            android:layout_height="5dp"
-            android:layout_marginEnd="6dp"
-            android:background="@drawable/widget_dot" />
+        <!-- 超支时这一点要跟着转陶土，所以它是 ImageView 而不是带 background 的 FrameLayout：
+             RemoteViews 只能对 ImageView 换色（setColorFilter）。 -->
+        <ImageView
+            android:id="@+id/wbv_dot"
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:layout_marginEnd="7dp"
+            android:contentDescription="@null"
+            android:src="@drawable/widget_dot" />
 
         <TextView
-            android:id="@+id/widget_ring_title"
+            android:id="@+id/wbv_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif"
@@ -31,7 +36,7 @@
             android:maxLines="1"
             android:text="@string/widget_budget_ring_title"
             android:textColor="@color/widget_brand"
-            android:textSize="10.5sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <FrameLayout
@@ -40,23 +45,23 @@
             android:layout_weight="1" />
 
         <TextView
-            android:id="@+id/widget_period"
+            android:id="@+id/wbv_period"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:includeFontPadding="false"
             android:maxLines="1"
-            android:textColor="@color/widget_ink2"
-            android:textSize="9.5sp" />
+            android:textColor="@color/widget_ink3"
+            android:textSize="10sp" />
     </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/widget_budget_ring_wrap"
+        android:id="@+id/wbv_ring_wrap"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
         <ProgressBar
-            android:id="@+id/widget_budget_ring_green"
+            android:id="@+id/wbv_ring_green"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="84dp"
             android:layout_height="84dp"
@@ -69,7 +74,7 @@
             android:visibility="gone" />
 
         <ProgressBar
-            android:id="@+id/widget_budget_ring_gold"
+            android:id="@+id/wbv_ring_gold"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="84dp"
             android:layout_height="84dp"
@@ -82,7 +87,7 @@
             android:visibility="gone" />
 
         <ProgressBar
-            android:id="@+id/widget_budget_ring_expense"
+            android:id="@+id/wbv_ring_expense"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="84dp"
             android:layout_height="84dp"
@@ -94,41 +99,71 @@
             android:progressDrawable="@drawable/widget_budget_ring_expense"
             android:visibility="gone" />
 
-        <TextView
-            android:id="@+id/widget_budget_percent"
+        <!-- 「已用」两字是给百分比消歧的：光看 86% 不知道是花掉了 86% 还是剩 86%。 -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:fontFamily="serif"
-            android:fontFeatureSettings="'tnum'"
-            android:includeFontPadding="false"
-            android:maxLines="1"
-            android:textColor="@color/widget_ink"
-            android:textSize="20sp" />
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/wbv_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:fontFeatureSettings="'tnum'"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_ink"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/wbv_used"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.06"
+                android:maxLines="1"
+                android:text="@string/widget_budget_used"
+                android:textColor="@color/widget_ink3"
+                android:textSize="9sp" />
+        </LinearLayout>
     </FrameLayout>
 
     <TextView
-        android:id="@+id/widget_budget_left"
+        android:id="@+id/wbv_left"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:fontFamily="serif"
         android:fontFeatureSettings="'tnum'"
         android:gravity="center"
         android:includeFontPadding="false"
         android:maxLines="1"
         android:textColor="@color/widget_ink"
-        android:textSize="15sp" />
+        android:textSize="12sp" />
 
     <TextView
-        android:id="@+id/widget_budget_setup"
+        android:id="@+id/wbv_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/widget_ink3"
+        android:textSize="10sp" />
+
+    <TextView
+        android:id="@+id/wbv_setup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:gravity="center"
-        android:includeFontPadding="false"
         android:maxLines="2"
-        android:text="@string/widget_budget_setup"
+        android:text="@string/widget_budget_unset_short"
         android:textColor="@color/widget_ink3"
         android:textSize="10sp"
         android:visibility="gone" />
@@ -142,6 +177,6 @@
         android:maxLines="2"
         android:text="@string/widget_failure_hint"
         android:textColor="@color/widget_ink3"
-        android:textSize="7.5sp"
+        android:textSize="9sp"
         android:visibility="gone" />
 </LinearLayout>

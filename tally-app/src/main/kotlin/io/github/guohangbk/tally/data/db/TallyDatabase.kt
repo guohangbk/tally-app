@@ -3,6 +3,7 @@ package io.github.guohangbk.tally.data.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import io.github.guohangbk.tally.data.db.dao.AiConfigDao
+import io.github.guohangbk.tally.data.db.dao.DiagnosticDao
 import io.github.guohangbk.tally.data.db.dao.AiConversationDao
 import io.github.guohangbk.tally.data.db.dao.AiMessageAttachmentDao
 import io.github.guohangbk.tally.data.db.dao.AiMessageDao
@@ -80,6 +81,9 @@ abstract class TallyDatabase : RoomDatabase() {
     abstract fun aiReportDao(): AiReportDao
     abstract fun aiMessageAttachmentDao(): AiMessageAttachmentDao
     abstract fun keywordRuleDao(): KeywordRuleDao
+
+    /** 只服务「设置 → 导出诊断包」，不参与任何业务口径。 */
+    abstract fun diagnosticDao(): DiagnosticDao
 
     companion object {
         const val NAME = "tally.db"

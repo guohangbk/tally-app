@@ -235,6 +235,15 @@ data class InstallmentPlanView(
     /** 计划所选分类的图标；二级优先，没有二级就用一级，缺失时卡片退回通用分期图标。 */
     val categoryIconKey: String? = null,
     val periods: List<InstallmentPeriod>,
+    /**
+     * 账上**真的**有账单的那些期号（有效账单，不含回收站）。
+     *
+     * 与 [plan.generatedPeriods] 不是一回事：那是个只增不减的**生成水位**，记录"生成到第几期了"。
+     * 用户把某一期的账单删掉之后水位不会回退，只看水位就会报"已入账"，而账本里并没有那笔钱——
+     * 用户以为记过了，汇总却少算。**所以对外的"已入账"一律以本集合为准**，
+     * 水位只留给排期本身（下一期是哪期、还剩几期）。
+     */
+    val depositedPeriods: Set<Int> = emptySet(),
 ) {
     val status: InstallmentStatus
         get() = runCatching { InstallmentStatus.valueOf(plan.status) }.getOrDefault(InstallmentStatus.ACTIVE)
@@ -246,9 +255,15 @@ data class InstallmentPlanView(
 
     val totalMinor: Long get() = plan.totalMinor
     val generatedPeriods: Int get() = plan.generatedPeriods
+    /** 对外显示的"已入账期数"：账上真实存在的账单条数，不是生成水位。 */
+    val depositedCount: Int get() = depositedPeriods.size
+    /** 有账单生成过、但其中一些已经被删掉的期数——弹层要把这件事说出来。 */
+    val missingPeriods: Int
+        get() = periods.count { it.index <= plan.generatedPeriods && it.index !in depositedPeriods }
     val remainingPeriods: Int get() = (periods.size - plan.generatedPeriods).coerceAtLeast(0)
+    /** 卡片进度条：按**账上真实入账**的期数算，不按生成水位——被删掉的期不该算作已还。 */
     val progress: Float
-        get() = if (periods.isEmpty()) 0f else plan.generatedPeriods.toFloat() / periods.size
+        get() = if (periods.isEmpty()) 0f else depositedCount.toFloat() / periods.size
 
     /** 当前生效年利率（BP）：改过利率时取下一条变更段。 */
     val currentRateBp: Int get() = InstallmentSchedule.rateAt(plan, plan.generatedPeriods + 1)
@@ -256,7 +271,8 @@ data class InstallmentPlanView(
         get() = periods.drop(plan.generatedPeriods).sumOf { it.principalMinor ?: 0L }
     val totalInterestMinor: Long get() = periods.sumOf { it.interestMinor ?: 0L }
     val nextPeriod: InstallmentPeriod? get() = periods.firstOrNull { it.index > plan.generatedPeriods }
-    val paidMinor: Long get() = periods.take(plan.generatedPeriods).sumOf { it.amountMinor }
+    /** 已还金额 = 账上真实存在的那几期的合计（被删掉的期不算进去，否则这笔钱是虚的）。 */
+    val paidMinor: Long get() = periods.filter { it.index in depositedPeriods }.sumOf { it.amountMinor }
 }
 
 /** 报销管理页的三组数据：待报销、已报销、钱迹「报销记录」独立系列。 */

@@ -3,6 +3,18 @@ import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 /**
+ * versionCode 与版本号对齐：`major*10000 + minor*100 + patch`，每段各占两位十进制
+ * （所以 minor / patch 必须 ≤ 99，否则会挤进高一段的位置）。
+ *
+ * 这么写的好处是「版本号的先后顺序」永远等于「数字的大小顺序」，Android 判断
+ * 升级 / 降级不会出错，而且从 versionCode 能直接读出是哪个版本。
+ *
+ * 写成函数而不是一行字面量，是为了避开 lint 的 `AccidentalOctal`——
+ * 表达式以 `0 *` 开头时它会把那个 0 当成八进制前缀。
+ */
+fun tallyVersionCode(major: Int, minor: Int, patch: Int): Int = major * 10000 + minor * 100 + patch
+
+/**
  * 统一签名：debug 与 release 共用一把 keystore，两台机器、两台机器之间覆盖安装不会再撞签名。
  *
  * 那把钥匙（`keystore/tally-unified.jks`）**随仓库一起提交**，用的是 Android 调试钥匙那一套公开常量
@@ -51,8 +63,10 @@ android {
         applicationId = "io.github.guohangbk.tally"
         minSdk = 28
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // 0.1.1 → 101。已发布的 0.1.0 是 versionCode 1（当年没走公式，属历史事实，不再改）。
+        versionCode = tallyVersionCode(major = 0, minor = 1, patch = 1)
+        // 发布提交上用正式号：主仓 HEAD 一直挂 dev 号（那边现在是 0.1.2-dev）。
+        versionName = "0.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -1,0 +1,141 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Tally 塔莉 ·「这个仓库真的能构建」的证明
+#
+# 这个 workflow **不发布任何东西**：不出 Release、不签正式包、不打 tag、不上传
+# 到任何应用商店。它只做一件事——在一台干净的机器上把 `:tally-app:assembleDebug`
+# 跑绿，然后把 debug APK 作为 artifact 挂上来。对陌生人的价值只有一句：
+# 「你克隆下来，不用配任何东西，也能出包」。
+#
+# 为什么零配置就能跑通：仓库自带一把测试签名钥匙
+# `tally-app/keystore/tally-unified.jks`（store/key 口令都是 `android`，别名
+# `androiddebugkey`），而 `tally-app/build.gradle.kts` 的 `signingConfigs` 对这
+# 四项写的默认值就是这些；`local.properties` 不进 git，所以 CI 上它根本不存在，
+# 走的就是这四个默认值。**不需要配任何 secret**。
+#
+# 这个触发分支 `main` 是给公开仓 `guohangbk/tally-app` 的（它的默认分支是 main）；
+# 私有主仓用的是 master 与 release/*，在本仓里这个 workflow 不会自己跑起来。
+#
+# ── 【SDK 平台包 id：实测结论，不是猜的】 ──────────────────────────────────
+#   · 本机 `platforms/android-37.0/package.xml:144` 写的是
+#     `<localPackage path="platforms;android-37.0" obsolete="false">`，
+#     `<display-name>Android SDK Platform 37.0</display-name>`；
+#   · 用 init 脚本打印 AGP 的解析结果，实测 `android.compileSdkVersion = android-37.0`
+#     （`tally-app/build.gradle.kts` 里是 `compileSdk = 37` + `compileSdkMinor = 0`）；
+#   · Google 官方仓库清单里 `platforms;android-37.0` 挂在 `channel-0`（稳定通道），
+#     `<codename>` 为空、`obsolete="false"`。
+#   结论一：包 id 是 **`platforms;android-37.0`**。官方清单里**没有** `platforms;android-37`
+#           这个 id——Android 从 37 起平台包按「major.minor」命名，所以没有不带 `.0` 的写法。
+#   结论二：**不需要 `--channel=` 参数**。API 37 已是正式版：本机
+#           `platforms/android-37.0/build.prop` 里 `ro.build.version.codename=REL`、
+#           `ro.build.version.preview_sdk=0`；`source.properties` 里
+#           `AndroidVersion.PreviewSdkInt=0`、`AndroidVersion.CodeName=` 为空。
+#           预览版才会带 codename（如 CANARY / CinnamonBun）并需要 `--channel=`。
+#
+# ── 【build-tools】 ───────────────────────────────────────────────────────
+#   同一个 init 脚本探到 `android.buildToolsVersion = 36.0.0`；本机
+#   `build-tools/36.0.0` 正是与 `platforms;android-37.0` 同一分钟装上的那一个，
+#   官方清单里它同样在 `channel-0`。所以这里显式装 36.0.0。万一 AGP 还想要别的
+#   组件，许可已经接受，它会自己补下来（`android.builder.sdkDownload` 默认开）。
+#
+# ── 【Gradle 发行包走哪个源】 ──────────────────────────────────────────────
+#   `gradle/wrapper/gradle-wrapper.properties` 的 `distributionUrl` 指向腾讯镜像
+#   （为国内网络），GitHub runner 在国外，拉它会慢甚至超时，所以下一步先把它改回
+#   官方 `services.gradle.org`。已实测该地址可用：
+#   `https://services.gradle.org/distributions/gradle-9.6.0-bin.zip` → 200，
+#   140,681,093 字节。
+#   wrapper jar 本体也核过了：它的 sha256 是
+#   `497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7`，
+#   与官方 `gradle-9.6.0-wrapper.jar.sha256` 完全一致——所以
+#   `gradle/actions/setup-gradle@v4` 自带的 wrapper 校验能过，不需要关掉它。
+#
+# ── 【为什么只跑 assembleDebug】 ──────────────────────────────────────────
+#   README 里那条 `:tally-app:build` 还含 lint 与 release 打包，在 CI 上是双倍
+#   时间，而对「这个仓库能不能构建」这句话没有增量信息。要证明能构建，
+#   `assembleDebug` 足够了。
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 只读即可：这个 job 不写仓库、不发 Release、不碰任何 secret。
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  assemble-debug:
+    name: assembleDebug（JDK 21 + android-37.0）
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      # `gradle/gradle-daemon-jvm.properties` 里 `toolchainVersion=21`，另外还带了
+      # foojay 的自动下载地址。CI 上自己装好 JDK 21 更稳也更快：Gradle 的守护进程
+      # 条件会先看 JAVA_HOME，命中就不必再走网络去下。
+      - name: 装 JDK 21（Temurin）
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: 装 Android 命令行工具
+        uses: android-actions/setup-android@v3
+
+      - name: 装平台包与 build-tools
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT" -path '*/cmdline-tools/*/bin/sdkmanager' | sort | tail -n1)"
+          fi
+          echo "SDK_ROOT   = $SDK_ROOT"
+          echo "SDKMANAGER = $SDKMANAGER"
+
+          # 先把仓库里 android-37 相关的条目打进日志：哪天包名变了，红色 job 里
+          # 直接就能看到该把下面那行改成什么，不用再猜。
+          "$SDKMANAGER" --list | grep -E "platforms;android-37|build-tools;36" || true
+
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          # 不需要 --channel=：见文件头「SDK 平台包 id」一节。
+          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0" "platform-tools"
+
+      # 先换源、再让 setup-gradle 接手：它读的就是 wrapper properties，
+      # 顺序反了它会照着腾讯镜像去解析与预热缓存。
+      - name: Gradle 发行包换回官方源
+        run: |
+          set -euo pipefail
+          sed -i 's#https://mirrors.cloud.tencent.com/gradle/#https://services.gradle.org/distributions/#g' \
+            gradle/wrapper/gradle-wrapper.properties
+          grep '^distributionUrl' gradle/wrapper/gradle-wrapper.properties
+
+      - name: Gradle 依赖缓存
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 构建 debug APK
+        run: ./gradlew :tally-app:assembleDebug --stacktrace
+
+      - name: 上传 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tally-app-debug-apk
+          # 产物路径与 README「本地构建」一节写的一致。
+          path: tally-app/build/outputs/apk/debug/tally-app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      # debug 包与 Release 页上的正式包用的是同一把钥匙、同一个包名，所以这个
+      # sha256 同样值得看一眼：它只证明「这次 CI 真出了这个文件」，不是说它等于
+      # Release 页那个包的哈希。
+      - name: 把 debug APK 的 sha256 写进日志
+        run: sha256sum tally-app/build/outputs/apk/debug/tally-app-debug.apk

@@ -7,8 +7,7 @@
     <string name="shortcut_stats">统计</string>
     <string name="shortcut_stats_long">查看统计</string>
 
-    <!-- 桌面组件（WG-06/07/08）：组件里的文字走资源，深色模式由 values-night 的同一组颜色接管。 -->
-    <string name="widget_budget_setup">未设预算 · 点这里设置</string>
+    <!-- 桌面组件共用的文字：深色模式由 values-night 的同一组颜色接管。 -->
     <string name="widget_currency">¥</string>
     <string name="widget_add_bill">记一笔</string>
     <string name="widget_foot_today">今天</string>
@@ -16,22 +15,52 @@
     <string name="widget_period_stale">%1$s · 未更新</string>
     <string name="widget_month_tag">%1$d 月</string>
 
-    <!-- 新增三枚桌面组件：近七日柱状 / 预算圆环 / 当日当月 -->
+    <!-- 近七日柱状图 -->
     <string name="widget_seven_day_label">近七日</string>
     <string name="widget_seven_day_description">最近 7 天支出柱状图，点柱条看统计</string>
-    <string name="widget_budget_label">预算</string>
-    <string name="widget_budget_description">本月预算已用占比与剩余，点开看预算</string>
-    <string name="widget_day_month_label">当日当月</string>
-    <string name="widget_day_month_description">今天与本月支出，点 ＋ 记一笔</string>
     <string name="widget_seven_day_header">Tally · 近七日支出</string>
     <string name="widget_sd_total_label">合计</string>
     <string name="widget_sd_avg_label">日均</string>
     <string name="widget_sd_period_range">%1$s – %2$s</string>
+
+    <!-- 三期桌面组件（docs/v3 桌面组件板）：全部新增，与近七日并存，不动它们的布局与取数。 -->
+    <string name="widget_flow_s_label">收支速览</string>
+    <string name="widget_flow_s_description">今日支出大字，下面给本月收支两行</string>
+    <string name="widget_flow_m_label">收支速览（四格）</string>
+    <string name="widget_flow_m_description">今日与本月、支出与收入四格同权重</string>
+    <string name="widget_quick_s_label">快速记账</string>
+    <string name="widget_quick_s_description">最近三十天用得最多的三个分类，点一下直接进记账页</string>
+    <string name="widget_quick_m_label">快速记账（八格）</string>
+    <string name="widget_quick_m_description">两行四列八个分类，给平板与大桌面</string>
+    <string name="widget_budget_ring_v2_label">预算环</string>
+    <string name="widget_budget_ring_v2_description">圈内百分比与「已用」，圈下写剩多少与总额</string>
     <string name="widget_budget_ring_title">本月预算</string>
     <string name="widget_budget_percent_fmt">%1$d%%</string>
-    <string name="widget_budget_remaining">剩余 %1$s</string>
-    <string name="widget_budget_over">超 %1$s</string>
-    <string name="widget_today_expense_label">今日支出</string>
     <string name="widget_month_expense_label">本月支出</string>
-    <string name="widget_foot_stale_suffix">未更新</string>
+    <string name="widget_rhythm_label">消费节奏</string>
+    <string name="widget_rhythm_description">近三十天每日支出的深浅，最后一格是今天</string>
+    <string name="widget_streak_label">记账连续记录</string>
+    <string name="widget_streak_description">连续记账天数与近二十八天的记录格</string>
+
+    <string name="widget_today_label">今日</string>
+    <string name="widget_today_expense_short">今日支出</string>
+    <string name="widget_today_income_label">今日收入</string>
+    <string name="widget_month_income_label">本月收入</string>
+    <string name="widget_flow_title">收支速览</string>
+    <string name="widget_quick_title">快速记账</string>
+    <string name="widget_rhythm_title">消费节奏</string>
+    <string name="widget_rhythm_window">近 30 天</string>
+    <string name="widget_rhythm_scale">深色为该日支出相对偏高</string>
+    <string name="widget_rhythm_flat">比上周平稳</string>
+    <string name="widget_rhythm_up">比上周偏高</string>
+    <string name="widget_rhythm_down">比上周偏低</string>
+    <string name="widget_streak_title">连续记账</string>
+    <string name="widget_streak_unit">天</string>
+    <string name="widget_streak_active">28 天里记了 %1$d 天</string>
+    <string name="widget_budget_used">已用</string>
+    <string name="widget_budget_left_fmt">剩 %1$s / %2$s</string>
+    <string name="widget_budget_over_fmt">超 %1$s / %2$s</string>
+    <string name="widget_budget_days_left">%1$s · 剩 %2$d 天</string>
+    <string name="widget_budget_days_over">%1$s · 已超 %2$d%%</string>
+    <string name="widget_budget_unset_short">未设预算 · 点这里设置</string>
 </resources>

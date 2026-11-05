@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.data.repository
 
+import io.github.guohangbk.tally.data.db.dao.BillDao
 import io.github.guohangbk.tally.data.db.dao.CategoryDao
 import io.github.guohangbk.tally.data.db.dao.InstallmentPlanDao
 import io.github.guohangbk.tally.data.db.dao.LedgerDao
@@ -29,6 +30,8 @@ class InstallmentRepository(
     private val planDao: InstallmentPlanDao,
     private val ledgerDao: LedgerDao,
     private val categoryDao: CategoryDao,
+    /** 只读用途：查这一期到底有没有真实账单（生成水位不等于账上有钱）。 */
+    private val billDao: BillDao,
     private val preferences: TallyPreferences,
     private val now: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
@@ -38,9 +41,12 @@ class InstallmentRepository(
         planDao.observeAll(),
         ledgerDao.observeActive(),
         categoryDao.observeForNames(),
-    ) { plans, ledgers, categories ->
+        billDao.observeDepositedPlanPeriods(),
+    ) { plans, ledgers, categories, deposited ->
         val ledgerNames = ledgers.associate { it.id to it.name }
         val categoryNames = categories.associateBy { it.id }
+        val depositedByPlan = deposited.groupBy({ it.planId }, { it.periodIndex })
+            .mapValues { (_, indexes) -> indexes.toSet() }
         plans.map { plan ->
             InstallmentPlanView(
                 plan = plan,
@@ -49,6 +55,7 @@ class InstallmentRepository(
                 categoryIconKey = categoryNames[plan.categoryL2Id]?.iconKey
                     ?: categoryNames[plan.categoryL1Id]?.iconKey,
                 periods = InstallmentSchedule.periods(plan, zoneId()),
+                depositedPeriods = depositedByPlan[plan.id].orEmpty(),
             )
         }
     }

@@ -242,7 +242,9 @@ private fun InstallmentCard(
     val colors = tallyColors
     val plan = view.plan
     val settled = view.status != InstallmentStatus.ACTIVE
-    val generated = plan.generatedPeriods
+    // 卡片大数字与进度条都按「账上真实入账的期数」算，不按生成水位——
+    // 否则删掉某一期之后，卡片仍报"已还 N 期"，而账本里并没有那笔钱
+    val deposited = view.depositedCount
     val total = view.periods.size
 
     TallyCard(
@@ -273,7 +275,7 @@ private fun InstallmentCard(
                 Spacer(Modifier.width(6.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        "$generated/$total",
+                        "$deposited/$total",
                         style = TallyType.moneyBody.copy(fontSize = 22.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
                         color = if (settled) colors.ink3 else colors.ink,
                     )
@@ -292,7 +294,8 @@ private fun InstallmentCard(
                     TallyTag(text = text, tone = tone)
                 }
                 Spacer(Modifier.weight(1f))
-                Text("已入账 $generated 期", fontSize = 10.5.sp, lineHeight = 13.1.sp, color = colors.ink3)
+                // 「已入账」按账上真实存在的账单数说，不按生成水位——被删掉的期不能算进来
+                Text("已入账 ${view.depositedCount} 期", fontSize = 10.5.sp, lineHeight = 13.1.sp, color = colors.ink3)
             }
 
             Spacer(Modifier.height(7.dp))
@@ -391,7 +394,7 @@ private fun InstallmentDetailSheet(
                     Text(view.sheetSubline(), fontSize = 11.sp, lineHeight = 13.8.sp, color = colors.ink3, maxLines = 1)
                 }
                 Text(
-                    "${plan.generatedPeriods} / ${view.periods.size} 期",
+                    "${view.depositedCount} / ${view.periods.size} 期",
                     fontSize = 11.sp, lineHeight = 13.8.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.ink2,
@@ -475,7 +478,7 @@ private fun InstallmentPlanView.metricCells(today: LocalDate): List<Metric> {
     val dueNote = next?.let {
         val status = if (it.dueAt <= today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()) "已到期" else "未到期"
         "${monthDay(it.dueAt)} · $status"
-    } ?: "全部已入账"
+    } ?: if (depositedCount >= periods.size) "全部已入账" else "已入账 $depositedCount / ${periods.size} 期"
     val first = Metric(
         label = "本期应还",
         value = formatAmount(next?.amountMinor ?: 0L),
@@ -488,7 +491,7 @@ private fun InstallmentPlanView.metricCells(today: LocalDate): List<Metric> {
             Metric(
                 label = "已还金额",
                 value = formatAmount(paidMinor),
-                note = "已入账 ${plan.generatedPeriods} 期",
+                note = "已入账 ${depositedCount} 期",
                 tone = MetricTone.BRAND,
             ),
             Metric(
@@ -578,7 +581,11 @@ private fun PeriodTable(view: InstallmentPlanView) {
             TableHead("状态", Modifier.width(56.dp))
         }
         view.periods.forEach { period ->
-            val done = period.index <= view.plan.generatedPeriods
+            val deposited = period.index in view.depositedPeriods
+            // 生成过、但账上那笔已经不在了（用户删了它）：不能继续报「已入账」，
+            // 否则明细说有钱、账本里没这笔，汇总就悄悄少算。它也不会被自动补记——
+            // 用户删掉某一期就是「这一期不要了」，补执行不该把它顶回来。
+            val removed = !deposited && period.index <= view.plan.generatedPeriods
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                 TableCell(period.index.toString(), Modifier.width(24.dp), colors.ink3)
                 TableCell(shortDate(period.dueAt), Modifier.weight(1f), colors.ink2)
@@ -588,12 +595,13 @@ private fun PeriodTable(view: InstallmentPlanView) {
                 }
                 TableCell(formatAmount(period.amountMinor), Modifier.width(74.dp), colors.ink)
                 val label = when {
-                    done -> "已入账"
+                    deposited -> "已入账"
+                    removed -> "已删除"
                     period.amountMinor == lastAmount -> "末期"
                     period.isFee -> "手续费"
                     else -> "待生成"
                 }
-                TableCell(label, Modifier.width(56.dp), if (done) colors.brand else colors.ink3)
+                TableCell(label, Modifier.width(56.dp), if (deposited) colors.brand else colors.ink2)
             }
         }
     }

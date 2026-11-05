@@ -336,7 +336,11 @@ class BillRepository(
                 isRefund = isRefund,
                 refundOfBillId = draft.refundOfBillId,
                 excludedFromStats = draft.excludedFromStats,
-                source = draft.source.name,
+                // source 是「这笔账是怎么进来的」，属于既成事实，**编辑不该改它**。
+                // 编辑页构造 BillDraft 时不带 source，而 BillDraft.source 默认 MANUAL——
+                // 照着 draft 抄就会把周期 / 分期 / 语音 / 截图来的账单洗成「手动」，
+                // 按来源筛选直接漏单（坑二）。所以更新分支一律保留原值。
+                source = existing.source,
                 externalId = draft.externalId ?: existing.externalId,
                 fingerprint = draft.fingerprint ?: existing.fingerprint,
                 updatedAt = timestamp,
@@ -382,12 +386,18 @@ class BillRepository(
 
     /**
      * 周期/分期生成的账单入口。幂等键是 (rule|plan, period_index)：
-     * 已存在同期的有效账单时直接返回 null，补执行重复触发也不会多记一笔。
+     * 已存在同期的**任何**账单时直接返回 null，补执行重复触发也不会多记一笔。
+     *
+     * 判重用的是「含回收站」的查询（`findXxxPeriodAny`），不是只查有效行的那个：
+     * 这一期在回收站里还留着一行时，只看有效行会以为没生成过，于是插一条新行——
+     * 而 (rule|plan, period_index) 上是全量唯一索引（不带 `deleted_at`），
+     * `@Insert(REPLACE)` 会先把回收站那一行**物理删掉**再插新的，那笔就永久没了。
+     * 用户删掉某一期就是「这一期不要了」，补执行不该把它顶掉、也不该再补一遍。
      */
     suspend fun insertGenerated(spec: GeneratedBillSpec): String? {
         val duplicate = when {
-            spec.recurrenceRuleId != null -> billDao.findByRecurringPeriod(spec.recurrenceRuleId, spec.periodIndex)
-            spec.installmentPlanId != null -> billDao.findByInstallmentPeriod(spec.installmentPlanId, spec.periodIndex)
+            spec.recurrenceRuleId != null -> billDao.findRecurringPeriodAny(spec.recurrenceRuleId, spec.periodIndex)
+            spec.installmentPlanId != null -> billDao.findInstallmentPeriodAny(spec.installmentPlanId, spec.periodIndex)
             else -> null
         }
         if (duplicate != null) return null

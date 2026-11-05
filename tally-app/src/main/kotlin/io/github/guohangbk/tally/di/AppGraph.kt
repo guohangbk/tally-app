@@ -122,6 +122,8 @@ class AppGraph(
         planDao = database.installmentPlanDao(),
         ledgerDao = database.ledgerDao(),
         categoryDao = database.categoryDao(),
+        // 明细弹层要说清「这一期到底入没入账」，得回 bill 表看真实账单，不能只信生成水位
+        billDao = database.billDao(),
         preferences = preferences,
     )
 
@@ -364,6 +366,32 @@ class AppGraph(
             // Debug 构建先自检结构漂移：改实体但 version 仍是 1 时，旧库自动换结构并搬数据。
             // Release 不进这里——hash 对不上照旧抛异常，绝不清库。
             DevSchemaHeal.prepareIfNeeded(context)
+            /**
+             * 排锁探针：包住 Room 的两个 executor，只在「排队」或「执行」超过阈值时写一行。
+             * 查的是"读被谁挡住"——事务单线程串行，一条长事务会让后面所有读写一起等，
+             * 光看业务侧的取数耗时只能看到"都慢"，看不到是谁持着锁。
+             * 这也是全应用唯一可信的读写耗时来源：业务侧那些 Flow 是失效驱动的，一条订阅会发很多次。
+             */
+            val probeMs = 200L
+            fun probe(name: String, delegate: java.util.concurrent.Executor): java.util.concurrent.Executor =
+                java.util.concurrent.Executor { task ->
+                    val queued = System.currentTimeMillis()
+                    delegate.execute {
+                        val started = System.currentTimeMillis()
+                        try {
+                            task.run()
+                        } finally {
+                            val waited = started - queued
+                            val ran = System.currentTimeMillis() - started
+                            if (waited > probeMs || ran > probeMs) {
+                                io.github.guohangbk.tally.data.debug.DebugLog.log(
+                                    "Lock",
+                                    "$name 排队${waited}ms 执行${ran}ms",
+                                )
+                            }
+                        }
+                    }
+                }
             return Room.databaseBuilder(context, TallyDatabase::class.java, TallyDatabase.NAME)
                 // 刻意不配 `fallbackToDestructiveMigration`：打开会抛异常，而不是静默清库。
                 // version 一直是 1，改实体直接改 entity、不走迁移路径；Release 里 Room 打开仍会比对编译期
@@ -373,8 +401,8 @@ class AppGraph(
                 // 读取并行：Room 不显式配置时，会把「查询」和「事务」都压在同一个单线程 IO executor 上。
                 // 首页同时有本月 / 账本统计 / 分类树等多条 Flow，全在这一根线程上排队，一条慢就全慢。
                 // 事务必须单线程（保证写一致），查询给一个固定线程池并行跑，冷启动首屏明显更快。
-                .setTransactionExecutor(java.util.concurrent.Executors.newSingleThreadExecutor())
-                .setQueryExecutor(java.util.concurrent.Executors.newFixedThreadPool(4))
+                .setTransactionExecutor(probe("事务", java.util.concurrent.Executors.newSingleThreadExecutor()))
+                .setQueryExecutor(probe("查询", java.util.concurrent.Executors.newFixedThreadPool(4)))
                 .build()
         }
     }

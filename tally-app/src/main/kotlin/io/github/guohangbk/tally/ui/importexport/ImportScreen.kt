@@ -65,7 +65,7 @@ import kotlinx.coroutines.launch
  * 主操作固定在底部通栏——「下一步 · 校验表头 / 开始导入」，不在页面中间摆一串按钮。
  */
 @Composable
-fun ImportScreen(onBack: () -> Unit) {
+fun ImportScreen(onBack: () -> Unit, onGoHome: () -> Unit = onBack) {
     val graph = rememberAppGraph()
     val context = LocalContext.current
     val viewModel = tallyViewModel { ImportViewModel(graph, context.applicationContext) }
@@ -124,7 +124,9 @@ fun ImportScreen(onBack: () -> Unit) {
                         else askDuplicates = true
                     },
                 )
-                else -> ReportSection(state, onDone = { advanced = false; viewModel.reset() }, onBack = onBack)
+                // 「返回账单」得真的回到账单：这一页可能是从引导页 push 上来的，
+                // 单纯 popBackStack 会把他退回引导页，那颗按钮就在骗人。
+                else -> ReportSection(state, onDone = { advanced = false; viewModel.reset() }, onBack = onGoHome)
             }
             Spacer(Modifier.height(20.dp))
         }

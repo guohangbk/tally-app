@@ -30,6 +30,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -151,6 +152,7 @@ private fun statsTileColors(index: Int): Pair<Color, Color> {
 @Composable
 fun TallyStatsScreen(
     initialLedgerId: String? = null,
+    initialAnchor: Long? = null,
     onBack: () -> Unit,
     onOpenReimbursement: () -> Unit,
     onAskAssistant: (String) -> Unit = {},
@@ -164,6 +166,8 @@ fun TallyStatsScreen(
     // 预算段在概览之后：只取总额与分类预算前两条，与首页、组件同一份聚合。
     val budget by viewModel.budgetSummary.collectAsStateWithLifecycle()
     val colors = tallyColors
+    // 首页翻到哪个月，这一页就从那个月起步（ViewModel 按目的地缓存，构造参数只吃第一次）。
+    LaunchedEffect(initialAnchor) { initialAnchor?.let(viewModel::anchorAt) }
     val snapshot = state.snapshot
     var periodPicker by remember { mutableStateOf(false) }
     var rangePicker by remember { mutableStateOf(false) }

@@ -139,7 +139,13 @@ class ImportViewModel(
                     sourceBytes = bytes,
                 )
             }
-            local.value = local.value.copy(busy = false, outcome = outcome, error = outcome.report.message.takeIf { outcome.rolledBack })
+            local.value = local.value.copy(
+                busy = false,
+                outcome = outcome,
+                error = outcome.report.message.takeIf { outcome.rolledBack },
+            )
+            // 写进去了就是有账，首次引导该替他结掉；回滚的那次不算，留在引导页让他重来。
+            if (!outcome.rolledBack) graph.preferences.completeOnboarding()
         }
     }
 

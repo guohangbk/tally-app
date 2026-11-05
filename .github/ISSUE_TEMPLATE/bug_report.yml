@@ -1,0 +1,118 @@
+name: 缺陷报告
+description: 装了之后某个地方不对/崩了/数字不对。请把版本号写在标题里，方便一眼定位。
+title: "[缺陷] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        填之前先花十秒看一眼 [Releases 页](https://github.com/guohangbk/tally-app/releases) 最新那条——如果你装的不是最新的，先升上去试试，很多问题在最新一版已经改掉了。
+
+        ⚠️ **安全问题不要开公开 issue**，请走 [私密漏洞报告](https://github.com/guohangbk/tally-app/security/advisories/new)（见 [SECURITY.md](https://github.com/guohangbk/tally-app/blob/main/SECURITY.md)）。
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本号
+      description: "App 里「设置 → 关于 → 版本」那一行的原文，形如 `0.1.0 (1)`。括号里是 versionCode，两个都要带上——只写「最新版」等于没写。"
+      placeholder: "0.1.0 (1)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: 这个包是怎么来的
+      options:
+        - Releases 页下载的安装包
+        - 自己从源码 assembleDebug 出来的
+        - 自己从源码 assembleRelease 出来的
+        - 其它（在下面说明）
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 机型
+      description: "品牌 + 型号。同一版代码在不同厂商 ROM 上表现经常不一样，这个信息不能省。"
+      placeholder: "小米 14 / Pixel 9 / 华为 Mate 60"
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Android 版本
+      description: "系统里「设置 → 关于手机 → 版本」看，形如 Android 15。懒得抄就直接从下面的诊断包里拷 `[dev]` 段的 `android` 与 `abis` 两行。"
+      placeholder: "Android 15 (API 35)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: assistant
+    attributes:
+      label: 这次有没有用到小莉（AI）
+      description: "小莉是可选功能，开关在「设置 → 小莉（AI）」。它开着时走的网络链路和别处完全不同，所以要分开问。"
+      options:
+        - 没用到（小莉开关是关的）
+        - 小莉开着，但这条问题跟它无关
+        - 问题就出在小莉的链路上（对话抽账 / 周期分析 / 连接测试）
+        - 说不准
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: 出了什么事
+      description: "尽量具体。「统计页某天少了一笔」「导出后金额列错位」「点保存直接闪退」这样的描述能直接开工；「不好用」不能。"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: "从打开 App 开始，一步一步写。第几步开始不对，写清第几步。"
+      placeholder: |
+        1. 打开 App，停在首页
+        2. 点 ＋ 记一笔 18.00，分类选「餐饮」，保存
+        3. 进统计页选本月
+        4. 期望看到 18.00，实际显示 0.00
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你本来期待什么
+      description: 可选。如果和「实际发生」差别很微妙，这里写一句很有用。
+    validations:
+      required: false
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: 诊断包（可选，但强烈建议贴）
+      description: |
+        App 里「设置 → 数据 → 导出诊断包」会写一份 txt 到手机的 `下载/Tally/`，并直接顶起系统分享，把内容贴到下面就行。
+
+        它**不含**账单金额、备注、分类名、账本名与图片，也不含 API Key 与网关地址——行数只说明「有多少条」，不含任何一条的内容，所以可以放心贴。里面还会带崩溃留档与应用内打点，排查崩溃时基本靠它。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我贴的版本号是当前装的这一版的原文（不是「最新版」三个字）
+          required: true
+        - label: 除了诊断包以外，我没有贴任何含账单金额、备注或截图的内容
+          required: true
+        - label: 这不是安全问题（安全问题走 Security → Advisories → Report a vulnerability）
+          required: true
+        - label: 我知道这是自用为主的个人项目，作者会看，但不承诺响应时间
+          required: true

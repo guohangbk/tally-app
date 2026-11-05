@@ -17,23 +17,20 @@ import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.Period
 import io.github.guohangbk.tally.domain.PeriodRange
 import io.github.guohangbk.tally.domain.formatAmount
-import io.github.guohangbk.tally.domain.model.BudgetPeriod
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
 
 /**
- * 三枚桌面组件共用一次刷新（WG-06 近七日 / WG-07 预算环 / WG-08 当日当月）。
+ * 「近七日」桌面组件（WG-06，4×2）的取数与刷新。
  *
- * 组件只读：算出「今天 + 近 7 天 + 本月支出」与「本月总额预算」后写进 RemoteViews，不碰任何写库路径。
+ * 组件只读：算出含今天的 7 天日支出后写进 RemoteViews，不碰任何写库路径。
  * 刷新只有三个来源——组件自己被系统要求更新、App 回到前台、每日那次
  * [io.github.guohangbk.tally.work.AutomationWorker]。桌面上没有组件时一次库都不查。
  *
- * 取数失败与「今天真的没花钱」必须分开：失败时用 SharedPreferences 里上一次成功的数字并标
+ * 取数失败与「这几天真的没花钱」必须分开：失败时用 SharedPreferences 里上一次成功的数字并标
  * 「· 未更新」，一次都没成功过才显示「—」与「数据没读到」——绝不拿 ¥0.00 冒充（WG-04）。
  */
 object TallyWidgets {
@@ -43,7 +40,7 @@ object TallyWidgets {
     fun refresh(context: Context) {
         val app = context.applicationContext
         val manager = AppWidgetManager.getInstance(app)
-        if (!hasInstances(app, manager)) return
+        if (manager.getAppWidgetIds(ComponentName(app, SevenDayWidgetProvider::class.java)).isEmpty()) return
         scope.launch { runCatching { updateAll(app) } }
     }
 
@@ -51,135 +48,43 @@ object TallyWidgets {
         val app = context.applicationContext
         val graph = TallyApplication.from(app).graph
         val manager = AppWidgetManager.getInstance(app)
-        val sevenIds = manager.getAppWidgetIds(ComponentName(app, SevenDayWidgetProvider::class.java))
-        val dayMonthIds = manager.getAppWidgetIds(ComponentName(app, DayMonthWidgetProvider::class.java))
-        val budgetIds = manager.getAppWidgetIds(ComponentName(app, BudgetWidgetProvider::class.java))
-        if (sevenIds.isEmpty() && dayMonthIds.isEmpty() && budgetIds.isEmpty()) return
+        val ids = manager.getAppWidgetIds(ComponentName(app, SevenDayWidgetProvider::class.java))
+        if (ids.isEmpty()) return
 
-        val now = System.currentTimeMillis()
-        // 每月起始日读不到就整轮当失败：月界算错比显示「未更新」更糟。
-        val startDay = runCatching { graph.settingRepository.monthStartDay() }.getOrNull()
-        val monthRange = startDay?.let { Period.monthRange(now, it) }
-
-        // 「近七日 / 当日当月」共用今天那一份数据，只 load 一次。
-        if ((sevenIds + dayMonthIds).isNotEmpty()) {
-            val fresh = if (monthRange == null) null else runCatching { loadToday(graph, now, monthRange) }.getOrNull()
-            val cached = readToday(app)
-            if (fresh != null) writeToday(app, fresh)
-            val data = fresh ?: cached
-            val stale = fresh == null && cached != null
-            if (sevenIds.isNotEmpty()) {
-                val views = sevenDayViews(app, data, stale)
-                sevenIds.forEach { manager.updateAppWidget(it, views) }
-            }
-            if (dayMonthIds.isNotEmpty()) {
-                val views = dayMonthViews(app, data, stale)
-                dayMonthIds.forEach { manager.updateAppWidget(it, views) }
-            }
-        }
-        // 预算环那一份本月数据（含预算）单独 load。
-        if (budgetIds.isNotEmpty()) {
-            val fresh = if (monthRange == null || startDay == null) null else runCatching { loadMonth(app, graph, monthRange, startDay) }.getOrNull()
-            val cached = readMonth(app)
-            if (fresh != null) writeMonth(app, fresh)
-            val data = fresh ?: cached
-            val stale = fresh == null && cached != null
-            val views = budgetViews(app, data, stale)
-            budgetIds.forEach { manager.updateAppWidget(it, views) }
-        }
+        val fresh = runCatching { loadWeek(graph, System.currentTimeMillis()) }.getOrNull()
+        val cached = readWeek(app)
+        if (fresh != null) writeWeek(app, fresh)
+        val data = fresh ?: cached
+        val views = sevenDayViews(app, data, stale = fresh == null && cached != null)
+        ids.forEach { manager.updateAppWidget(it, views) }
     }
 
-    private fun hasInstances(app: Context, manager: AppWidgetManager): Boolean =
-        listOf(
-            SevenDayWidgetProvider::class.java,
-            DayMonthWidgetProvider::class.java,
-            BudgetWidgetProvider::class.java,
-        ).any { manager.getAppWidgetIds(ComponentName(app, it)).isNotEmpty() }
-
-    private data class TodayData(
-        val todayExpense: Long,
-        val todayCount: Int,
-        val monthExpense: Long,
-        /** 今天的 0 点时间戳，用来推“近七日”每一列的日期标签。 */
+    /** 近七日这一份数据：含今天的 7 天支出（从左到右），以及点进统计要带的那本账。 */
+    private data class WeekData(
+        /** 今天的 0 点时间戳，用来推每一列的日期标签。 */
         val todayStart: Long,
-        /** 含今天的 7 天支出，从左到右。 */
         val week: List<Long>,
         /** 这一份数算的是哪本账：点组件进统计要带同一本，否则组件与统计各说一个数。 */
         val ledgerId: String?,
     )
 
-    /** 预算环（WG-07）那一份本月数据：旧版概览的收支结余三栏随组件一起退了。 */
-    private data class MonthData(
-        val tag: String,
-        /** 预算条：没有设预算时 `hasBudget` 为 false，整格换成「未设预算 · 点这里设置」。 */
-        val hasBudget: Boolean = false,
-        val budgetAmount: Long = 0L,
-        val budgetUsed: Long = 0L,
-        /** 已用百分比，超支时大于 100。 */
-        val budgetRatio: Int = 0,
-        val budgetAlert: Int = 80,
-        val budgetRemainingDays: Int = 0,
-    )
-
-    private suspend fun loadToday(graph: AppGraph, now: Long, monthRange: PeriodRange): TodayData {
+    private suspend fun loadWeek(graph: AppGraph, now: Long): WeekData {
         val todayStart = Period.dayRange(now, now).startAt
         val ledgerId = graph.billRepository.defaultLedgerId()
         val weekRange = PeriodRange(Period.shiftDays(todayStart, -6), Period.shiftDays(todayStart, 1))
         val week = graph.billRepository.observeMonth(ledgerId, weekRange).first()
-        val month = graph.billRepository.observeMonth(ledgerId, monthRange).first()
         val byDay = week.days.associateBy { it.dayStart }
-        val today = byDay[todayStart]
         val weekValues = (0..6).map { offset ->
             byDay[Period.shiftDays(todayStart, (offset - 6).toLong())]?.expenseMinor ?: 0L
         }
-        return TodayData(
-            ledgerId = ledgerId,
-            todayExpense = today?.expenseMinor ?: 0L,
-            todayCount = today?.bills?.size ?: 0,
-            monthExpense = month.summary.expenseMinor,
-            todayStart = todayStart,
-            week = weekValues,
-        )
+        return WeekData(ledgerId = ledgerId, todayStart = todayStart, week = weekValues)
     }
-
-    private suspend fun loadMonth(
-        context: Context,
-        graph: AppGraph,
-        range: PeriodRange,
-        startDay: Int,
-    ): MonthData {
-        val ledgerId = graph.billRepository.defaultLedgerId()
-        // 预算只取总额、只取月预算——分类预算在预算页与统计页看，组件上放不下。
-        val budget = ledgerId?.let { ledger ->
-            runCatching {
-                graph.budgetRepository.observeSummary(ledger, BudgetPeriod.MONTHLY, startDay).first().total
-            }.getOrNull()
-        }
-        return MonthData(
-            tag = periodTag(context, range, startDay),
-            hasBudget = budget != null,
-            budgetAmount = budget?.item?.amountMinor ?: 0L,
-            budgetUsed = budget?.usedMinor ?: 0L,
-            budgetRatio = budget?.let { ((it.usedMinor.toFloat() / it.item.amountMinor) * 100).toInt() } ?: 0,
-            budgetAlert = budget?.item?.alertRatio ?: 80,
-            budgetRemainingDays = budget?.remainingDays ?: 0,
-        )
-    }
-
-    /** 周期标签：1 号起写「10 月」，改了起始日写「10/15–11/14」。 */
-    private fun periodTag(context: Context, range: PeriodRange, startDay: Int): String =
-        if (Period.normalizeStartDay(startDay) == Period.DEFAULT_START_DAY) {
-            val month = Instant.ofEpochMilli(range.startAt).atZone(ZoneId.systemDefault()).toLocalDate().monthValue
-            context.getString(R.string.widget_month_tag, month)
-        } else {
-            Period.label(range, startDay)
-        }
 
     /**
      * 4×2「近七日柱状图」（WG-06）：标题用品牌绿、合计 / 日均各放大一档，中间 7 根柱按权重铺满图表区，
      * 今天陶土、其余墨色，0 支出压到底条。数据与首页同一份日聚合（只算净支出）。
      */
-    private fun sevenDayViews(context: Context, data: TodayData?, stale: Boolean): RemoteViews {
+    private fun sevenDayViews(context: Context, data: WeekData?, stale: Boolean): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_seven_day)
         if (data == null) {
             views.setTextViewText(R.id.widget_sd_period, "")
@@ -218,93 +123,6 @@ object TallyWidgets {
         }
         views.setOnClickPendingIntent(R.id.widget_root, linkIntent(context, NotificationLink.Home, SLOT_HOME))
         views.setOnClickPendingIntent(R.id.widget_sd_chart, linkIntent(context, NotificationLink.Stats(data?.ledgerId), SLOT_STATS))
-        return views
-    }
-
-    /** 2×2「预算圆环」（WG-07）：环 = 已用占比，中心百分比，下面只一个结论数（剩余 / 超出）。 */
-    private fun budgetViews(context: Context, data: MonthData?, stale: Boolean): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_budget)
-        views.setTextViewText(
-            R.id.widget_period,
-            when {
-                data == null -> ""
-                stale -> context.getString(R.string.widget_period_stale, data.tag)
-                else -> data.tag
-            },
-        )
-        val rings = intArrayOf(R.id.widget_budget_ring_green, R.id.widget_budget_ring_gold, R.id.widget_budget_ring_expense)
-        rings.forEach { views.setViewVisibility(it, View.GONE) }
-        if (data == null) {
-            views.setViewVisibility(R.id.widget_budget_ring_wrap, View.GONE)
-            views.setViewVisibility(R.id.widget_budget_left, View.GONE)
-            views.setViewVisibility(R.id.widget_budget_setup, View.GONE)
-            views.setViewVisibility(R.id.widget_note, View.VISIBLE)
-        } else if (!data.hasBudget || data.budgetAmount <= 0L) {
-            views.setViewVisibility(R.id.widget_budget_ring_wrap, View.GONE)
-            views.setViewVisibility(R.id.widget_budget_left, View.GONE)
-            views.setViewVisibility(R.id.widget_budget_setup, View.VISIBLE)
-            views.setViewVisibility(R.id.widget_note, View.GONE)
-        } else {
-            views.setViewVisibility(R.id.widget_budget_ring_wrap, View.VISIBLE)
-            views.setViewVisibility(R.id.widget_budget_left, View.VISIBLE)
-            views.setViewVisibility(R.id.widget_budget_setup, View.GONE)
-            views.setViewVisibility(R.id.widget_note, View.GONE)
-            val over = data.budgetUsed > data.budgetAmount
-            views.setTextViewText(R.id.widget_budget_percent, context.getString(R.string.widget_budget_percent_fmt, data.budgetRatio))
-            views.setTextColor(R.id.widget_budget_percent, context.getColor(if (over) R.color.widget_expense else R.color.widget_ink))
-            val percent = data.budgetRatio.coerceIn(0, 100)
-            rings.forEach { views.setInt(it, "setProgress", percent) }
-            val tier = when {
-                over -> R.id.widget_budget_ring_expense
-                data.budgetRatio >= data.budgetAlert -> R.id.widget_budget_ring_gold
-                else -> R.id.widget_budget_ring_green
-            }
-            views.setViewVisibility(tier, View.VISIBLE)
-            val gap = if (over) data.budgetUsed - data.budgetAmount else data.budgetAmount - data.budgetUsed
-            views.setTextViewText(
-                R.id.widget_budget_left,
-                context.getString(if (over) R.string.widget_budget_over else R.string.widget_budget_remaining, "¥${formatYuan(gap)}"),
-            )
-            views.setTextColor(R.id.widget_budget_left, context.getColor(if (over) R.color.widget_expense else R.color.widget_ink))
-        }
-        views.setOnClickPendingIntent(R.id.widget_root, linkIntent(context, NotificationLink.Budget, SLOT_BUDGET))
-        views.setOnClickPendingIntent(R.id.widget_budget_ring_wrap, linkIntent(context, NotificationLink.Budget, SLOT_BUDGET))
-        views.setOnClickPendingIntent(R.id.widget_budget_left, linkIntent(context, NotificationLink.Budget, SLOT_BUDGET))
-        views.setOnClickPendingIntent(R.id.widget_budget_setup, linkIntent(context, NotificationLink.Budget, SLOT_BUDGET))
-        return views
-    }
-
-    /** 2×2「当日 + 当月」（WG-08）：顶栏日期 + 今日支出主数字 + 本月支出副行。 */
-    private fun dayMonthViews(context: Context, data: TodayData?, stale: Boolean): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_day_month)
-        val date = if (data == null) "" else {
-            val day = Period.toDate(data.todayStart)
-            "${day.monthValue}月${day.dayOfMonth}日 周${weekdayCn(data.todayStart)}" +
-                if (stale) " · ${context.getString(R.string.widget_foot_stale_suffix)}" else ""
-        }
-        views.setTextViewText(R.id.widget_date, date)
-        if (data == null) {
-            views.setTextViewText(R.id.widget_today_int, "—")
-            views.setTextColor(R.id.widget_today_int, context.getColor(R.color.widget_ink3))
-            views.setViewVisibility(R.id.widget_today_currency, View.GONE)
-            views.setViewVisibility(R.id.widget_today_dec, View.GONE)
-            views.setTextViewText(R.id.widget_month_value, "—")
-            views.setViewVisibility(R.id.widget_note, View.VISIBLE)
-        } else {
-            val (integer, fraction) = splitAmount(data.todayExpense)
-            val mainColor = context.getColor(if (data.todayCount == 0) R.color.widget_ink else R.color.widget_expense)
-            views.setTextViewText(R.id.widget_today_int, integer)
-            views.setTextViewText(R.id.widget_today_dec, fraction)
-            views.setTextColor(R.id.widget_today_int, mainColor)
-            views.setTextColor(R.id.widget_today_dec, mainColor)
-            views.setTextColor(R.id.widget_today_currency, mainColor)
-            views.setViewVisibility(R.id.widget_today_currency, View.VISIBLE)
-            views.setViewVisibility(R.id.widget_today_dec, View.VISIBLE)
-            views.setTextViewText(R.id.widget_month_value, formatAmount(data.monthExpense))
-            views.setViewVisibility(R.id.widget_note, View.GONE)
-        }
-        views.setOnClickPendingIntent(R.id.widget_root, linkIntent(context, NotificationLink.Stats(data?.ledgerId), SLOT_STATS))
-        views.setOnClickPendingIntent(R.id.widget_add, linkIntent(context, NotificationLink.NewBill, SLOT_ADD))
         return views
     }
 
@@ -354,13 +172,6 @@ object TallyWidgets {
         }
     }
 
-    /** 主数字拆成整数与小数两段：小数与货币符号都要小一号。 */
-    private fun splitAmount(minor: Long): Pair<String, String> {
-        val text = formatAmount(minor)
-        val dot = text.length - 3
-        return text.substring(0, dot) to text.substring(dot)
-    }
-
     /** 副栏取整到元：250dp 宽放不下三栏都带角分。 */
     private fun formatYuan(minor: Long): String {
         val negative = minor < 0
@@ -389,75 +200,32 @@ object TallyWidgets {
 
     // ---- 上一次成功的数字：读不到库时用它顶住，角落标「· 未更新」 ----
 
-    private fun readToday(context: Context): TodayData? {
+    private fun readWeek(context: Context): WeekData? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (!prefs.contains(KEY_TODAY_MONTH)) return null
-        val week = prefs.getString(KEY_TODAY_WEEK, null)
+        val week = prefs.getString(KEY_WEEK, null)
             ?.split(',')
             ?.mapNotNull { it.toLongOrNull() }
             ?: return null
         if (week.size != 7) return null
-        return TodayData(
-            todayExpense = prefs.getLong(KEY_TODAY_EXPENSE, 0L),
-            todayCount = prefs.getInt(KEY_TODAY_COUNT, 0),
-            monthExpense = prefs.getLong(KEY_TODAY_MONTH, 0L),
+        return WeekData(
             todayStart = prefs.getLong(KEY_TODAY_START, 0L),
             week = week,
-            ledgerId = prefs.getString(KEY_TODAY_LEDGER, null),
+            ledgerId = prefs.getString(KEY_LEDGER, null),
         )
     }
 
-    private fun writeToday(context: Context, data: TodayData) {
+    private fun writeWeek(context: Context, data: WeekData) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putLong(KEY_TODAY_EXPENSE, data.todayExpense)
-            .putInt(KEY_TODAY_COUNT, data.todayCount)
-            .putLong(KEY_TODAY_MONTH, data.monthExpense)
             .putLong(KEY_TODAY_START, data.todayStart)
-            .putString(KEY_TODAY_WEEK, data.week.joinToString(","))
-            .putString(KEY_TODAY_LEDGER, data.ledgerId)
-            .apply()
-    }
-
-    private fun readMonth(context: Context): MonthData? {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (!prefs.contains(KEY_MONTH_TAG)) return null
-        return MonthData(
-            tag = prefs.getString(KEY_MONTH_TAG, null).orEmpty(),
-            hasBudget = prefs.getBoolean(KEY_MONTH_HAS_BUDGET, false),
-            budgetAmount = prefs.getLong(KEY_BUDGET_AMOUNT, 0L),
-            budgetUsed = prefs.getLong(KEY_BUDGET_USED, 0L),
-            budgetRatio = prefs.getInt(KEY_BUDGET_RATIO, 0),
-            budgetAlert = prefs.getInt(KEY_BUDGET_ALERT, 80),
-            budgetRemainingDays = prefs.getInt(KEY_BUDGET_DAYS, 0),
-        )
-    }
-
-    private fun writeMonth(context: Context, data: MonthData) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putString(KEY_MONTH_TAG, data.tag)
-            .putBoolean(KEY_MONTH_HAS_BUDGET, data.hasBudget)
-            .putLong(KEY_BUDGET_AMOUNT, data.budgetAmount)
-            .putLong(KEY_BUDGET_USED, data.budgetUsed)
-            .putInt(KEY_BUDGET_RATIO, data.budgetRatio)
-            .putInt(KEY_BUDGET_ALERT, data.budgetAlert)
-            .putInt(KEY_BUDGET_DAYS, data.budgetRemainingDays)
+            .putString(KEY_WEEK, data.week.joinToString(","))
+            .putString(KEY_LEDGER, data.ledgerId)
             .apply()
     }
 
     private const val PREFS_NAME = "widget_state"
-    private const val KEY_TODAY_EXPENSE = "today_expense"
-    private const val KEY_TODAY_COUNT = "today_count"
-    private const val KEY_TODAY_MONTH = "today_month"
-    private const val KEY_TODAY_WEEK = "today_week"
     private const val KEY_TODAY_START = "today_start"
-    private const val KEY_TODAY_LEDGER = "today_ledger"
-    private const val KEY_MONTH_TAG = "month_tag"
-    private const val KEY_MONTH_HAS_BUDGET = "month_has_budget"
-    private const val KEY_BUDGET_AMOUNT = "budget_amount"
-    private const val KEY_BUDGET_USED = "budget_used"
-    private const val KEY_BUDGET_RATIO = "budget_ratio"
-    private const val KEY_BUDGET_ALERT = "budget_alert"
-    private const val KEY_BUDGET_DAYS = "budget_days"
+    private const val KEY_WEEK = "week"
+    private const val KEY_LEDGER = "ledger"
 
     private const val TODAY_BAR_INDEX = 6
 
@@ -506,40 +274,10 @@ object TallyWidgets {
 
     private const val SLOT_HOME = 1
     private const val SLOT_STATS = 2
-    private const val SLOT_ADD = 3
-    private const val SLOT_BUDGET = 4
 }
 
 /** 近七日柱状图组件（4×2，WG-06）。 */
 class SevenDayWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                TallyWidgets.updateAll(context.applicationContext)
-            } finally {
-                pending.finish()
-            }
-        }
-    }
-}
-
-/** 预算圆环组件（2×2，WG-07）。 */
-class BudgetWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                TallyWidgets.updateAll(context.applicationContext)
-            } finally {
-                pending.finish()
-            }
-        }
-    }
-}
-
-/** 当日 + 当月组件（2×2，WG-08）。 */
-class DayMonthWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {

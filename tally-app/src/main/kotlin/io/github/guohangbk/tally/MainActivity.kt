@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import io.github.guohangbk.tally.data.notify.NotificationLink
 import io.github.guohangbk.tally.data.notify.TallyNotifier
 import io.github.guohangbk.tally.ui.navigation.TallyAppRoot
+import io.github.guohangbk.tally.ui.widget.InsightWidgets
 import io.github.guohangbk.tally.ui.widget.TallyWidgets
 import io.github.guohangbk.tally.work.AutomationWorker
 
@@ -35,12 +36,26 @@ class MainActivity : ComponentActivity() {
     /**
      * 回到前台补一次：WorkManager 在国产 ROM 上可能被延迟，
      * 启动与前台路径自己兜底，保证周期/分期不漏、当日提醒不丢。
-     * 顺便把桌面组件的本月数字刷一遍——没有组件实例时这一步会直接返回。
+     * 顺便把桌面组件刷一遍——没有组件实例时这一步会直接返回。
      */
     override fun onResume() {
         super.onResume()
         AutomationWorker.runNow(this)
+        refreshWidgets()
+    }
+
+    /**
+     * 离开前台再刷一次：账是在 App 里记的，回到桌面时若还拿着进来之前那份数，
+     * 看起来就像「组件根本不更新」——只靠 onResume 刷新，改动要等下一次进来才生效。
+     */
+    override fun onStop() {
+        super.onStop()
+        refreshWidgets()
+    }
+
+    private fun refreshWidgets() {
         TallyWidgets.refresh(this)
+        InsightWidgets.refresh(this)
     }
 
     private fun intakeSharedImage(intent: Intent?) {

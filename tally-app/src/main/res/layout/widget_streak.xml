@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2×2「记账连续记录」（WG-K1）：主数是连续天数，下面一行给「28 天里记了 N 天」，
+     底部 28 格按 4×7 排，最后一格是今天（描边那圈）。
+     口径：occurred_at 归本地日、跟当前账本、排除软删与「不计入收支」、无宽限日——今天没记就是 0。
+     天数量用无衬线，衬线只留给金额。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:text="@string/widget_streak_title"
+        android:textColor="@color/widget_ink3"
+        android:textSize="10sp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:baselineAligned="true"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/wsk_days"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:fontFeatureSettings="'tnum'"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_ink"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/wsk_unit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/widget_streak_unit"
+            android:textColor="@color/widget_ink3"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/wsk_active"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/widget_ink3"
+        android:textSize="10sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="4"
+        android:baselineAligned="false"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <ImageView android:id="@+id/wsk_c00" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c01" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c02" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c03" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c04" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c05" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c06" style="@style/WidgetCombCell" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="3dp"
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <ImageView android:id="@+id/wsk_c07" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c08" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c09" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c10" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c11" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c12" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c13" style="@style/WidgetCombCell" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="3dp"
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <ImageView android:id="@+id/wsk_c14" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c15" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c16" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c17" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c18" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c19" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c20" style="@style/WidgetCombCell" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="3dp"
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <ImageView android:id="@+id/wsk_c21" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c22" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c23" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c24" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c25" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <ImageView android:id="@+id/wsk_c26" style="@style/WidgetCombCell" android:layout_marginEnd="3dp" />
+            <!-- 今天这一格：描边压在状态色上，所以今天记没记都看得出是哪一格。 -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <ImageView
+                    android:id="@+id/wsk_c27"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/widget_comb_off"
+                    android:contentDescription="@null" />
+
+                <ImageView
+                    android:id="@+id/wsk_today_ring"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/widget_comb_today"
+                    android:contentDescription="@null" />
+            </FrameLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:includeFontPadding="false"
+        android:maxLines="2"
+        android:text="@string/widget_failure_hint"
+        android:textColor="@color/widget_ink3"
+        android:textSize="9sp"
+        android:visibility="gone" />
+</LinearLayout>

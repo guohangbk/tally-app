@@ -1,0 +1,28 @@
+# 这个项目怎么处理 issue
+#
+# 这里只有两件事要做：说明文档在哪，以及说清这个项目没有公开路线图。
+# 这个文件就是 GitHub 上「新建 issue 时的引导条」，路径是
+# .github/ISSUE_TEMPLATE/config.yml。
+#
+# 关掉空白 issue 的理由：两个模板已经覆盖了缺陷与建议，而缺陷模板里那几个
+# 必填项（版本号、机型、Android 版本、有没有用小莉）是排障的最低限度——
+# 跳过它们开一个空白 issue，通常还得再问一轮才开得了工。
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: "📖 文档：需求 / 概要设计 / 详细设计 / 数据库 / 交互规范 / 使用手册"
+    url: https://github.com/guohangbk/tally-app/tree/main/docs/release
+    about: "对外只有这一份、不带版本号，永远是「当前口径」。想查某个数字按什么口径算、当初为什么这么定，先来这里。历史版本用公开仓的 tag 取回。"
+
+  - name: "🧭 下一步会做什么：看 Release 说明"
+    url: https://github.com/guohangbk/tally-app/releases
+    about: "这个项目没有单独的公开路线图——它自用为主，计划跟着作者自己的用账需求走。每一版「这次改了什么、下一步往哪动」都写在对应那条 Release 说明里；想要什么就提「功能建议」。"
+
+  - name: "🐣 还不知道怎么用：先看使用指南"
+    url: https://tally.guohang.asia
+    about: "App 内也有同一份——「设置 → 关于 → 使用指南」，讲怎么操作、从哪儿进、每个数字按什么口径算。截图与下载入口也在项目主页上。"
+
+  - name: "🔐 安全问题：走私密漏洞报告，不要开公开 issue"
+    url: https://github.com/guohangbk/tally-app/security/advisories/new
+    about: "仓库 → Security → Advisories → Report a vulnerability。修好之前摆在公开 issue 里，等于把还在用的版本放到台面上；能报什么、怎么报、哪些算已知取舍，见 SECURITY.md。"

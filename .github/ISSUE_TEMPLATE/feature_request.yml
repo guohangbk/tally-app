@@ -1,0 +1,74 @@
+name: 功能建议
+description: 想要一个现在没有的能力。描述场景比描述方案有用得多。
+title: "[建议] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先说两句省时间的：「不做的事」是**写死的**——账号体系、云同步、多端合并、账户与资产、转账、多币种、iOS、应用商店上架，这几条 [README](https://github.com/guohangbk/tally-app/blob/main/README.md) 里已经明确不做，提了也不会做。
+
+        想确认某个能力是不是已经存在、或者当初为什么这么定，看 [`docs/release/`](https://github.com/guohangbk/tally-app/tree/main/docs/release) 里的需求规格与设计决策文档。
+
+  - type: input
+    id: summary
+    attributes:
+      label: 你想要什么
+      description: 一句话说清。例：想在统计页按「不计入」单独过滤。
+      placeholder: "一句话"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 它解决你现在的什么问题
+      description: |
+        写你**实际遇到的事**，不要写「加个 XXX 功能」这种方案描述。
+
+        同样一句「想要标签」：一种说法是「我希望有标签，因为别的 App 都有」；另一种是「我每个月要按『公司报销 / 自己花』拆一次支出，现在只能新建第二个账本，于是分类重复维护两遍」。第二种才知道该怎么改。
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 你现在怎么绕过去的
+      description: 可选。知道现有绕法，才知道这个需求有多疼。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: 这件事发生在哪个入口
+      multiple: false
+      options:
+        - 记账（手打 / 键盘算式 / 语音 / 截图）
+        - 首页与账单列表
+        - 统计与分享长图
+        - 搜索与批量修改
+        - 预算
+        - 周期记账与分期
+        - 账本与分类
+        - 回收站与找回
+        - 提醒与通知
+        - 桌面组件与快捷方式
+        - 导入导出与备份（CSV / XLSX / .tally / WebDAV）
+        - 小莉（AI）
+        - 其它
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我要的不是 README 里「不做的事」那几项（账号、云同步、多端合并、账户与资产、转账、多币种、iOS、上架）
+          required: true
+        - label: 我看过 docs/release/ 里的文档，确认这不是已经实现了的能力（只是入口我没找到）
+          required: true
+        - label: 我知道这个项目以自用为主，需求会被取舍，提了不一定会做
+          required: true

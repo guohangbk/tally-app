@@ -180,6 +180,8 @@ object BackupJson {
         put("total_minor", e.totalMinor); put("period_count", e.periodCount)
         put("per_period_minor", e.perPeriodMinor); put("tail_minor", e.tailMinor)
         put("category_l1_id", e.categoryL1Id); put("category_l2_id", e.categoryL2Id)
+        // 计划级备注必须跟着走：漏了这一行，恢复一次备份就把备注丢光（周期规则的 note 一直是带的）
+        put("note", e.note)
         put("first_occurred_at", e.firstOccurredAt); put("interval_months", e.intervalMonths)
         put("repayment_method", e.repaymentMethod); put("annual_rate_bp", e.annualRateBp)
         put("rate_changes_json", e.rateChangesJson)
@@ -328,6 +330,7 @@ object BackupJson {
         val total = o.optLong("total_minor")
         return InstallmentPlanEntity(
             id = o.getString("id"), ledgerId = o.optString("ledger_id"), name = o.optString("name"),
+            note = o.nullableString("note"),
             type = o.optString("type", "EXPENSE"),
             principalMinor = o.optLong("principal_minor", total),
             feeMinor = o.optLong("fee_minor"), feeMode = o.optString("fee_mode", "INCLUDED"),

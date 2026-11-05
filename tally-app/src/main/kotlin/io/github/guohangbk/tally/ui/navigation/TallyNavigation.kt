@@ -84,7 +84,7 @@ import io.github.guohangbk.tally.ui.stats.TallyStatsScreen
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
-    const val STATS = "stats?ledgerId={ledgerId}"
+    const val STATS = "stats?ledgerId={ledgerId}&anchor={anchor}"
     /** 使用指南（设置 → 关于）：怎么操作 + 按什么口径算，收在同一页。 */
     const val GUIDE = "settings/guide"
     /** 许可与依赖（设置 → 关于）：BUSL-1.1 源码可用许可 + 第三方依赖清单。 */
@@ -129,8 +129,12 @@ object Routes {
 
     fun billEdit(id: String) = "bill/edit/$id"
 
-    /** 首页选中的账本要跟着进统计与搜索，空串表示「全部账本」。 */
-    fun stats(ledgerId: String?) = "stats?ledgerId=${ledgerId.orEmpty()}"
+    /**
+     * 首页选中的账本要跟着进统计与搜索，空串表示「全部账本」；
+     * anchor 带上首页正在看的那一个月，否则首页翻到 9 月、点统计却回到今天。
+     */
+    fun stats(ledgerId: String?, anchor: Long? = null) =
+        "stats?ledgerId=${ledgerId.orEmpty()}&anchor=${anchor?.toString().orEmpty()}"
 
     /**
      * 统计页那段账整个搬进海报页：维度、锚点、区间的右边界与分桶都跟着走，
@@ -235,6 +239,16 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
     val currentRoute = backStackEntry?.destination?.route
     val showShell = onboardingDone
 
+    // 导入类动作成功之后统一落回首页，并把整条返回栈清空再进。
+    // 引导期是从 ONBOARDING push 上去的：只 popBackStack 会把他退回引导页——
+    // 账都已经进库了，人却被挡在门外，而且标记没落库，下次冷启动还是引导页。
+    fun goHome() {
+        navController.navigate(Routes.HOME) {
+            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
     // 系统分享进来的截图只负责把用户送到草稿页；uri 由那一页自己取用并清空。
     // 二级独立图标第二轮：先改子级再改「零食」这一级，避免父级先换掉后认不出继承关系。
     LaunchedEffect(graph) {
@@ -317,7 +331,7 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                             currentRoute = currentRoute,
                             onOpenLedgers = { navController.navigate(Routes.LEDGERS) },
                             onOpenAssistant = { navController.navigate(Routes.ASSISTANT) },
-                            onOpenStats = { ledgerId -> navController.navigate(Routes.stats(ledgerId)) },
+                            onOpenStats = { ledgerId, anchor -> navController.navigate(Routes.stats(ledgerId, anchor)) },
                             onOpenBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
                             onOpenShotDraft = { bill ->
                                 navController.navigate(
@@ -359,6 +373,7 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                     composable(Routes.STATS) { entry ->
                         TallyStatsScreen(
                             initialLedgerId = entry.arguments?.getString("ledgerId")?.ifEmpty { null },
+                            initialAnchor = entry.arguments?.getString("anchor")?.toLongOrNull(),
                             onBack = { navController.popBackStack() },
                             // 海报入口靠它跳转：漏传就走默认的空实现，点了什么也不会发生。
                             onNavigateRoute = { route -> navController.navigate(route) },
@@ -516,7 +531,12 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                             onRepeatBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
                         )
                     }
-                    composable(Routes.IMPORT) { ImportScreen(onBack = { navController.popBackStack() }) }
+                    composable(Routes.IMPORT) {
+                        ImportScreen(
+                            onBack = { navController.popBackStack() },
+                            onGoHome = { goHome() },
+                        )
+                    }
                     composable(Routes.EXPORT) { ExportScreen(onBack = { navController.popBackStack() }) }
                     composable(Routes.RECURRING) {
                         RecurringScreen(
@@ -553,7 +573,13 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                             onRepeatBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
                         )
                     }
-                    composable(Routes.BACKUP) { BackupScreen(onBack = { navController.popBackStack() }) }
+                    composable(Routes.BACKUP) {
+                        BackupScreen(
+                            onBack = { navController.popBackStack() },
+                            // 恢复只在引导期替他落到首页；从设置页进来的该留在设置流里。
+                            onRestored = { if (!onboardingDone) goHome() },
+                        )
+                    }
                     composable(Routes.BUDGET) {
                         BudgetScreen(
                             onBack = { navController.popBackStack() },
