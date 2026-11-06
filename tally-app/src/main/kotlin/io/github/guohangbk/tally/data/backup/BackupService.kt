@@ -34,7 +34,12 @@ class BackupService(
     private val database: TallyDatabase,
     private val backupDao: BackupDao,
     private val now: () -> Long = System::currentTimeMillis,
-    private val appVersion: String = "0.1.0",
+    // 跟设置页「关于」同一口径：版本取 APK 自己的，不手写一份。
+    // 手写那份一定会被忘掉——上一版写死 "0.1.0"，恢复侧拿它判断「包是否来自更新的 App」就永远失效。
+    private val appVersion: String = runCatching {
+        @Suppress("DEPRECATION")
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName
+    }.getOrNull().orEmpty(),
     private val zoneId: () -> ZoneId = ZoneId::systemDefault,
 ) {
     private val fileStamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
