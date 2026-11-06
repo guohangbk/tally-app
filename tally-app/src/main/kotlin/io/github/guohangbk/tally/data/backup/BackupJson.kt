@@ -133,6 +133,7 @@ object BackupJson {
         put("occurred_at", e.occurredAt); put("time_precision", e.timePrecision)
         put("note", e.note); put("source", e.source); put("external_id", e.externalId)
         put("fingerprint", e.fingerprint); put("reimbursed", e.reimbursed)
+        put("reimbursed_at", e.reimbursedAt)
         put("is_refund", e.isRefund); put("is_reimbursement", e.isReimbursement)
         put("refund_of_bill_id", e.refundOfBillId)
         put("excluded_from_stats", e.excludedFromStats); put("recorder", e.recorder)
@@ -210,6 +211,7 @@ object BackupJson {
         put("id", e.id); put("conversation_id", e.conversationId); put("role", e.role)
         put("content", e.content); put("message_type", e.messageType); put("status", e.status)
         put("sequence", e.sequence); put("error_code", e.errorCode)
+        put("duration_ms", e.durationMs)
         put("created_at", e.createdAt); put("updated_at", e.updatedAt); put("deleted_at", e.deletedAt)
         put("device_id", e.deviceId); put("version", e.version)
     }
@@ -250,14 +252,18 @@ object BackupJson {
         deviceId = o.optString("device_id"), version = o.optInt("version", 1),
     )
 
-    /** 旧备份文件里的封面值不在图标库键域内，按 v9→v10 迁移同一张映射表落回图标。 */
+    /**
+     * 旧备份里的渐变封面值（v10 之前）不在图标库键域内，按 v9→v10 迁移的映射表落回图标。
+     * **其它键一律原样返回**：现在的 icon_key 已经是图标库键，之前 `else -> "ledger"`
+     * 会把所有账本图标在恢复时洗成同一个 `ledger`。
+     */
     private fun legacyCoverToIcon(key: String): String = when (key) {
         "gold" -> "coin"
         "umber" -> "sofa"
         "clay" -> "cup"
         "ink" -> "book"
         "slate" -> "piggy"
-        else -> "ledger"
+        else -> key
     }
 
     private fun categoryFrom(o: JSONObject) = CategoryEntity(
@@ -278,6 +284,7 @@ object BackupJson {
         timePrecision = o.optString("time_precision", "DATE"), note = o.nullableString("note"),
         source = o.optString("source", "MANUAL"), externalId = o.nullableString("external_id"),
         fingerprint = o.nullableString("fingerprint"), reimbursed = o.optString("reimbursed", "NONE"),
+        reimbursedAt = o.nullableLong("reimbursed_at"),
         isRefund = o.optBoolean("is_refund"), isReimbursement = o.optBoolean("is_reimbursement"),
         refundOfBillId = o.nullableString("refund_of_bill_id"),
         excludedFromStats = o.optBoolean("excluded_from_stats"), recorder = o.nullableString("recorder"),
@@ -371,6 +378,7 @@ object BackupJson {
         role = o.optString("role", "USER"), content = o.optString("content"),
         messageType = o.optString("message_type", "TEXT"), status = o.optString("status", "SUCCESS"),
         sequence = o.optInt("sequence"), errorCode = o.nullableString("error_code"),
+        durationMs = o.nullableLong("duration_ms"),
         createdAt = o.optLong("created_at"), updatedAt = o.optLong("updated_at"),
         deletedAt = o.nullableLong("deleted_at"), deviceId = o.optString("device_id"),
         version = o.optInt("version", 1),

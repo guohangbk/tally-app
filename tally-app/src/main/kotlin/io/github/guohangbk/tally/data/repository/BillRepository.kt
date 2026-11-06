@@ -12,6 +12,8 @@ import io.github.guohangbk.tally.data.preferences.TallyPreferences
 import io.github.guohangbk.tally.domain.Money
 import io.github.guohangbk.tally.domain.Period
 import io.github.guohangbk.tally.domain.PeriodRange
+import io.github.guohangbk.tally.domain.policy.BillEditContext
+import io.github.guohangbk.tally.domain.policy.BillEditPolicy
 import io.github.guohangbk.tally.domain.model.BillDayGroup
 import io.github.guohangbk.tally.domain.model.BillDraft
 import io.github.guohangbk.tally.domain.model.BillFilter
@@ -323,28 +325,19 @@ class BillRepository(
         // 给的是墙上时间，同一天里它（12:30）会排在记账页那条（零点）上面，看着像后记的反而沉底。
         val occurredAt = if (draft.timePrecision == TimePrecision.DATE) startOfDay(draft.occurredAt) else draft.occurredAt
         val entity = if (existing != null) {
-            existing.copy(
-                ledgerId = ledgerId,
-                categoryL1Id = categoryL1.id,
-                categoryL2Id = categoryL2?.id,
-                type = draft.type.name,
-                amountMinor = draft.amountMinor,
-                occurredAt = occurredAt,
-                timePrecision = draft.timePrecision.name,
-                note = draft.note?.trim()?.ifEmpty { null },
-                reimbursed = draft.reimbursed.name,
-                isRefund = isRefund,
-                refundOfBillId = draft.refundOfBillId,
-                excludedFromStats = draft.excludedFromStats,
-                // source 是「这笔账是怎么进来的」，属于既成事实，**编辑不该改它**。
-                // 编辑页构造 BillDraft 时不带 source，而 BillDraft.source 默认 MANUAL——
-                // 照着 draft 抄就会把周期 / 分期 / 语音 / 截图来的账单洗成「手动」，
-                // 按来源筛选直接漏单（坑二）。所以更新分支一律保留原值。
-                source = existing.source,
-                externalId = draft.externalId ?: existing.externalId,
-                fingerprint = draft.fingerprint ?: existing.fingerprint,
-                updatedAt = timestamp,
-                version = existing.version + 1,
+            // 编辑分支的字段归属交给纯策略裁决（见 BillEditPolicy）：
+            // source 等「既成事实」一律沿用原值，编辑页构造的草稿不带这些字段。
+            BillEditPolicy.merge(
+                existing = existing,
+                draft = draft,
+                context = BillEditContext(
+                    ledgerId = ledgerId,
+                    categoryL1Id = categoryL1.id,
+                    categoryL2Id = categoryL2?.id,
+                    occurredAt = occurredAt,
+                    timestamp = timestamp,
+                    isRefund = isRefund,
+                ),
             )
         } else {
             BillEntity(

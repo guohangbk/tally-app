@@ -63,10 +63,10 @@ android {
         applicationId = "io.github.guohangbk.tally"
         minSdk = 28
         targetSdk = 37
-        // 0.1.1 → 101。已发布的 0.1.0 是 versionCode 1（当年没走公式，属历史事实，不再改）。
-        versionCode = tallyVersionCode(major = 0, minor = 1, patch = 1)
-        // 发布提交上用正式号：主仓 HEAD 一直挂 dev 号（那边现在是 0.1.2-dev）。
-        versionName = "0.1.1"
+        // 0.1.2 → 102。已发布的 0.1.0 是 versionCode 1、0.1.1 是 101
+        // （0.1.0 当年没走公式，属历史事实，不再改）。
+        versionCode = tallyVersionCode(major = 0, minor = 1, patch = 2)
+        versionName = "0.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -146,5 +146,20 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.5")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // 纯 JVM 单测：JUnit 5 + org.json 的可运行实现。
+    // 断言只用 kotlin.test，不引 mock 框架——数据层测试靠内存 fixture，不靠打桩。
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.json:json:20240303")
+    testImplementation(kotlin("test-junit5"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events("failed", "skipped")
+        showStandardStreams = false
+    }
 }
 
