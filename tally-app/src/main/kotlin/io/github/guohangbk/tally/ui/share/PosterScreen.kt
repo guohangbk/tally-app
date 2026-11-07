@@ -49,20 +49,22 @@ import io.github.guohangbk.tally.ui.shell.TallyTopBar
 @Composable
 fun PosterScreen(
     graph: AppGraph,
-    request: StatsRequest,
+    request: StatsRequest?,
     onBack: () -> Unit,
+    /** 非空即结算长图模式：这本账的区间与预算由它自己现算，[request] 不用传。 */
+    settlementLedgerId: String? = null,
 ) {
     val colors = tallyColors
     val context = LocalContext.current
-    val viewModel = tallyViewModel(key = "poster") {
-        PosterViewModel(graph, context.applicationContext, request)
+    val viewModel = tallyViewModel(key = settlementLedgerId?.let { "poster-settle-$it" } ?: "poster") {
+        PosterViewModel(graph, context.applicationContext, request, settlementLedgerId)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize().background(colors.paper)) {
         // 标题就叫「分享」。账本与期间不在这儿改：那是统计页的事，这一页只把带上来的那一段画出来、发出去，
         // 于是「屏上在看的那段账」与「这张图」永远是同一份口径。
-        TallyTopBar(title = "分享", onBack = onBack)
+        TallyTopBar(title = if (settlementLedgerId != null) "结算长图" else "分享", onBack = onBack)
 
         // 海报本身按宽铺满、上下滚：一屏压不下整张，硬压会糊（SH-02）。
         Box(

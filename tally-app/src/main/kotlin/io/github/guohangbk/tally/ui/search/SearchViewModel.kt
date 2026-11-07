@@ -2,7 +2,7 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.guohangbk.tally.data.repository.LedgerListItem
+import io.github.guohangbk.tally.data.db.entity.LedgerEntity
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.model.BillFilter
 import io.github.guohangbk.tally.domain.model.BillSearchResult
@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.take
@@ -28,7 +29,7 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val filter: BillFilter = BillFilter(),
     val result: BillSearchResult = BillSearchResult(io.github.guohangbk.tally.domain.model.BillSummary(), emptyList()),
-    val ledgers: List<LedgerListItem> = emptyList(),
+    val ledgers: List<LedgerEntity> = emptyList(),
     /** 分类筛选的名称（「零食 / 咖啡」），只有带着分类进来时才有值。 */
     val categoryLabel: String? = null,
     val loaded: Boolean = false,
@@ -73,16 +74,20 @@ class SearchViewModel(
         filter.drop(1).debounce(KEYWORD_DEBOUNCE_MILLIS),
     ).flatMapLatest { graph.billRepository.observeSearch(it) }
 
+    /** 账本 chip 只要名称与 id：走轻量的账本表，不为了几个按钮跑整张 bill 表的 GROUP BY。 */
+    private val ledgerChips = graph.ledgerRepository.active
+        .map { ledgers -> ledgers.filterNot { it.isArchived } }
+
     val state: StateFlow<SearchUiState> = combine(
         filter,
         result,
-        graph.ledgerRepository.items,
+        ledgerChips,
         categoryLabel,
     ) { currentFilter, currentResult, ledgers, label ->
         SearchUiState(
             filter = currentFilter,
             result = currentResult,
-            ledgers = ledgers.filter { !it.ledger.isArchived },
+            ledgers = ledgers,
             categoryLabel = label.takeIf { currentFilter.categoryL1Id != null || currentFilter.categoryL2Id != null },
             loaded = true,
         )

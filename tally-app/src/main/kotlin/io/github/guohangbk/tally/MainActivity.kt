@@ -28,6 +28,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // 从桌面图标点回来的 intent 是 MAIN/LAUNCHER；分享、通知、快捷方式都带各自的动作，不会命中。
+        if (intent.action == Intent.ACTION_MAIN) {
+            TallyApplication.from(this).graph.launcherOpened.tryEmit(Unit)
+        }
         intakeSharedImage(intent)
         intakeNotificationLink(intent)
         intakeShortcut(intent)

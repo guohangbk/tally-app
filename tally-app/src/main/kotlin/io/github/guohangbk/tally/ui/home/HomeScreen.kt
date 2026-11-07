@@ -56,12 +56,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.scale
@@ -102,6 +103,7 @@ import io.github.guohangbk.tally.ui.design.BudgetUsageRow
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.MoneySign
 import io.github.guohangbk.tally.ui.design.MoneyText
+import io.github.guohangbk.tally.ui.design.SkeletonBar
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
@@ -109,6 +111,7 @@ import io.github.guohangbk.tally.ui.design.TallyTag
 import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.TagTone
+import io.github.guohangbk.tally.ui.design.rememberSkeletonShown
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.navigation.Routes
 import io.github.guohangbk.tally.ui.shell.TallyDrawer
@@ -472,6 +475,7 @@ fun TallyHomeScreen(
                 dailyAverageMinor = if (summary == null) 0L else summary.expenseMinor / (state.daysElapsed.coerceAtLeast(1)),
                 grouping = state.settings.showThousandsSeparator,
                 showCurrency = state.settings.showCurrencySymbol,
+                loading = summary == null,
                 bar = homeBudgetBar(budgetOverview),
                 onOpenBudget = { showBudgetSheet = true },
             )
@@ -934,7 +938,12 @@ private fun DaySection(
     }
 }
 
-/** 设计板 .sum：墨底卡片、右上金晕、左下纸光，两格等宽、左对齐、1px 竖线分栏；预算态挂在卡片正下方。 */
+/**
+ * 设计板 .sum：墨底卡片、右上金晕、左下纸光，两格等宽、左对齐、1px 竖线分栏；预算态挂在卡片正下方。
+ *
+ * 数据没到时按最终版式占位：标签与卡片先画，金额位置留骨架，不拿 ¥0.00 冒充结果；
+ * 数字到了再淡入，黑框的尺寸与位置从头到尾不变。
+ */
 @Composable
 private fun SummaryBar(
     expenseMinor: Long,
@@ -944,10 +953,15 @@ private fun SummaryBar(
     dailyAverageMinor: Long,
     grouping: Boolean,
     showCurrency: Boolean,
+    loading: Boolean,
     bar: HomeBudgetBar? = null,
     onOpenBudget: () -> Unit = {},
 ) {
     val colors = tallyColors
+    // 数字与灰条都硬切换：不做淡入淡出，只保留「超过 150ms 才出现骨架」。
+    val skeletonAlpha = if (rememberSkeletonShown(loading)) 1f else 0f
+    val contentAlpha = if (loading) 0f else 1f
+    val skeletonColor = colors.onSummaryBar.copy(alpha = 0.16f)
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp)) {
         Row(
             modifier = Modifier
@@ -990,6 +1004,9 @@ private fun SummaryBar(
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 grouping = grouping,
                 showCurrency = showCurrency,
+                contentAlpha = contentAlpha,
+                skeletonAlpha = skeletonAlpha,
+                skeletonColor = skeletonColor,
             )
             Box(
                 modifier = Modifier
@@ -1004,6 +1021,9 @@ private fun SummaryBar(
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 grouping = grouping,
                 showCurrency = showCurrency,
+                contentAlpha = contentAlpha,
+                skeletonAlpha = skeletonAlpha,
+                skeletonColor = skeletonColor,
             )
         }
         // BU21-01 / 02：预算不往支出格里堆字，也不在账单明细上方起横栏——它是黑框卡片下紧贴的一条进度。
@@ -1023,6 +1043,9 @@ private fun SummaryCell(
     modifier: Modifier = Modifier,
     grouping: Boolean,
     showCurrency: Boolean,
+    contentAlpha: Float,
+    skeletonAlpha: Float,
+    skeletonColor: Color,
 ) {
     val colors = tallyColors
     Column(modifier = modifier) {
@@ -1037,16 +1060,44 @@ private fun SummaryCell(
             maxLines = 1,
         )
         Spacer(Modifier.height(6.dp))
-        MoneyText(
-            amountMinor = amountMinor,
-            sign = MoneySign.NONE,
-            style = TallyType.moneyBody.copy(fontSize = 23.sp, lineHeight = 25.sp),
-            color = colors.onSummaryBar,
-            grouping = grouping,
-            showCurrency = showCurrency,
-        )
+        // 金额始终按最终版式排版，只做透明度：数字与骨架换着画也不会改变黑框高度。
+        Box {
+            MoneyText(
+                amountMinor = amountMinor,
+                sign = MoneySign.NONE,
+                style = TallyType.moneyBody.copy(fontSize = 23.sp, lineHeight = 25.sp),
+                color = colors.onSummaryBar,
+                grouping = grouping,
+                showCurrency = showCurrency,
+                modifier = Modifier.alpha(contentAlpha),
+            )
+            if (skeletonAlpha > 0f) {
+                SkeletonBar(
+                    width = 88.dp,
+                    height = 22.dp,
+                    color = skeletonColor,
+                    modifier = Modifier.align(Alignment.CenterStart).alpha(skeletonAlpha),
+                )
+            }
+        }
         Spacer(Modifier.height(3.dp))
-        Text(note, fontSize = 11.5.sp, lineHeight = 14.4.sp, color = colors.onSummaryBar.copy(alpha = 0.55f), maxLines = 1)
+        Box {
+            Text(
+                note,
+                fontSize = 11.5.sp, lineHeight = 14.4.sp,
+                color = colors.onSummaryBar.copy(alpha = 0.55f),
+                maxLines = 1,
+                modifier = Modifier.alpha(contentAlpha),
+            )
+            if (skeletonAlpha > 0f) {
+                SkeletonBar(
+                    width = 70.dp,
+                    height = 11.dp,
+                    color = skeletonColor,
+                    modifier = Modifier.align(Alignment.CenterStart).alpha(skeletonAlpha),
+                )
+            }
+        }
     }
 }
 

@@ -41,6 +41,12 @@ object PosterFiles {
         } + ".png"
     }
 
+    /** 结算长图不按期间编号：一本账只结算一次，文件名就是那次结算的身份。 */
+    fun settlementName(ledgerName: String): String =
+        ledgerName.trim().ifBlank { "账本" }.replace(illegalChars, "_") + " 结算长图.png"
+
+    private val illegalChars = Regex("[\\\\/:*?\"<>|]")
+
     /** 只读分享用的副本：同一个文件名覆盖上一次，缓存目录里不会堆出几十张海报。 */
     fun cacheUri(context: Context, fileName: String, bytes: ByteArray): Uri {
         val dir = File(context.cacheDir, CACHE_DIR).apply { mkdirs() }

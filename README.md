@@ -8,7 +8,7 @@
 
 ## 下载与安装
 
-**APK 在 Releases 页**：<https://github.com/guohangbk/tally-app/releases>。当前版本号看那一页最新的一条，APK 挂在该条的 Assets 里。README 不写死版本号——它每次发版都会变，写在这里必然漂移。
+**APK 在 Releases 页**：<https://github.com/guohangbk/tally-app/releases>。
 
 下载前先确认手机对得上：
 
@@ -86,7 +86,7 @@ git clone https://github.com/guohangbk/tally-app.git
 | 逐功能 / 逐模块的处理逻辑与边界    | [`详细设计说明书.md`](docs/release/详细设计说明书.md)                         |
 | 表结构、索引、统计口径与版本策略   | [`数据库设计文档.md`](docs/release/数据库设计文档.md)                         |
 | 设计语言、组件与交互判据           | [`界面与交互规范.md`](docs/release/界面与交互规范.md)                         |
-| 界面长什么样（自包含，可离线打开） | [`界面设计图.html`](docs/release/界面设计图.html)（29 节 / 117 屏）           |
+| 界面长什么样（自包含，可离线打开） | [`界面设计图.html`](docs/release/界面设计图.html)（29 节 / 127 屏）           |
 | 为什么这么设计、否决过什么         | [`设计决策.md`](docs/release/设计决策.md)                                     |
 | 交给使用者看的说明书               | [`用户操作手册.md`](docs/release/用户操作手册.md) + App 内「设置 → 使用指南」 |
 

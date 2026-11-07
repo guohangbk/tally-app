@@ -3760,32 +3760,87 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 </section>
 <section class="sec">
   <div class="sec-h"><span class="no">10</span><h2>账本与首次引导</h2>
-    <div class="meta">账本承载分类树<br>引导只给两条路</div></div>
-  <p class="lead">账本不是「账户」：没有资产账户这一层，账本只是数据分组——决定一笔记在哪里、用哪棵分类树、算进哪组统计。这句话必须在引导里对用户讲明白，否则用户会拿它当钱包，把结余读成余额。</p>
+    <div class="meta">账本只是数据分组<br>引导只给两条路</div></div>
+  <p class="lead">账本不是「账户」：没有资产账户这一层，账本只是数据分组——决定一笔记在哪里、算进哪组统计。分类是全机共用的一套字典，不随账本切换；这句话必须在引导里对用户讲明白，否则用户会拿它当钱包，把结余读成余额。</p>
   <div class="grid q4">
 
     <figure class="pc"><div class="dev"><div class="scr">
-      <div class="notch"></div><div class="sb"><span>9:43</span><span class="r"><svg><use href="#i-wifi"/></svg><svg><use href="#i-batt"/></svg></span></div>
+      <div class="notch"></div><div class="sb"><span>9:43</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">我的账本</span><span class="sp"></span><span class="tag">5,623 笔合计</span></div>
-        <div class="lgc b mt" style="border-color:rgba(31,74,56,.3)"><div class="row"><span class="nm" style="flex:1">日常账本</span><span class="tag b">默认</span><span class="ck on d"><svg><use href="#i-check"/></svg></span></div>
-          <div class="st"><span>5,208 笔</span><span>最近 10-15</span><span>支出 361,208.44</span></div></div>
-        <div class="lgc a mt0"><div class="row"><span class="nm" style="flex:1">泰国旅行</span><span class="tag g">小莉代记账</span></div>
-          <div class="st"><span>142 笔</span><span>最近 08-02</span><span>支出 6,240.00</span></div></div>
-        <div class="lgc c mt0"><div class="row"><span class="nm" style="flex:1">家庭备用</span></div>
-          <div class="st"><span>273 笔</span><span>最近 09-30</span><span>房租 · 保险</span></div></div>
-        <div class="lgc mt0" style="border-style:dashed;background:rgba(94,122,138,.05)"><div class="row"><span class="nm" style="flex:1;color:var(--slate)">宝宝用品</span><span class="tag" style="color:var(--slate);border-color:rgba(94,122,138,.4)">已归档</span><span class="btn gh ghs" style="height:22px;font-size:9px;padding:0 8px">恢复</span></div>
-          <div class="st"><span>58 笔</span><span>归档于 09-30</span><span>记账页与统计都不再出现</span></div></div>
-        <div class="lgc mt0" style="opacity:.62"><div class="row"><span class="nm" style="flex:1">工作报销</span><span class="tag">空账本</span></div>
-          <div class="st"><span style="color:var(--gold)">0 笔 · 建议归档或删除</span><span>只有分组，没有余额</span></div></div>
-        <div class="btn gh mt" style="height:34px"><svg><use href="#i-plus"/></svg>新建账本</div>
-        <div class="row mt0" style="gap:6px"><span class="dot"></span><span style="font-size:8.5px;color:var(--ink3)">归档账本不能设为默认</span></div>
-        <div class="hair" style="margin:9px 0 7px"></div>
-        <div style="font-size:8.5px;color:var(--ink3);line-height:1.55"><b style="color:var(--ink2)">分类树只属于当前账本</b>：每本各自一棵树，切账本整页数据随之切换。</div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">我的账本</span><span class="sp"></span><span class="tag">5,623 笔合计</span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
+        <div class="card" style="border-radius:16px;margin-bottom:9px;border-color:rgba(31,74,56,.32)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:36px;height:36px;border-radius:12px;background:var(--brand);border:1px solid var(--brand);display:grid;place-items:center;flex:none;color:#F6F3EB"><svg style="width:18px;height:18px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-wallet"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="font-size:15.5px;font-weight:600;line-height:20px">日常账本</div><span class="tag b" style="font-size:8.5px;padding:2px 5px">默认</span></div>
+              <div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">1,208 笔 · 最近 10-14</div>
+            </div>
+            <span class="money e" style="font-size:22px;line-height:24px">3,186.40</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;opacity:.42"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
+        <div class="card" style="border-radius:16px;margin-bottom:9px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:18px;height:18px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-plane"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15.5px;font-weight:600;line-height:20px;white-space:nowrap">冰岛旅行</div>
+              <div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">86 笔 · 最近 10-02</div>
+            </div>
+            <span class="money e" style="font-size:22px;line-height:24px">4,920.00</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
+        <div class="card" style="border-radius:16px;margin-bottom:9px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:18px;height:18px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-car"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15.5px;font-weight:600;line-height:20px;white-space:nowrap">车贷账本</div>
+              <div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">24 笔 · 最近 09-28</div>
+            </div>
+            <span class="money e" style="font-size:22px;line-height:24px">1,240.00</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
+        <div style="font-family:var(--serif);font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--gold);margin:12px 2px 6px">已结算 1</div>
+        <div class="card" style="border-radius:16px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:18px;height:18px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-piggy"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15.5px;font-weight:600;line-height:20px;color:var(--ink2);white-space:nowrap">装修</div>
+            </div>
+            <span class="money" style="font-size:22px;line-height:24px;color:var(--ink2)">17,490.00</span>
+          </div>
+          <div style="display:flex;align-items:center;margin-top:5px"><span class="tag" style="background:var(--paper);color:var(--slate);border-color:rgba(94,122,138,.4)">已结算</span><span style="flex:1"></span><span style="font-size:9.5px;color:var(--ink3)">214 笔 · 最近 08-19</span></div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:8px;padding:0 3px;gap:3px;white-space:nowrap;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px"><use href="#i-archive"/></svg>恢复记账</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
       </div>
     </div></div>
-    <figcaption><div class="pn">P07</div><div class="ph">我的账本 · 三态并列</div>
-      <div class="pd">默认 / 在用 / 已归档三态并列，每本给笔数、最近记账时间与支出收入分布。点圆圈设为默认；默认账本不能归档也不能直接删。空账本提示归档或删除。</div></figcaption></figure>
+    <figcaption><div class="pn">P07</div><div class="ph">我的账本 · 结算在动作行里</div>
+      <div class="pd">账本只有「在用 / 已结算」两态。默认身份挂在账本名旁，右侧是这本账的支出；动作行固定「概览 · 编辑 · 结算 · 删除」——默认账本的「结算」置灰（持续使用，没有结束），删除用陶土色。已结算的账本单独一区，动作换成「概览 · 编辑 · 恢复记账 · 删除」。点卡片主体与「概览」是同一个去处；概览、结算与问答的细节见本节 10.1–10.3。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:43</span><span class="r"><svg><use href="#i-wifi"/></svg><svg><use href="#i-batt"/></svg></span></div>
@@ -3797,20 +3852,19 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="li"><span class="ic b"><svg><use href="#i-diamond"/></svg></span><div class="x"><div class="t">电器数码 · 分期</div><div class="s"><span class="mk rc"><svg><use href="#i-slice"/></svg>分期 3/12</span></div></div><div class="money s e"><span class="int">749</span><span class="dec">.92</span></div></div>
       </div>
       <div class="scrim"></div>
-      <div class="sheet">
+      <div class="sheet" style="z-index:3">
         <div class="grab"></div>
-        <div class="sh-h"><b>切换账本</b><span style="flex:1"></span><span class="tag">当前 · 日常账本</span></div>
-        <div class="set" style="padding:8px 0"><span class="ck d on"><svg><use href="#i-check"/></svg></span><span class="ic b"><svg><use href="#i-ledger"/></svg></span><div class="x"><div class="t">日常账本</div><div class="s">5,208 笔 · 分类 21 个一级 / 46 个二级</div></div><span class="tag b" style="margin-left:auto">默认</span></div>
-        <div class="set" style="padding:8px 0;background:rgba(31,74,56,.06);box-shadow:inset 3px 0 0 var(--brand);border-radius:10px"><span class="ck d"></span><span class="ic"><svg><use href="#i-plane"/></svg></span><div class="x"><div class="t">泰国旅行</div><div class="s">142 笔 · 分类 9 个一级 / 15 个二级</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
-        <div class="set" style="padding:8px 0;opacity:.6"><span class="ck d"></span><span class="ic" style="background:rgba(94,122,138,.14);border-color:rgba(94,122,138,.3);color:var(--slate)"><svg><use href="#i-archive"/></svg></span><div class="x"><div class="t">宝宝用品</div><div class="s">已归档 · 恢复后才能切入</div></div></div>
-        <div class="grp" style="padding:9px 11px;background:rgba(185,138,52,.08);border-color:rgba(185,138,52,.32)">
-          <div class="row" style="gap:6px;align-items:flex-start"><svg style="width:13px;height:13px;stroke:var(--gold);stroke-width:1.8;fill:none;flex:none;margin-top:1px"><use href="#i-warn"/></svg>
-            <span style="font-size:8.5px;color:var(--ink2);line-height:1.6">切到「泰国旅行」后一并换掉：<b>首页与统计</b>（只算这本）· <b>记账落账本</b>（这本）· <b>搜索默认</b>（这本）。分类树全机共用，不随账本变。</span></div></div>
-        <div class="row" style="gap:7px;margin-top:10px"><span class="btn gh" style="flex:1;height:34px">取消</span><span class="btn gr" style="flex:1;height:34px">切到 泰国旅行</span></div>
+        <div class="sh-h"><b>切换账本</b></div>
+        <div class="grp" style="padding:2px 11px">
+          <div class="set"><span style="width:34px;height:34px;border-radius:10px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:17px;height:17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-select"/></svg></span><div><div class="t">全部账本</div></div></div>
+          <div class="set"><span style="width:34px;height:34px;border-radius:10px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:17px;height:17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-wallet"/></svg></span><div><div class="t">日常账本</div><div class="s">默认账本</div></div><span class="tag b" style="margin-left:auto">当前</span></div>
+          <div class="set"><span style="width:34px;height:34px;border-radius:10px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:17px;height:17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-plane"/></svg></span><div><div class="t">冰岛旅行</div><div class="s">86 笔</div></div></div>
+          <div class="set"><span style="width:34px;height:34px;border-radius:10px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:17px;height:17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-car"/></svg></span><div><div class="t">车贷账本</div><div class="s">24 笔</div></div></div>
+        </div>
       </div>
     </div></div>
-    <figcaption><div class="pn">P07b</div><div class="ph">切账本 · 影响面前置</div>
-      <div class="pd">切之前把三处口径变化摊开并给具体数字：首页与统计只算这本、记账落到这本、上次分类沿用全机那一对。已归档账本置灰，默认账本不给归档。</div></figcaption></figure>
+    <figcaption><div class="pn">P07b</div><div class="ph">切账本 · 一行即切</div>
+      <div class="pd">点一行就切走并收起，没有确认按钮。列表只放<b>还在用的账本</b>：已结算的不出现，默认账本标「默认账本」。切完之后首页、统计、记账落账与搜索默认一起换成这本；分类是全机共用的一套字典，切账本不换分类树。</div></figcaption></figure>
 
     
     <figure class="pc"><div class="dev"><div class="scr">
@@ -3843,6 +3897,617 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 
     
   </div>
+  <style>
+  /* ---------- §10.1–10.3 账本概览 / 结算 / 快速问答 ---------- */
+  .lvboard .sec{margin-top:80px}
+  .lvboard .sec-h{display:flex;align-items:flex-end;gap:20px;border-bottom:1.5px solid var(--ink);padding-bottom:14px;margin-bottom:8px}
+  .lvboard .sec-h h2{font-family:var(--serif);font-size:29px;font-weight:600;margin:0}
+  .lvboard .sec-h .no{font-family:var(--serif);font-size:32px;color:var(--ink3);line-height:1}
+  .lvboard .sec-h .meta{margin-left:auto;font-size:12px;color:var(--ink2);text-align:right;line-height:1.5}
+  .lvboard .lead{font-size:13.5px;color:var(--ink2);line-height:1.75;max-width:820px;margin:18px 0 34px}
+  .lvboard .grid{display:flex;flex-wrap:wrap;gap:46px 34px;align-items:flex-start}
+  .lvboard .pc{width:360px;margin:0}
+  .lvboard .pc figcaption{margin-top:14px}
+  .lvboard .ph{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 4px}
+  .lvboard .pn{font-family:var(--serif);font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.14em}
+  .lvboard .pd{font-size:11.5px;color:var(--ink2);line-height:1.65;margin:0 0 14px;min-height:52px}
+
+  .lvboard .dev{width:302px;border-radius:34px;padding:9px;background:#12191C;
+    box-shadow:0 2px 0 rgba(255,255,255,.5) inset,0 22px 44px -18px rgba(18,25,28,.5),0 4px 12px rgba(18,25,28,.18)}
+  .lvboard .scr{position:relative;height:616px;border-radius:26px;overflow:hidden;background:var(--paper);
+    font-size:11px;line-height:1.45;display:flex;flex-direction:column}
+  .lvboard .sb{height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+    font-family:var(--serif);font-size:10.5px;font-weight:600;color:var(--ink);flex:none}
+  .lvboard .sb .r{display:flex;gap:4px;align-items:center}
+  .lvboard .sb svg{width:11px;height:11px;fill:currentColor}
+  .lvboard .notch{position:absolute;left:50%;top:5px;transform:translateX(-50%);width:64px;height:16px;border-radius:9px;background:#12191C}
+  .lvboard .body{flex:1;overflow:hidden;padding:0 15px;display:flex;flex-direction:column}
+  .lvboard .body::-webkit-scrollbar{display:none}
+
+  .lvboard .ab{display:flex;align-items:center;gap:9px;height:40px;flex:none}
+  .lvboard .ab .tt{font-family:var(--serif);font-size:16.5px;font-weight:600;letter-spacing:.01em}
+  .lvboard .ab .sp{flex:1}
+  .lvboard .iB{width:29px;height:29px;border-radius:9px;border:1px solid var(--line);background:var(--card);
+    display:grid;place-items:center;flex:none}
+  .lvboard .iB svg{width:14px;height:14px;stroke:var(--ink);stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .lvboard .iB.on{background:var(--brand);border-color:var(--brand)}
+  .lvboard .iB.on svg{stroke:#F2EEE4}
+
+  .lvboard .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:11px 12px;
+    box-shadow:0 1px 2px rgba(18,25,28,.05)}
+  .lvboard .card.corner16{border-radius:16px}
+
+  .lvboard .gly{width:30px;height:30px;border-radius:10px;background:var(--brand-soft);color:var(--brand);
+    display:grid;place-items:center;flex:none}
+  .lvboard .gly svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .lvboard .gly.paper{background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+  .lvboard .gly.paper svg{stroke:currentColor}
+
+  .lvboard .tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:2.5px 7px;border-radius:17px;
+    background:var(--paper);border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+  .lvboard .tag.b{background:var(--brand);color:#F6F3EB;border-color:var(--brand)}
+  .lvboard .tag.g{background:var(--glow);border-color:rgba(185,138,52,.28);color:#7A5A18}
+  .lvboard .tag.r{background:var(--exp);color:#fff;border-color:var(--exp)}
+  .lvboard .tag.n{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .lvboard .tag.s{background:var(--brand-soft);color:var(--brand);border-color:transparent}
+  .lvboard .tag.dim{opacity:.5}
+
+  .lvboard .money{font-family:var(--serif);font-weight:600;letter-spacing:-.02em}
+  .lvboard .money.exp{color:var(--exp)}
+  .lvboard .money.inc{color:var(--brand)}
+  .lvboard .money.ink{color:var(--ink)}
+
+  .lvboard .ovcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 14px 13px;margin-bottom:11px;box-shadow:0 1px 2px rgba(18,25,28,.05)}
+  .lvboard .ovhdr{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .lvboard .ovhdr .nm{font-size:15px;font-weight:600;line-height:18px;flex:1;min-width:0}
+  .lvboard .ovnum{font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:29px;color:var(--exp)}
+  .lvboard .ovnote{font-size:11px;color:var(--ink3);line-height:15px;margin-top:3px}
+
+  .lvboard .catbar{margin-top:0}
+  .lvboard .catbar .lab{font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--ink3);margin-bottom:6px}
+  .lvboard .catrow{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .lvboard .catrow .nm{font-size:10px;width:44px;flex:none;color:var(--ink2)}
+  .lvboard .catrow .tr{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+  .lvboard .catrow .tr i{display:block;height:100%;border-radius:3px}
+  .lvboard .catrow .v{font-size:9.5px;font-weight:600;width:32px;text-align:right;flex:none;color:var(--ink2)}
+
+  .lvboard .brow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .lvboard .brow:last-child{border-bottom:0}
+  .lvboard .brow .m{flex:1;min-width:0}
+  .lvboard .brow .m .t{font-size:10.5px;font-weight:600;line-height:15px}
+  .lvboard .brow .m .s{font-size:9px;color:var(--ink3);line-height:13px;margin-top:1px}
+  .lvboard .brow .cv{font-family:var(--serif);font-size:12px;font-weight:600;flex:none;color:var(--exp)}
+
+  .lvboard .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:13px;
+    font-family:var(--serif);font-size:12.5px;font-weight:600;letter-spacing:.02em;flex:none}
+  .lvboard .btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .lvboard .btn.gr{background:var(--brand);color:#F6F3EB}
+  .lvboard .btn.gd{background:linear-gradient(102deg,var(--gold-hi),var(--gold));color:#2A1F0B;box-shadow:0 6px 16px -6px rgba(185,138,52,.7)}
+  .lvboard .btn.gh{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .lvboard .btn.ghs{height:28px;border-radius:9px;font-size:11px;padding:0 11px}
+  .lvboard .btn.full{width:100%}
+
+  .lvboard .dialog-scrim{position:absolute;inset:0;z-index:5;background:rgba(18,25,28,.5)}
+  .lvboard .dialog{position:absolute;z-index:6;left:20px;right:20px;top:50%;transform:translateY(-50%);
+    background:var(--card);border-radius:18px;padding:20px 18px 16px;box-shadow:0 16px 48px rgba(18,25,28,.3)}
+  .lvboard .dialog .dt{font-family:var(--serif);font-size:15px;font-weight:600;margin-bottom:8px}
+  .lvboard .dialog .dd{font-size:11.5px;color:var(--ink2);line-height:1.7;margin-bottom:14px}
+  .lvboard .dialog .dd b{color:var(--exp)}
+  .lvboard .dialog .dbtns{display:flex;gap:8px}
+  .lvboard .dialog .dbtns .btn{flex:1}
+
+  .lvboard .scrim{position:absolute;inset:0;z-index:2;background:rgba(18,25,28,.44)}
+  .lvboard .sheet{position:absolute;left:0;right:0;bottom:0;z-index:3;background:var(--card);
+    border-radius:22px 22px 0 0;padding:16px 15px 18px;box-shadow:0 -12px 30px rgba(18,25,28,.18)}
+  .lvboard .grab{width:34px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px}
+
+  .lvboard .qrow{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;flex:none}
+  .lvboard .qrow::-webkit-scrollbar{display:none}
+  .lvboard .qchip{flex:none;background:var(--card);border:1px solid var(--line);border-radius:9px;
+    padding:6px 10px;font-size:10.5px;font-weight:600;color:var(--ink2);white-space:nowrap}
+  .lvboard .qchip.on{background:var(--brand);border-color:var(--brand);color:#F6F3EB}
+  .lvboard .qres{margin-top:8px}
+  .lvboard .qres .q{font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--ink3);margin-bottom:6px}
+  .lvboard .qres .v{font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:24px;color:var(--ink)}
+  .lvboard .qres .v small{font-size:11px;font-weight:600;color:var(--ink3);margin-left:4px}
+  .lvboard .qres .m{display:flex;gap:10px;margin-top:6px}
+  .lvboard .qres .m .it{font-size:9px;color:var(--ink3)}
+  .lvboard .qres .m .it b{display:block;font-size:10.5px;font-weight:600;color:var(--ink2);margin-bottom:1px}
+  .lvboard .qres .ov{font-size:9px;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);color:var(--ink3);line-height:1.5}
+  .lvboard .qres .ov b{color:var(--exp);font-weight:600}
+
+  .lvboard .poster{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 16px;text-align:center;margin-bottom:10px}
+  .lvboard .poster .eyebrow{font-size:8.5px;letter-spacing:.3em;color:var(--gold);font-weight:700;margin-bottom:8px}
+  .lvboard .poster .name{font-family:var(--serif);font-size:17px;font-weight:600;margin-bottom:2px}
+  .lvboard .poster .span{font-size:9px;color:var(--ink3);margin-bottom:14px}
+  .lvboard .poster .amt{font-family:var(--serif);font-size:32px;font-weight:600;letter-spacing:-.02em;color:var(--exp);margin-bottom:14px}
+  .lvboard .poster .catbar{margin-top:0}
+  .lvboard .poster .foot{font-size:7.5px;color:var(--ink3);margin-top:14px;padding-top:8px;border-top:1px dashed var(--line);line-height:1.5}
+
+  .lvboard .slab{font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--ink3);margin:12px 2px 6px}
+
+  .lvboard .note{background:var(--glow);border:1px solid var(--gold-hi);border-radius:16px;padding:18px 20px;margin-top:34px}
+  .lvboard .note h3{font-family:var(--serif);font-size:15px;margin:0 0 8px;font-weight:600}
+  .lvboard .note ul{margin:0;padding-left:18px}
+  .lvboard .note li{font-size:12.5px;line-height:1.85;color:var(--ink2);margin-bottom:3px}
+  </style>
+
+  <div class="lvboard" id="ledger-screens">
+
+<!-- ============ 10.1 账本概览页 ============ -->
+<div class="sec">
+  <div class="sec-h"><span class="no">10.1</span><h2>账本概览页</h2>
+    <div class="meta">入口：账本列表点卡片进<br>概览卡 + 快速问答 + 分类占比 + 最近几笔</div></div>
+  <p class="lead">现在点进账本只是列表。改成点卡片进「概览页」：顶部是一本账的白底 TallyCard——IconTile + 账本名 + 笔数标签、大号总支出、一行时间跨度与日均；下面是快速问答、分类占比、最近几笔。
+  概览页不替代统计页——统计是任意区间的查询工具，概览是这本账的固定答案。看统计在顶栏右侧（与首页一致）。</p>
+
+  <div class="grid">
+
+    <!-- LV-01 账本列表 -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:45</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">我的账本</span><span class="sp"></span><span class="tag">5,623 笔合计</span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
+        <!-- 默认账本：名字旁挂「默认」标签，动作行里「结算」置灰 -->
+        <div class="card corner16" style="margin-bottom:9px">
+          <div class="row" style="display:flex;align-items:center;gap:10px">
+            <span class="gly" style="background:var(--brand);border-color:var(--brand);color:#F6F3EB"><svg><use href="#i-wallet"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px"><div style="font-size:15.5px;font-weight:600;line-height:20px">日常账本</div><span class="tag b" style="font-size:8.5px">默认</span></div>
+              <div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">1,208 笔 · 最近 10-14</div>
+            </div>
+            <span class="money exp" style="font-size:22px;line-height:24px">3,186.40</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div class="row" style="display:flex;gap:5px;position:relative">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;opacity:.42"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
+        <!-- 非默认账本：「结算」可点，删除直接平铺在动作行 -->
+        <div class="card corner16" style="margin-bottom:9px">
+          <div class="row" style="display:flex;align-items:center;gap:10px">
+            <span class="gly paper"><svg><use href="#i-plane"/></svg></span>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:600;line-height:20px">冰岛旅行</div><div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">86 笔 · 最近 10-02</div></div>
+            <span class="money exp" style="font-size:22px;line-height:24px">4,920.00</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div class="row" style="display:flex;gap:5px;position:relative">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
+        <!-- 已结算：单独一区，动作换成「概览 · 编辑 · 恢复记账 · 删除」 -->
+        <div class="slab" style="margin-top:2px">已结算 1</div>
+        <div class="card corner16">
+          <div class="row" style="display:flex;align-items:center;gap:10px">
+            <span class="gly paper"><svg><use href="#i-piggy"/></svg></span>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:600;line-height:20px;color:var(--ink2)">装修</div></div>
+            <span class="money" style="font-size:22px;line-height:24px;color:var(--ink2)">17,490.00</span>
+          </div>
+          <div style="display:flex;align-items:center;margin-top:5px">
+            <span class="tag" style="background:var(--paper);color:var(--slate);border-color:rgba(94,122,138,.4)">已结算</span>
+            <span style="flex:1"></span>
+            <span style="font-size:9.5px;color:var(--ink3)">214 笔 · 最近 08-19</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div class="row" style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:8px;padding:0 3px;gap:3px;white-space:nowrap;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px"><use href="#i-archive"/></svg>恢复记账</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">LV-01</div><div class="ph">我的账本 · 结算在动作行里</div>
+      <div class="pd">卡片动作固定「概览 · 编辑 · 结算 · 删除」：默认账本的「结算」置灰——默认账本是持续使用的，没有「结束」的概念；非默认账本可点，直接进概览页并弹出结算确认。
+      删除是动作行最后一格，陶土字说明它是破坏动作；默认身份改成账本名旁的「默认」标签，切换默认挪进编辑弹窗的开关。
+      已结算的账本单独一区，标题「已结算 N」，动作换成「概览 · 编辑 · 恢复记账 · 删除」，卡片降为次要色。
+      点卡片主体同样进概览页，「概览」只是把这条路径明说出来；看统计在概览页顶栏右侧（与首页一致），不在列表页出现。</div></figcaption></figure>
+
+    <!-- LV-02 概览页（完整视图：概览卡 + 快速问答 + 分类占比 + 最近几笔） -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:46</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">冰岛旅行</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <!-- 概览卡 -->
+        <div class="ovcard">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-plane"/></svg></span>
+            <span class="nm">冰岛旅行</span>
+            <span class="tag">86 笔</span>
+          </div>
+          <div class="ovnum">¥4,920.00</div>
+          <div class="ovnote">2026-07-03 ～ 2026-08-12 · 41 天 · 日均 ¥120.00</div>
+        </div>
+        <!-- 快速问答 -->
+        <div class="slab">快速问答</div>
+        <div class="qrow">
+          <span class="qchip on">收入和结余</span>
+          <span class="qchip">最大一笔</span>
+          <span class="qchip">每月平均</span>
+          <span class="qchip">某分类花了多少</span>
+        </div>
+        <div class="card qres">
+          <div class="q">收入和结余</div>
+          <div class="v">¥5,400<small>· 结余 +¥480.00</small></div>
+          <div class="m">
+            <div class="it"><b>支出</b>¥4,920.00</div>
+            <div class="it"><b>笔数</b>86 笔</div>
+          </div>
+        </div>
+        <!-- 分类占比 -->
+        <div class="slab">分类占比</div>
+        <div class="card">
+          <div class="catbar">
+            <div class="catrow"><span class="nm">住宿</span><span class="tr"><i style="width:42%;background:var(--brand)"></i></span><span class="v">¥2,066</span></div>
+            <div class="catrow"><span class="nm">交通</span><span class="tr"><i style="width:24%;background:var(--gold)"></i></span><span class="v">¥1,181</span></div>
+            <div class="catrow"><span class="nm">餐饮</span><span class="tr"><i style="width:18%;background:var(--slate)"></i></span><span class="v">¥886</span></div>
+            <div class="catrow"><span class="nm">其他</span><span class="tr"><i style="width:16%;background:var(--ink3)"></i></span><span class="v">¥787</span></div>
+          </div>
+        </div>
+        <!-- 最近几笔 -->
+        <div class="slab">最近几笔</div>
+        <div>
+          <div class="brow"><span class="gly paper" style="width:24px;height:24px;border-radius:8px"><svg style="width:11px;height:11px"><use href="#i-plane"/></svg></span><div class="m"><div class="t">机票</div><div class="s">08-12 · 冰岛航空</div></div><span class="cv">¥1,840</span></div>
+          <div class="brow"><span class="gly paper" style="width:24px;height:24px;border-radius:8px"><svg style="width:11px;height:11px"><use href="#i-sofa"/></svg></span><div class="m"><div class="t">酒店</div><div class="s">08-11 · 雷克雅未克</div></div><span class="cv">¥612</span></div>
+          <div class="brow"><span class="gly paper" style="width:24px;height:24px;border-radius:8px"><svg style="width:11px;height:11px"><use href="#i-food"/></svg></span><div class="m"><div class="t">晚餐</div><div class="s">08-10 · Seafood</div></div><span class="cv">¥186</span></div>
+        </div>
+        <div style="flex:1"></div>
+        <!-- 底部结算按钮（非默认账本才有） -->
+        <div style="margin-top:10px;margin-bottom:0">
+          <span class="btn gr full"><svg style="stroke:#F6F3EB"><use href="#i-flag"/></svg>结算</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">LV-02</div><div class="ph">概览页 · 完整视图</div>
+      <div class="pd">顶栏统一：返回 + 账本名 + 看统计 icon（与首页一致）。
+      页面从上到下：概览卡（总支出 + 时间跨度 + 日均）→ 快速问答（四枚模板 chips + 结果卡）→ 分类占比 → 最近几笔 → 底部结算按钮（非默认账本才有，默认账本不显示）。
+      概览卡只展示账本维度的固有数据——总支出、时间跨度、笔数、日均；预算是周期维度（本月/本年），留在首页与统计页，不放进账本概览。
+      问答默认第一问是「收入和结余」：只问支出回答不了「这本账到底赚没赚」，结余才是账本维度的结论。</div></figcaption></figure>
+
+    <!-- LV-03 默认账本概览页（无结算按钮） -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:47</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">日常账本</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <div class="ovcard">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-wallet"/></svg></span>
+            <span class="nm">日常账本</span>
+            <span class="tag b">默认</span>
+          </div>
+          <div class="ovnum">¥3,186.40</div>
+          <div class="ovnote">2026-01-01 ～ 至今 · 1,208 笔 · 日均 ¥9.80</div>
+        </div>
+        <div class="slab">快速问答</div>
+        <div class="qrow">
+          <span class="qchip on">收入和结余</span>
+          <span class="qchip">最大一笔</span>
+          <span class="qchip">每月平均</span>
+          <span class="qchip">某分类花了多少</span>
+        </div>
+        <div class="card qres">
+          <div class="q">收入和结余</div>
+          <div class="v">¥3,400<small>· 结余 +¥213.60</small></div>
+          <div class="m">
+            <div class="it"><b>支出</b>¥3,186.40</div>
+            <div class="it"><b>笔数</b>1,208 笔</div>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">LV-03</div><div class="ph">默认账本概览页 · 无结算按钮</div>
+      <div class="pd">默认账本（日常账本）的概览页结构与非默认账本完全一致，但底部不显示结算按钮——默认账本是持续使用的，没有「结束」的概念；同样地，列表页动作行里的「结算」对它置灰。
+      右端跨度写「至今」，不写一个会过期的结束日。</div></figcaption></figure>
+
+  </div>
+</div>
+
+<!-- ============ 10.2 项目结算/收尾 ============ -->
+<div class="sec">
+  <div class="sec-h"><span class="no">10.2</span><h2>项目结算 / 收尾</h2>
+    <div class="meta">入口：账本卡动作行 / 概览页底部「结算」<br>确认弹窗 → 结算结果 sheet → 锁定账本</div></div>
+  <p class="lead">装修结束了，你想知道「装修到底花了多少钱、比预算多了多少」。结算 = 这本账的一次性汇总：总支出、时间范围、预算对比、分类占比、导出长图。
+  确认后账本被锁定，标记为「已结算」，之后不能往里记新账；要接着记，在账本列表的「已结算」区点「恢复记账」。没有单独的「归档」动作——结算就是锁定。</p>
+
+  <div class="grid">
+
+    <!-- SET-01 概览页 → 点结算按钮 -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:48</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">装修</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <div class="ovcard">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-piggy"/></svg></span>
+            <span class="nm">装修</span>
+            <span class="tag">214 笔</span>
+          </div>
+          <div class="ovnum">¥17,490.00</div>
+          <div class="ovnote">2026-03-15 ～ 2026-08-19 · 157 天 · 日均 ¥111.40</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="margin-top:10px;margin-bottom:0">
+          <span class="btn gr full"><svg style="stroke:#F6F3EB"><use href="#i-flag"/></svg>结算</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">SET-01</div><div class="ph">概览页 · 底部结算按钮</div>
+      <div class="pd">点底部结算按钮进确认弹窗。从账本卡动作行的「结算」进来时不走这一段——直接落在本页并弹出确认框，不再让人找第二次按钮。
+      看统计在顶栏右侧（chart icon），不在底部。</div></figcaption></figure>
+
+    <!-- SET-02 结算确认弹窗 -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:49</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">装修</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <div class="ovcard">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-piggy"/></svg></span>
+            <span class="nm">装修</span>
+            <span class="tag">214 笔</span>
+          </div>
+          <div class="ovnum">¥17,490.00</div>
+          <div class="ovnote">2026-03-15 ～ 2026-08-19 · 157 天</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="margin-top:10px;margin-bottom:0">
+          <span class="btn gr full"><svg style="stroke:#F6F3EB"><use href="#i-flag"/></svg>结算</span>
+        </div>
+      </div>
+      <!-- 确认弹窗 -->
+      <div class="dialog-scrim"></div>
+      <div class="dialog">
+        <div class="dt">结算「装修」账本？</div>
+        <div class="dd">结算后这本账会被锁定，之后不能往里记新账。如需继续记账，请新建账本。</div>
+        <div class="dbtns">
+          <span class="btn gh"><svg><use href="#i-back"/></svg>取消</span>
+          <span class="btn gr"><svg><use href="#i-check"/></svg>确认结算</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">SET-02</div><div class="ph">结算确认弹窗</div>
+      <div class="pd">点「结算」后弹出确认弹窗（不是结算结果页）。弹窗只说一件不可逆的事：账本锁定、之后不能往里记新账、要接着记只能新建账本。
+      确认后进入结算结果 sheet（SET-03）。</div></figcaption></figure>
+
+    <!-- SET-03 结算结果 sheet -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:50</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">装修</span><span class="sp"></span></div>
+        <div class="ovcard" style="margin-bottom:0">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-piggy"/></svg></span>
+            <span class="nm">装修</span>
+            <span class="tag" style="background:var(--paper);color:var(--slate);border-color:rgba(94,122,138,.4)">已结算</span>
+          </div>
+          <div class="ovnum">¥17,490.00</div>
+          <div class="ovnote">2026-03-15 ～ 2026-08-19 · 157 天</div>
+        </div>
+      </div>
+      <!-- 结算结果 sheet -->
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div style="font-family:var(--serif);font-size:14px;font-weight:600;margin-bottom:10px">装修 · 结算</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+          <span class="money exp" style="font-size:26px;line-height:26px">¥17,490</span>
+          <span style="font-size:10px;color:var(--ink3);font-weight:600">总支出</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:10px;padding:8px 10px;margin-bottom:10px">
+          <span style="font-size:9.5px;color:var(--ink3);flex:1">预算 ¥16,000 · 已超支</span>
+          <span style="font-size:11px;font-weight:600;color:var(--exp)">+¥1,490</span>
+        </div>
+        <div class="catbar">
+          <div class="lab">分类占比</div>
+          <div class="catrow"><span class="nm">建材</span><span class="tr"><i style="width:38%;background:var(--brand)"></i></span><span class="v">¥6,646</span></div>
+          <div class="catrow"><span class="nm">家具</span><span class="tr"><i style="width:27%;background:var(--gold)"></i></span><span class="v">¥4,722</span></div>
+          <div class="catrow"><span class="nm">家电</span><span class="tr"><i style="width:22%;background:var(--slate)"></i></span><span class="v">¥3,848</span></div>
+          <div class="catrow"><span class="nm">其他</span><span class="tr"><i style="width:13%;background:var(--ink3)"></i></span><span class="v">¥2,274</span></div>
+        </div>
+        <div style="font-size:9px;color:var(--ink3);line-height:1.5;margin:8px 0 10px">账本已结算 · 之后不能往里记新账</div>
+        <div class="row" style="display:flex;gap:7px">
+          <span class="btn gd full"><svg style="stroke:#2A1F0B"><use href="#i-share"/></svg>生成结算长图</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">SET-03</div><div class="ph">结算结果 sheet · 账本已锁定</div>
+      <div class="pd">确认结算后账本立即锁定（列表里卡片换成「已结算」标签，动作换成「恢复记账」），同时弹出结果 sheet：总支出大数字、预算对比行（超支标陶土）、分类占比条、底部一行灰色说明「账本已结算 · 之后不能往里记新账」。
+      主按钮是「生成结算长图」，复用海报管线。</div></figcaption></figure>
+
+    <!-- SET-04 结算长图 -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:51</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body" style="padding-top:10px">
+        <div class="poster">
+          <div class="eyebrow">TALLY · 账本结算</div>
+          <div class="name">装修</div>
+          <div class="span">2026-03-15 ～ 2026-08-19 · 214 笔</div>
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.14em;color:var(--ink3);text-align:left;padding-top:8px;border-top:1px dashed var(--line);margin-bottom:4px">支出</div>
+          <div class="amt" style="margin-bottom:8px">¥17,490</div>
+          <div style="display:flex;gap:8px;text-align:left;margin-bottom:14px">
+            <div style="flex:1"><div style="font-size:8px;color:var(--ink3)">笔数</div><div style="font-size:11px;font-weight:600">214 笔</div></div>
+            <div style="flex:1"><div style="font-size:8px;color:var(--ink3)">日均</div><div style="font-size:11px;font-weight:600">¥111</div></div>
+            <div style="flex:1"><div style="font-size:8px;color:var(--ink3)">月均</div><div style="font-size:11px;font-weight:600">¥2,915</div></div>
+          </div>
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.14em;color:var(--ink3);text-align:left;padding-top:8px;border-top:1px dashed var(--line);margin-bottom:7px">分类占比</div>
+          <div style="text-align:left">
+            <div class="catrow"><span class="nm" style="width:auto">建材 · 38%</span><span class="tr"><i style="width:100%;background:var(--brand)"></i></span><span class="v" style="width:auto">¥6,646</span></div>
+            <div class="catrow"><span class="nm" style="width:auto">家具 · 27%</span><span class="tr"><i style="width:71%;background:var(--slate)"></i></span><span class="v" style="width:auto">¥4,722</span></div>
+            <div class="catrow"><span class="nm" style="width:auto">家电 · 22%</span><span class="tr"><i style="width:58%;background:var(--slate)"></i></span><span class="v" style="width:auto">¥3,848</span></div>
+            <div class="catrow"><span class="nm" style="width:auto">其他 · 13%</span><span class="tr"><i style="width:34%;background:var(--slate)"></i></span><span class="v" style="width:auto">¥2,274</span></div>
+          </div>
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.14em;color:var(--ink3);text-align:left;padding-top:8px;border-top:1px dashed var(--line);margin-bottom:6px">预算</div>
+          <div style="font-size:9px;color:var(--ink3);text-align:left;margin-bottom:5px">预算 ¥16,000 · 已超支 +¥1,490</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px"><span style="flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:100%;background:var(--exp);border-radius:3px"></i></span></div>
+          <div class="foot">由 Tally 塔莉生成 · 数据只存在这台手机</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="row" style="display:flex;gap:5px;margin-top:10px;margin-bottom:0">
+          <span class="btn ghs" style="flex:1"><svg><use href="#i-share"/></svg>分享</span>
+          <span class="btn ghs" style="flex:1"><svg><use href="#i-doc"/></svg>保存</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">SET-04</div><div class="ph">结算长图 · 复用海报渲染管线</div>
+      <div class="pd">复用月度/年度海报那套渲染（PosterScreen / PosterViewModel）：抬头「TALLY · 账本结算」+ 账本名 + 完整日期跨度、支出段（大数字 + 笔数/日均/月均三格）、分类占比行、预算段、页脚。
+      整本账没有「上期」，所以不出环比与趋势；脱敏开关照海报那套，默认不脱敏。</div></figcaption></figure>
+
+  </div>
+</div>
+
+<!-- ============ 10.3 快速问答 ============ -->
+<div class="sec">
+  <div class="sec-h"><span class="no">10.3</span><h2>快速问答</h2>
+    <div class="meta">入口：概览卡下方「快速问答」chips<br>四问：收入和结余 / 最大一笔 / 每月平均 / 某分类</div></div>
+  <p class="lead">有 5,739 笔账，你真正会问的问题不是「这个月花了多少」（首页已经有了），而是：「今年装修一共花了多少」「买车到现在已经花了多少」「上个月支出最多的一笔是什么」。
+  现在这些要经过搜索页 → 筛选条件 → 点统计才能看到。快速问答让「账本 + 时间范围」变成一个快捷入口，点一下出结果。四枚 chips 就地换结果：以下三屏是其中三种状态（「每月平均」的结构与「最大一笔」相同，单值 + 两格说明），顶栏一致。</p>
+
+  <div class="grid">
+
+    <!-- Q-01 默认态 -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:52</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">装修</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <div class="ovcard">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-piggy"/></svg></span>
+            <span class="nm">装修</span>
+            <span class="tag">214 笔</span>
+          </div>
+          <div class="ovnum">¥17,490.00</div>
+          <div class="ovnote">2026-03-15 ～ 2026-08-19 · 157 天 · 日均 ¥111.40</div>
+        </div>
+        <div class="slab">快速问答</div>
+        <div class="qrow">
+          <span class="qchip on">收入和结余</span>
+          <span class="qchip">最大一笔</span>
+          <span class="qchip">每月平均</span>
+          <span class="qchip">某分类花了多少</span>
+        </div>
+        <div class="card qres">
+          <div class="q">收入和结余</div>
+          <div class="v">¥17,900<small>· 结余 +¥410.00</small></div>
+          <div class="m">
+            <div class="it"><b>支出</b>¥17,490.00</div>
+            <div class="it"><b>笔数</b>214 笔</div>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="margin-top:10px;margin-bottom:0">
+          <span class="btn gr full"><svg style="stroke:#F6F3EB"><use href="#i-flag"/></svg>结算</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">Q-01</div><div class="ph">快速问答 · 默认态</div>
+      <div class="pd">概览卡下方一行横向滚动的模板 chips，默认选中「收入和结余」，下面 TallyCard 直接出结果。点别的 chip 结果卡换内容——不换页面，就地刷新。</div></figcaption></figure>
+
+    <!-- Q-02 最大一笔 -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:53</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">装修</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <div class="ovcard">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-piggy"/></svg></span>
+            <span class="nm">装修</span>
+            <span class="tag">214 笔</span>
+          </div>
+          <div class="ovnum">¥17,490.00</div>
+          <div class="ovnote">2026-03-15 ～ 2026-08-19 · 157 天</div>
+        </div>
+        <div class="slab">快速问答</div>
+        <div class="qrow">
+          <span class="qchip">收入和结余</span>
+          <span class="qchip on">最大一笔</span>
+          <span class="qchip">每月平均</span>
+          <span class="qchip">某分类花了多少</span>
+        </div>
+        <div class="card qres">
+          <div class="q">最大一笔</div>
+          <div class="v">¥3,200<small>· 沙发</small></div>
+          <div class="m">
+            <div class="it"><b>日期</b>06-28</div>
+            <div class="it"><b>分类</b>家具</div>
+          </div>
+          <div class="ov">这笔占这本账的 <b>18.3%</b> · 点这笔进账单详情</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="margin-top:10px;margin-bottom:0">
+          <span class="btn gr full"><svg style="stroke:#F6F3EB"><use href="#i-flag"/></svg>结算</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">Q-02</div><div class="ph">快速问答 · 「最大一笔」</div>
+      <div class="pd">点「最大一笔」结果卡换成这笔的金额、日期、分类、占这本账的比例，并有一条可点的「这笔占这本账的 18.3%」——点这笔进账单详情（已有 BillDetailSheet）。模板走纯查询，不调 AI。</div></figcaption></figure>
+
+    <!-- Q-03 某分类 -->
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:54</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">装修</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <div class="ovcard">
+          <div class="ovhdr">
+            <span class="gly paper" style="width:28px;height:28px;border-radius:9px"><svg style="width:13px;height:13px"><use href="#i-piggy"/></svg></span>
+            <span class="nm">装修</span>
+            <span class="tag">214 笔</span>
+          </div>
+          <div class="ovnum">¥17,490.00</div>
+          <div class="ovnote">2026-03-15 ～ 2026-08-19 · 157 天</div>
+        </div>
+        <div class="slab">快速问答</div>
+        <div class="qrow">
+          <span class="qchip">收入和结余</span>
+          <span class="qchip">最大一笔</span>
+          <span class="qchip">每月平均</span>
+          <span class="qchip on">某分类花了多少</span>
+        </div>
+        <div class="card qres">
+          <div class="q">建材花了多少</div>
+          <div class="v">¥6,646<small>· 38 笔</small></div>
+          <div class="m">
+            <div class="it"><b>占这本账</b>38%</div>
+            <div class="it"><b>月均</b>¥458</div>
+          </div>
+          <div class="ov">点这个分类进统计页看这笔分类的明细</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="margin-top:10px;margin-bottom:0">
+          <span class="btn gr full"><svg style="stroke:#F6F3EB"><use href="#i-flag"/></svg>结算</span>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">Q-03</div><div class="ph">快速问答 · 「某分类花了多少」</div>
+      <div class="pd">点「某分类花了多少」时弹一个小选择器（从这本账里出现过的分类里选），选中后结果卡显示这个分类的总额、笔数、占这本账的比例、月均。点结果卡上的分类名进统计页看明细——统计页已有按分类下钻，不用新建。</div></figcaption></figure>
+
+  </div>
+</div>
+
+<div class="note">
+  <h3>判定与边界</h3>
+  <ul>
+    <li><b>不新增计算口径</b>：概览只发一条只读瘦查询（不取附件数、已退合计、账本与分期 JOIN，也不排序），聚合复用统计页同一套函数——页面省的是搬运，不是口径。</li>
+    <li><b>快速问答不走 AI</b>：模板走纯查询（已有统计口径），AI 没配也能用。与小莉那条线完全分开——小莉是对话式记账，问答是预设查询。</li>
+    <li><b>结算长图复用海报管线</b>：月度/年度海报那套渲染（PosterScreen / PosterViewModel）直接拿来画「这本账的总账」。抬头写账本名 + 完整日期跨度，不出环比与趋势。</li>
+    <li><b>结算即锁定，没有单独的归档动作</b>：确认结算后账本标记为「已结算」，列表里单独一区、可「恢复记账」；要彻底删掉仍走回收站。</li>
+    <li><b>默认账本不允许结算</b>：默认账本是持续使用的，没有「结束」的概念。列表动作行里的「结算」对它置灰，概览页底部不显示结算按钮；默认身份挂账本名旁的标签，切换默认在编辑弹窗里做。</li>
+    <li><b>两个入口，一个结果</b>：账本卡动作行点「结算」直接落在概览页并弹出确认框；概览页底部的「结算」按钮弹同一个确认框。</li>
+    <li><b>结算结果 sheet 只有一个主动作</b>：确认结算后就地弹出结果 sheet，「生成结算长图」是唯一按钮。</li>
+    <li><b>不新增表结构</b>：账本实体已有 icon_key / is_archived / sort_order，预算表已有，账单表已有。概览、结算、问答都是纯查询 + UI，不动数据库。</li>
+    <li><b>页面关系</b>：概览页是账本的新首页（点账本卡片进）；统计页不变（概览页顶栏看统计 icon 进统计页）；搜索页不变（快速问答是概览页内的快捷入口，不替代搜索）。</li>
+  </ul>
+</div>
+
+  </div>
+
 </section>
 
 <section class="sec">
@@ -4659,6 +5324,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.1-dev</span></div>
         <div class="grpt">记账偏好</div>
         <div class="grp" style="padding:0 12px">
+          <div class="set"><div><div class="t">秒开模式</div><div class="s">默认关闭 · 开启后打开应用直接进记账页</div></div><span class="sw"></span></div>
           <div class="set"><div><div class="t">账单图片</div><div class="s">默认关闭 · 记账页不显示图片入口</div></div><span class="sw"></span></div>
           <div class="set"><div><div class="t">报销</div><div class="s">关闭后记账不出现报销相关字段</div></div><span class="sw"></span></div>
           <div class="set"><div><div class="t">账单时间精度</div><div class="s">决定账单分组与统计的粒度</div></div><span class="sub" style="margin-left:auto"><a class="on">精确到日</a><a>到时和分</a></span></div>
@@ -4692,7 +5358,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       </div>
     </div></div>
     <figcaption><div class="pn">P20</div><div class="ph">设置</div>
-      <div class="pd">五组到底：记账偏好、小莉（AI）、外观、数据、关于。每个开关把默认值与影响面写在行副标题里，不另加解释段落；没有的功能不给灰按钮。「恢复默认」单独一组，只回偏好，不动账单。</div></figcaption></figure>
+      <div class="pd">五组到底：记账偏好、小莉（AI）、外观、数据、关于。每个开关把默认值与影响面写在行副标题里，不另加解释段落；没有的功能不给灰按钮。「秒开模式」把打开应用的落点从首页换成记账页——冷启动与从后台回到停在首页的 App 都算，停在别的页不打断——返回或保存后落在首页。「恢复默认」单独一组，只回偏好，不动账单。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:52</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -4709,7 +5375,6 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="grp" style="padding:0 12px">
           <div class="set"><div><div class="t">版本</div><div class="s">0.1.1-dev (101) · 从 APK 读，不硬编码</div></div></div>
           <div class="set"><div><div class="t">项目主页</div><div class="s">tally.guohang.asia · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
-          <div class="set"><div><div class="t">数据包名</div><div class="s">io.github.guohangbk.tally</div></div></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
         <div class="card mt" style="padding:9px 11px">
@@ -4724,7 +5389,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       </div>
     </div></div>
     <figcaption><div class="pn">P20b</div><div class="ph">设置 · 恢复默认与关于</div>
-      <div class="pd">恢复默认只回偏好，账单数据一律不动，且这句话就写在确认弹窗里。关于区给版本、包名与依赖清单；连点包名五次开调试台，浮层贴在页面左下。</div></figcaption></figure>
+      <div class="pd">恢复默认只回偏好，账单数据一律不动，且这句话就写在确认弹窗里。关于区给版本、项目主页与依赖清单；连点版本五次开调试台，浮层贴在页面左下。</div></figcaption></figure>
   </div>
 </section>
 
@@ -5475,32 +6140,88 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 </section>
 <section class="sec p2">
   <div class="sec-h"><span class="no">22</span><h2>账本与切账本弹层</h2>
-    <div class="meta">墨块底只留给选中态<br>三处一起改</div></div>
-  <p class="lead">账本图标压在 <code>#16211D</code> 墨块上，深色模式里又整块翻成米白——它跟分类页、切账本弹层、账单行用的<b>不是同一种瓦片</b>。
-    统一成全站默认的纸面底 + 1dp 描边 + 墨色图形；墨块底退回到它本来的语义：选中与强调。</p>
+    <div class="meta">纸面瓦 · 默认那本换绿底<br>列表 / 弹窗 / 弹层同一种瓦</div></div>
+  <p class="lead">账本图标与分类页一级卡片、切账本弹层、账单行走同一种<b>纸面瓦</b>：40dp、圆角 13、1dp 描边、墨色图形，深色下自动换成 <code>#1A2320</code>。
+    唯一的例外是默认账本——那枚瓦用品牌绿底反白，进列表第一眼就能认出身份（名字旁仍挂「默认」标签）。墨块底只留给选中态。</p>
   <div class="grid q4">
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:45</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">我的账本</span><span class="sp"></span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
-        <div class="icard"><div class="irow"><span class="tl p"><svg><use href="#i-wallet"/></svg></span>
-          <div class="ix"><div class="iname">日常账本 <span class="tag b" style="vertical-align:2px">默认</span></div><div class="imeta">1,208 笔 · 最近 10-14 · 支出 3,186.40</div></div>
-          <div class="row" style="gap:4px"><span class="iB"><svg><use href="#i-brush"/></svg></span><span class="iB"><svg><use href="#i-archive"/></svg></span></div></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">我的账本</span><span class="sp"></span><span class="tag">5,623 笔合计</span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
+        <div class="card" style="border-radius:16px;margin-bottom:9px;border-color:rgba(31,74,56,.32)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="tl" style="width:36px;height:36px;border-radius:12px;background:var(--brand);border:1px solid var(--brand);color:#F6F3EB"><svg style="width:18px;height:18px"><use href="#i-wallet"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="font-size:15.5px;font-weight:600;line-height:20px">日常账本</div><span class="tag b" style="font-size:8.5px;padding:2px 5px">默认</span></div>
+              <div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">1,208 笔 · 最近 10-14</div>
+            </div>
+            <span class="money e" style="font-size:22px;line-height:24px">3,186.40</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;opacity:.42"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
         </div>
-        <div class="icard"><div class="irow"><span class="tl p"><svg><use href="#i-plane"/></svg></span>
-          <div class="ix"><div class="iname">旅行账本</div><div class="imeta">86 笔 · 最近 10-02 · 支出 4,920.00</div></div>
-          <div class="row" style="gap:4px"><span class="iB"><svg><use href="#i-brush"/></svg></span><span class="iB"><svg><use href="#i-archive"/></svg></span></div></div>
+        <div class="card" style="border-radius:16px;margin-bottom:9px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="tl p" style="width:36px;height:36px;border-radius:12px"><svg style="width:18px;height:18px"><use href="#i-plane"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15.5px;font-weight:600;line-height:20px;white-space:nowrap">冰岛旅行</div>
+              <div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">86 笔 · 最近 10-02</div>
+            </div>
+            <span class="money e" style="font-size:22px;line-height:24px">4,920.00</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
         </div>
-        <div class="icard" style="opacity:.62"><div class="irow"><span class="tl p"><svg><use href="#i-piggy"/></svg></span>
-          <div class="ix"><div class="iname">装修 <span class="tag" style="vertical-align:2px">已归档</span></div><div class="imeta">214 笔 · 最近 08-19 · 支出不计入首页</div></div>
-          <div class="row" style="gap:4px"><span class="iB"><svg><use href="#i-brush"/></svg></span><span class="iB"><svg><use href="#i-trash"/></svg></span></div></div>
+        <div class="card" style="border-radius:16px;margin-bottom:9px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--ink)"><svg style="width:18px;height:18px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round"><use href="#i-car"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15.5px;font-weight:600;line-height:20px;white-space:nowrap">车贷账本</div>
+              <div style="font-size:10px;color:var(--ink3);line-height:14px;margin-top:3px">24 笔 · 最近 09-28</div>
+            </div>
+            <span class="money e" style="font-size:22px;line-height:24px">1,240.00</span>
+          </div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-flag"/></svg>结算</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
         </div>
-        <div class="cmhint" style="padding-top:11px"><svg><use href="#i-info"/></svg><span>图标只是身份，不承担配色与强调</span></div>
+        <div style="font-family:var(--serif);font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--gold);margin:12px 2px 6px">已结算 1</div>
+        <div class="card" style="border-radius:16px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="tl p" style="width:36px;height:36px;border-radius:12px"><svg style="width:18px;height:18px"><use href="#i-piggy"/></svg></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15.5px;font-weight:600;line-height:20px;color:var(--ink2);white-space:nowrap">装修</div>
+            </div>
+            <span class="money" style="font-size:22px;line-height:24px;color:var(--ink2)">17,490.00</span>
+          </div>
+          <div style="display:flex;align-items:center;margin-top:5px"><span class="tag" style="background:var(--paper);color:var(--slate);border-color:rgba(94,122,138,.4)">已结算</span><span style="flex:1"></span><span style="font-size:9.5px;color:var(--ink3)">214 笔 · 最近 08-19</span></div>
+          <div style="height:10px"></div><div style="height:1px;background:var(--line);opacity:.6"></div><div style="height:9px"></div>
+          <div style="display:flex;gap:5px">
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-eye"/></svg>概览</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px"><svg style="width:11px;height:11px"><use href="#i-pen"/></svg>编辑</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:8px;padding:0 3px;gap:3px;white-space:nowrap;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px"><use href="#i-archive"/></svg>恢复记账</span>
+            <span class="btn ghs" style="flex:1;height:26px;font-size:9.5px;padding:0 6px;color:var(--exp);border-color:rgba(191,78,59,.35)"><svg style="width:11px;height:11px"><use href="#i-trash"/></svg>删除</span>
+          </div>
+        </div>
       </div>
     </div></div>
-    <figcaption><div class="pn">LG-01</div><div class="ph">我的账本 · 瓦片改纸面底</div>
-      <div class="pd">44dp 圆角 14 的纸面瓦 + 1dp 描边 + 墨色图形，与分类页一级卡片同一种底。深色下自动换成 <code>#1A2320</code>。</div></figcaption></figure>
+    <figcaption><div class="pn">LG-01</div><div class="ph">我的账本 · 纸面瓦与四格动作行</div>
+      <div class="pd">瓦片 40dp、圆角 13、背景 <code>card</code>、1dp <code>line</code> 描边、墨色图形；深色自动换成 <code>#1A2320</code>。默认账本那枚用品牌绿底反白，静息态也能一眼认出来。动作行四格等宽：概览 / 编辑 / 结算 / 删除，已结算的换成恢复记账。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:46</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -5510,23 +6231,22 @@ html,body{margin:0;padding:0;background:#F2EEE4}
           <div><span class="l">笔数</span><div class="money"><span class="int">86</span></div></div></div>
       </div>
       <div class="scrim"></div>
-      <div class="modal" style="left:20px;right:20px;padding:16px 15px 13px">
+      <div class="modal" style="left:20px;right:20px;padding:16px 15px 14px">
         <div class="row" style="gap:8px"><div style="font-family:var(--serif);font-size:14px;font-weight:600;flex:1">编辑账本</div>
           <svg style="width:13px;height:13px;stroke:var(--ink3);stroke-width:1.8;fill:none"><use href="#i-close"/></svg></div>
-        <div class="inp" style="margin-top:11px"><span class="x">旅行账本</span><span class="cnt">5/20</span></div>
+        <div class="inp" style="margin-top:12px"><span class="x">旅行账本</span></div>
         <div class="grp" style="padding:9px 10px;margin-top:9px;background:rgba(31,74,56,.05);border-color:rgba(31,74,56,.22)">
-          <div class="row" style="gap:9px"><span class="tl p"><svg><use href="#i-plane"/></svg></span>
+          <div class="row" style="gap:9px"><span class="tl p" style="width:34px;height:34px;border-radius:10px"><svg style="width:17px;height:17px"><use href="#i-plane"/></svg></span>
             <div style="flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700">图标</div>
               <div style="font-size:8.5px;color:var(--ink3);margin-top:2px">旅行 · 出行</div></div>
-            <span class="btn gh ghs">换图标</span></div>
+            <span style="width:30px;height:30px;border-radius:9px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center"><svg style="width:14px;height:14px;stroke:var(--brand);stroke-width:1.7;fill:none"><use href="#i-switch"/></svg></span></div>
         </div>
-        <div style="font-size:8.5px;color:var(--ink2);line-height:1.65;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line)">
-          从全屏图标库选完返回，<b>瓦片与名称立刻回填到这一行</b>——不点保存不写库；点「换图标」可再选一次。</div>
-        <div class="row" style="gap:7px;margin-top:11px"><span class="btn gh" style="flex:1;height:34px">取消</span><span class="btn gr" style="flex:1;height:34px">保存</span></div>
+        <div style="display:flex;align-items:center;padding:8px 0"><span style="flex:1;font-size:13.5px;color:var(--ink)">设为默认账本</span><span class="sw"></span></div>
+        <div class="btn gr" style="height:34px;margin-top:8px">保存</div>
       </div>
     </div></div>
-    <figcaption><div class="pn">LG-02</div><div class="ph">编辑账本 · 图标回填可见</div>
-      <div class="pd">图标行本身用同一张纸面瓦，右侧写出「图标名 · 分组」，回填成没成一眼看得出来，不用等保存后回列表验证。</div></figcaption></figure>
+    <figcaption><div class="pn">LG-02</div><div class="ph">编辑账本 · 三样一起改</div>
+      <div class="pd">名称、图标、默认身份都在这一层改。图标行本身就是入口（右端 ⇄），走进全屏图标库；选完立刻回填，不点保存不写库。「设为默认账本」只在非默认、未结算的账本上出现——默认账本没有「取消默认」这条路，已结算的账本也不该再被推成默认。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:47</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -5536,32 +6256,31 @@ html,body{margin:0;padding:0;background:#F2EEE4}
           <div><span class="l">本月收入</span><div class="money"><span class="cur">¥</span><span class="int">15,000</span><span class="dec">.00</span></div></div></div>
       </div>
       <div class="scrim"></div>
-      <div class="sheet">
+      <div class="sheet" style="z-index:3">
         <div class="grab"></div>
-        <div class="hd" style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700"><span style="flex:1">切换账本</span><span class="tag">首页与统计只算这本</span></div>
+        <div class="hd" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700">切换账本</div>
         <div class="grp" style="margin-top:9px;padding:2px 10px">
-          <div class="set"><span class="tl p"><svg><use href="#i-select"/></svg></span><div><div class="t">全部账本</div><div class="s">1,508 笔</div></div><span class="tag">当前</span></div>
-          <div class="set"><span class="tl p"><svg><use href="#i-wallet"/></svg></span><div><div class="t">日常账本</div><div class="s">默认账本</div></div><span class="tag b">当前</span></div>
+          <div class="set"><span class="tl p"><svg><use href="#i-select"/></svg></span><div><div class="t">全部账本</div></div></div>
+          <div class="set"><span class="tl p"><svg><use href="#i-wallet"/></svg></span><div><div class="t">日常账本</div><div class="s">默认账本</div></div><span class="tag b" style="margin-left:auto">当前</span></div>
           <div class="set"><span class="tl p"><svg><use href="#i-plane"/></svg></span><div><div class="t">旅行账本</div><div class="s">86 笔</div></div></div>
           <div class="set"><span class="tl p"><svg><use href="#i-car"/></svg></span><div><div class="t">车贷账本</div><div class="s">24 笔</div></div></div>
-          <div class="set" style="opacity:.5"><span class="tl p"><svg><use href="#i-piggy"/></svg></span><div><div class="t">装修</div><div class="s">已归档 · 不在切换列表</div></div></div>
         </div>
       </div>
     </div></div>
     <figcaption><div class="pn">LG-03</div><div class="ph">切账本 · 每本各自的图标</div>
-      <div class="pd">这里现在每行都是同一个写死的图标——读的是账本自己的 <code>icon_key</code> 之后，四本账本才有四张脸。瓦片同一种底。</div></figcaption></figure>
+      <div class="pd">每行读账本自己的 <code>icon_key</code>，四本账本四张脸；瓦片同为纸面底。点一行就切走并收起，没有确认按钮。列表只放还在用的账本——已结算的不出现，结算就是锁定，不能再往里记新账。</div></figcaption></figure>
 
     <div class="card" style="flex:1 1 306px;width:306px;align-self:start">
       <div class="shl" style="margin:0">LG-04 · 图标瓦与文案<span class="x"></span><span class="shlk">三处同一个底</span></div>
       <div class="row" style="gap:10px;margin-top:9px;align-items:center">
-        <div style="text-align:center"><span class="tl p lg"><svg><use href="#i-wallet"/></svg></span><div style="font-size:8px;color:var(--brand);margin-top:4px">纸面瓦</div></div>
-        <div style="font-size:8.5px;color:var(--ink3);line-height:1.6;flex:1">44dp · 圆角 14 · 背景 <code>card</code> · 图形 <code>ink</code> · 1dp <code>line</code> 描边；深色自动换 <code>#1A2320</code>。墨块底只留给选中态。</div>
+        <div style="text-align:center"><span class="tl p" style="width:40px;height:40px;border-radius:13px"><svg style="width:20px;height:20px"><use href="#i-wallet"/></svg></span><div style="font-size:8px;color:var(--brand);margin-top:4px">纸面瓦</div></div>
+        <div style="font-size:8.5px;color:var(--ink3);line-height:1.6;flex:1">40dp · 圆角 13 · 背景 <code>card</code> · 图形 <code>ink</code> · 1dp <code>line</code> 描边；深色自动换 <code>#1A2320</code>。默认账本那枚换成品牌绿底反白，身份不靠猜。</div>
       </div>
       <table class="tbl" style="font-size:9px;margin-top:11px">
         <tr><th style="text-align:left;width:32%">位置</th><th style="text-align:left">用同一枚瓦</th></tr>
-        <tr><td>我的账本卡片</td><td>瓦在名称左，读 <code>ledger.icon_key</code></td></tr>
-        <tr><td>编辑 / 新建弹窗</td><td>图标行同瓦片，进页面回填当前图标</td></tr>
-        <tr><td>切账本弹层</td><td>每本各自那枚，不共用一个图形</td></tr>
+        <tr><td>我的账本卡片</td><td>40dp，瓦在名称左，读 <code>ledger.icon_key</code>；默认那枚换品牌绿底</td></tr>
+        <tr><td>编辑 / 新建弹窗</td><td>34dp 同款纸面瓦，进页面回填当前图标</td></tr>
+        <tr><td>切账本弹层</td><td>34dp，每本各自那枚，不共用一个图形</td></tr>
       </table>
       <div class="shl" style="margin:14px 0 4px">删除空账本弹窗<span class="x"></span><span class="shlk">不提分类</span></div>
       <div style="font-size:9px;line-height:1.7;color:var(--ink2)">
@@ -6523,7 +7242,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <div class="row" style="gap:8px;align-items:flex-start"><svg style="width:14px;height:14px;stroke:var(--brand);stroke-width:1.8;fill:none;flex:none;margin-top:1px"><use href="#i-info"/></svg>
       <span style="font-size:9.5px;color:var(--ink2);line-height:1.7"><b style="color:var(--ink)">这份文件是自包含的。</b>
       样式与图标都在同一份 HTML 里，改哪一屏就直接编辑对应的 <code>&lt;figure class="pc"&gt;</code>；新增屏请复用本页已有的组件类名，不要另起一套视觉。
-      这份文件是自包含的：29 节 / 117 屏，样式与图标都在这一份 HTML 里。</span></div>
+      这份文件是自包含的：29 节 / 127 屏，样式与图标都在这一份 HTML 里。</span></div>
   </div>
 </section>
 
@@ -6544,6 +7263,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>P06a…P06e</td><td>统计四段、分类报表、日报表、年维度、口径</td><td>§12</td><td>ui/stats/StatsScreen.kt · StatsCaliberScreen.kt · StatsPeriodPicker.kt</td></tr>
       <tr><td>S-01…S-03</td><td>AI 分析胶囊：未生成 / 生成中 / 结果</td><td>§12</td><td>ui/assistant/AssistantAnalysisViewModel.kt · data/ai/AiReportRepository</td></tr>
       <tr><td>P07 · P07b</td><td>我的账本三态、切账本影响面</td><td>§10</td><td>ui/ledger/LedgerScreen.kt · ui/common/CategoryPicker.kt · LedgerPickerSheet</td></tr>
+      <tr><td>LV-01…LV-03 · SET-01…SET-04 · Q-01…Q-03</td><td>账本概览页、项目结算与结算长图、快速问答</td><td>§10.1–10.3</td><td><code>ui/ledger/LedgerOverviewScreen.kt · LedgerOverviewViewModel.kt · ui/share/PosterScreen.kt</code></td></tr>
       <tr><td>P08a…P08i · I-01</td><td>分类卡片流、两级操作弹层、拖拽排序、归档区、新建、图标库</td><td>§06</td><td>ui/category/CategoryScreen.kt · CategorySheets.kt · CategoryDrag.kt · IconLibraryPage.kt</td></tr>
       <tr><td>P09·①…④</td><td>导入向导、预览与异常行、对账报告、落地后修正</td><td>§08</td><td>ui/importexport/ImportScreen.kt · domain/parser/ImportParsers.kt</td></tr>
       <tr><td>P10 · P11</td><td>模板下载与导出条件</td><td>§08</td><td>ui/importexport/ExportScreen.kt · data/importexport/ExportService</td></tr>
@@ -6597,7 +7317,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 </section>
 <footer class="sec" style="border-top:1.5px solid var(--ink);padding-top:22px;display:flex;gap:18px;flex-wrap:wrap;align-items:center">
   <div style="font-family:var(--serif);font-size:17px;font-weight:600">Tally 塔莉 · 界面设计图</div>
-  <div style="font-size:11px;color:var(--ink2)">基线 <b>当前主仓 HEAD</b>（<code>0.1.1-dev</code> 起的形态） · 29 节 / 117 屏 · Room 库 v1（无迁移链）<br>
+  <div style="font-size:11px;color:var(--ink2)">基线 <b>当前主仓 HEAD</b>（<code>0.1.1-dev</code> 起的形态） · 29 节 / 127 屏 · Room 库 v1（无迁移链）<br>
   屏号索引见 §29 · 规则与验收见 §15 与 §28</div>
   <div style="flex:1"></div>
   <div class="ia"><svg><use href="#i-ai"/></svg>小莉帮你管好每一笔收支</div>

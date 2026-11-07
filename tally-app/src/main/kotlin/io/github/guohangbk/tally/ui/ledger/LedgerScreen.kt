@@ -40,8 +40,6 @@ import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyCardAction
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
-import io.github.guohangbk.tally.ui.design.TallyMenuEntry
-import io.github.guohangbk.tally.ui.design.TallyMoreMenu
 import io.github.guohangbk.tally.ui.design.TallySectionLabel
 import io.github.guohangbk.tally.ui.design.TallyTag
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
@@ -60,6 +58,8 @@ fun LedgerScreen(
     viewModel: LedgerViewModel,
     onBack: () -> Unit,
     onPickLedgerIcon: () -> Unit,
+    onOpenOverview: (String) -> Unit,
+    onSettleLedger: (String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = tallyColors
@@ -109,24 +109,26 @@ fun LedgerScreen(
                     item = item,
                     grouping = state.settings.showThousandsSeparator,
                     actions = LedgerCardActions(
-                        onSetDefault = { viewModel.setDefault(item.ledger.id) },
+                        onOpenOverview = { onOpenOverview(item.ledger.id) },
                         onEdit = { viewModel.openDialog(LedgerDialogKind.EDIT, item.ledger.id) },
                         onToggleArchive = { viewModel.setArchived(item.ledger.id, archived = true) },
+                        onSettle = { onSettleLedger(item.ledger.id) },
                         onDelete = { viewModel.openDialog(LedgerDialogKind.DELETE, item.ledger.id) },
                     ),
                 )
             }
 
             if (state.archived.isNotEmpty()) {
-                TallySectionLabel("已归档 ${state.archived.size}")
+                TallySectionLabel("已结算 ${state.archived.size}")
                 state.archived.forEach { item ->
                     LedgerCard(
                         item = item,
                         grouping = state.settings.showThousandsSeparator,
                         actions = LedgerCardActions(
-                            onSetDefault = { viewModel.setDefault(item.ledger.id) },
+                            onOpenOverview = { onOpenOverview(item.ledger.id) },
                             onEdit = { viewModel.openDialog(LedgerDialogKind.EDIT, item.ledger.id) },
                             onToggleArchive = { viewModel.setArchived(item.ledger.id, archived = false) },
+                            onSettle = {},
                             onDelete = { viewModel.openDialog(LedgerDialogKind.DELETE, item.ledger.id) },
                         ),
                     )
@@ -139,15 +141,16 @@ fun LedgerScreen(
 }
 
 private class LedgerCardActions(
-    val onSetDefault: () -> Unit,
+    val onOpenOverview: () -> Unit,
     val onEdit: () -> Unit,
     val onToggleArchive: () -> Unit,
+    val onSettle: () -> Unit,
     val onDelete: () -> Unit,
 )
 
 /**
  * 账本卡（走查第 8 条统一语法）：主行给身份与支出，meta 给笔数与最近记账，
- * 动作固定四格「默认 · 编辑 · 归档 · ⋯」，删除收进 ⋯。
+ * 动作固定「默认 · 编辑 · 结算 · ⋯」，删除收进 ⋯；已结算的账本给「编辑 · 恢复记账 · ⋯」。
  * 右侧那个数**已经是不计入「不计入收支」的口径**（`BillDao.observeLedgerStats` 的 `excluded_from_stats = 0`），
  * 所以这一版不再单独显示「不计入收支」——它是口径，不是要人再看一眼的第二笔钱。
  */
@@ -164,6 +167,7 @@ private fun LedgerCard(
         corner = 16,
         contentPadding = 12.dp,
         borderColor = if (ledger.isDefault) colors.brand.copy(alpha = 0.32f) else colors.line,
+        onClick = actions.onOpenOverview,
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -174,14 +178,22 @@ private fun LedgerCard(
                     corner = 13.dp,
                     tone = if (ledger.isDefault && !archived) IconTone.BRAND else IconTone.PAPER,
                 )
-                Text(
-                    text = ledger.name,
-                    style = TallyType.listTitle.copy(fontSize = 15.5.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-                    color = if (archived) colors.ink2 else colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                Row(
                     modifier = Modifier.weight(1f),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = ledger.name,
+                        style = TallyType.listTitle.copy(fontSize = 15.5.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+                        color = if (archived) colors.ink2 else colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    // 默认身份改成名字旁的标签：动作行不再为它留一格。
+                    if (ledger.isDefault) TallyTag(text = "默认", tone = TagTone.BRAND)
+                }
                 MoneyText(
                     amountMinor = item.stat.expenseMinor,
                     sign = MoneySign.NONE,
@@ -198,7 +210,7 @@ private fun LedgerCard(
             Spacer(Modifier.height(5.dp))
             when {
                 archived -> LedgerStatusRow(
-                    tag = { TallyTag(text = "已归档", tone = TagTone.SLATE) },
+                    tag = { TallyTag(text = "已结算", tone = TagTone.SLATE) },
                     right = "${item.stat.billCount} 笔" +
                         (item.stat.lastOccurredAt?.let { " · 最近 ${formatLastBillTime(it)}" } ?: ""),
                     rightColor = colors.ink3,
@@ -223,31 +235,38 @@ private fun LedgerCard(
             if (archived) {
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     TallyCardAction(
+                        label = "概览",
+                        iconKey = "eye",
+                        onClick = actions.onOpenOverview,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TallyCardAction(
                         label = "编辑",
                         iconKey = "pencil",
                         onClick = actions.onEdit,
                         modifier = Modifier.weight(1f),
                     )
                     TallyCardAction(
-                        label = "取消归档",
+                        label = "恢复记账",
                         iconKey = "archive",
                         tone = CardActionTone.BRAND,
                         onClick = actions.onToggleArchive,
                         modifier = Modifier.weight(1f),
                     )
-                    TallyMoreMenu(
-                        entries = listOf(TallyMenuEntry("删除账本", danger = true, onClick = actions.onDelete)),
+                    TallyCardAction(
+                        label = "删除",
+                        iconKey = "trash",
+                        tone = CardActionTone.DANGER,
+                        onClick = actions.onDelete,
                         modifier = Modifier.weight(1f),
                     )
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     TallyCardAction(
-                        label = if (ledger.isDefault) "默认" else "设为默认",
-                        onClick = actions.onSetDefault,
-                        enabled = !ledger.isDefault,
-                        tone = if (ledger.isDefault) CardActionTone.BRAND else CardActionTone.NEUTRAL,
-                        leading = { DefaultDot(selected = ledger.isDefault) },
+                        label = "概览",
+                        iconKey = "eye",
+                        onClick = actions.onOpenOverview,
                         modifier = Modifier.weight(1f),
                     )
                     TallyCardAction(
@@ -256,16 +275,19 @@ private fun LedgerCard(
                         onClick = actions.onEdit,
                         modifier = Modifier.weight(1f),
                     )
+                    // 默认账本是持续使用的，没有「结束」的概念：列出但灰掉，说明这条路为什么走不了。
                     TallyCardAction(
-                        label = "归档",
-                        iconKey = "archive",
-                        onClick = actions.onToggleArchive,
-                        // 默认账本不能归档：先把默认身份交出去。
+                        label = "结算",
+                        iconKey = "flag",
+                        onClick = actions.onSettle,
                         enabled = !ledger.isDefault,
                         modifier = Modifier.weight(1f),
                     )
-                    TallyMoreMenu(
-                        entries = listOf(TallyMenuEntry("删除账本", danger = true, onClick = actions.onDelete)),
+                    TallyCardAction(
+                        label = "删除",
+                        iconKey = "trash",
+                        tone = CardActionTone.DANGER,
+                        onClick = actions.onDelete,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -281,27 +303,6 @@ private fun LedgerStatusRow(tag: @Composable () -> Unit, right: String, rightCol
         tag()
         Spacer(Modifier.weight(1f))
         Text(right, fontSize = 11.5.sp, lineHeight = 15.sp, color = rightColor, maxLines = 1)
-    }
-}
-
-/**
- * 默认身份的小圆点：选中 = 墨绿实心带纸心，未选 = 描边空心。
- * 26dp 的单选圈塞不进 32dp 的动作格，而这一格本来就是「点它就成了默认」，圆点足以表达唯一性。
- */
-@Composable
-private fun DefaultDot(selected: Boolean) {
-    val colors = tallyColors
-    Box(
-        modifier = Modifier
-            .size(13.dp)
-            .clip(CircleShape)
-            .background(if (selected) colors.brand else colors.paper)
-            .border(1.4.dp, if (selected) colors.brand else colors.ink3, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (selected) {
-            Box(Modifier.size(5.dp).clip(CircleShape).background(colors.onBrand))
-        }
     }
 }
 

@@ -38,16 +38,19 @@ class TallyApplication : Application() {
             DebugLog.log("Perf", "app bootstrap(首次触库) +${System.currentTimeMillis() - bootAt}ms")
             graph.cachedDefaultLedgerId = defaultLedger.id
             graph.cachedDefaultLedgerName = defaultLedger.name
-            val catchAt = System.currentTimeMillis()
-            graph.reminderCoordinator.runBackground()
-            DebugLog.log("Perf", "catchUp+提醒(周期/分期补执行) +${System.currentTimeMillis() - catchAt}ms")
             // 预热首页首帧要用的两条查询，把冷启动聚合成本挪到启动阶段，削掉打开后的空窗。
+            // 必须排在补执行之前：首帧等的是这一笔，补执行只影响首帧之后刷新的数；
+            // 补执行若确实生成了账单，Room 会失效重发，首页跟着刷新，不会停在旧数上。
             val warmAt = System.currentTimeMillis()
             graph.prewarmHome()
             DebugLog.log("Perf", "prewarmHome +${System.currentTimeMillis() - warmAt}ms · 距 onCreate +${System.currentTimeMillis() - createAt}ms")
+            val catchAt = System.currentTimeMillis()
+            graph.reminderCoordinator.runBackground()
+            DebugLog.log("Perf", "catchUp+提醒(周期/分期补执行) +${System.currentTimeMillis() - catchAt}ms")
             // 分类树同样预热：记账页与分类管理页的首帧都靠它，以前是进页才现查。
+            val catAt = System.currentTimeMillis()
             graph.prewarmCategories()
-            DebugLog.log("Perf", "prewarmCategories +${System.currentTimeMillis() - warmAt}ms · 距 onCreate +${System.currentTimeMillis() - createAt}ms")
+            DebugLog.log("Perf", "prewarmCategories +${System.currentTimeMillis() - catAt}ms · 距 onCreate +${System.currentTimeMillis() - createAt}ms")
         }
         AutomationWorker.schedule(this)
     }

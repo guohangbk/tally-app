@@ -279,6 +279,12 @@ class AppGraph(
     val pendingLink: MutableStateFlow<NotificationLink?> = MutableStateFlow(null)
 
     /**
+     * 从桌面图标打开、但进程还活着（页面停在某处，不是冷启动）。起点只在进程内定一次，
+     * 这种「热启动」不会被重新走一遍，所以单独把这一下告诉导航层，由它决定要不要切到记账页。
+     */
+    val launcherOpened = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
      * 应用启动 bootstrap 后写入的默认账本 id。首页据此初始化，避免「先查全部账本、
      * bootstrap 完再查默认账本」的第二次查询。未就绪时为 null，首页按原逻辑兜底。
      */
@@ -298,6 +304,13 @@ class AppGraph(
 
     @Volatile
     var cachedHomeBillCount: Int = 0
+
+    /**
+     * 首页黑框下面那条预算进度也要在首帧就有：它晚到一步，整块内容会往下跳一行，
+     * 看起来像黑框自己「展开」了一下。没有预算时缓存的是空 summary，那条本来就不渲染。
+     */
+    @Volatile
+    var cachedHomeBudget: io.github.guohangbk.tally.domain.model.BudgetSummary? = null
 
     /**
      * prewarmCategories 跑完缓存的两份分类数据，都是页面首帧要用的：
@@ -321,6 +334,7 @@ class AppGraph(
         cachedDefaultLedgerName = null
         cachedHomeSnapshot = null
         cachedHomeBillCount = 0
+        cachedHomeBudget = null
         cachedCategories = emptyMap()
         cachedCategoryTree = io.github.guohangbk.tally.domain.model.CategoryTreeSeed()
         dataGeneration.value += 1
@@ -339,6 +353,16 @@ class AppGraph(
             .onSuccess { cachedHomeSnapshot = it }
         runCatching { billRepository.observeBillCount(ledger).first() }
             .onSuccess { cachedHomeBillCount = it }
+        if (ledger != null) {
+            runCatching {
+                budgetRepository.observeSummary(
+                    ledger,
+                    io.github.guohangbk.tally.domain.model.BudgetPeriod.MONTHLY,
+                    startDay,
+                    range.startAt,
+                ).first()
+            }.onSuccess { cachedHomeBudget = it }
+        }
     }
 
     /**

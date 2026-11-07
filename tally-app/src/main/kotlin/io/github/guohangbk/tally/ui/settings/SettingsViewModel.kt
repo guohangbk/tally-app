@@ -82,13 +82,19 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun setBillImageEnabled(enabled: Boolean) = persist { graph.preferences.setBillImageEnabled(enabled) }
 
+    fun setQuickOpenEnabled(enabled: Boolean) = persist(
+        notice = if (enabled) "秒开模式已开启 · 下次打开应用直接进记账页" else "秒开模式已关闭 · 打开应用先进首页",
+    ) {
+        graph.preferences.setQuickOpenEnabled(enabled)
+    }
+
     fun setReimburseEnabled(enabled: Boolean) = persist { graph.preferences.setReimburseEnabled(enabled) }
 
     fun setThemeMode(mode: ThemeMode) = persist { graph.preferences.setThemeMode(mode) }
 
     fun setTimePrecision(precision: TimePrecision) = persist { graph.preferences.setTimePrecision(precision) }
 
-    /** 调试模式：设置里连点包名 5 次开关，开启后每个页面右下角会出现控制台。 */
+    /** 调试模式：设置 → 关于 → 版本，1.2 秒内连点 5 次开关，开启后每个页面右下角会出现控制台。 */
     fun setDebugMode(enabled: Boolean) = persist(
         notice = if (enabled) "调试模式已开启 · 每个页面右下角可以调出控制台" else "调试模式已关闭",
     ) {
@@ -154,6 +160,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
             onSaved = ::dismissDialog,
         ) {
             graph.preferences.setBillImageEnabled(TallySettings.DEFAULT.billImageEnabled)
+            graph.preferences.setQuickOpenEnabled(TallySettings.DEFAULT.quickOpenEnabled)
             graph.preferences.setReimburseEnabled(TallySettings.DEFAULT.reimburseEnabled)
             graph.preferences.setThemeMode(TallySettings.DEFAULT.themeMode)
             graph.preferences.setShowCurrencySymbol(TallySettings.DEFAULT.showCurrencySymbol)

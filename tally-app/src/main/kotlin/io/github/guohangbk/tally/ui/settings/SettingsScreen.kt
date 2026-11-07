@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.guohangbk.tally.data.preferences.ThemeMode
 import io.github.guohangbk.tally.di.rememberAppGraph
@@ -55,7 +54,7 @@ import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
 
 /** 项目主页：站点上有下载、截图与文档入口，App 里只留这一个出口，不再重复一遍链接。 */
-private const val PROJECT_HOME = "https://tally.guohang.asia"
+private const val PROJECT_HOME = "https://github.com/guohangbk/tally-app"
 
 /**
  * 版本号取 APK 自己的，**不在这里手写一份**——手写的那份一定会被忘掉：
@@ -172,6 +171,17 @@ fun SettingsScreen(
             Spacer(Modifier.height(4.dp))
 
             SettingsSection(title = "记账偏好") {
+                SettingsSwitchRow(
+                    checked = settings.quickOpenEnabled,
+                    onCheckedChange = viewModel::setQuickOpenEnabled,
+                    label = "秒开模式",
+                    description = if (settings.quickOpenEnabled) {
+                        "已开启 · 打开应用直接进记账页"
+                    } else {
+                        "已关闭 · 打开应用先进首页"
+                    },
+                )
+                SettingsDivider()
                 SettingsSwitchRow(
                     checked = settings.billImageEnabled,
                     onCheckedChange = viewModel::setBillImageEnabled,
@@ -334,19 +344,17 @@ fun SettingsScreen(
             }
 
             SettingsSection(title = "关于") {
-                SettingsInfoRow(label = "版本", value = appVersion(context))
+                VersionRow(
+                    version = appVersion(context),
+                    enabled = settings.debugMode,
+                    onToggle = viewModel::setDebugMode,
+                )
                 SettingsDivider()
                 SettingsNavRow(
                     title = "项目主页",
-                    subtitle = "tally.guohang.asia · 用浏览器打开",
+                    subtitle = "https://github.com/guohangbk/tally-app",
                     iconKey = "link",
                     onClick = { openProjectHome(context) },
-                )
-                SettingsDivider()
-                DebugEntry(
-                    packageName = LocalContext.current.packageName,
-                    enabled = settings.debugMode,
-                    onToggle = viewModel::setDebugMode,
                 )
                 SettingsDivider()
                 SettingsNavRow(
@@ -421,11 +429,11 @@ private fun SettingsDialogHost(
 }
 
 /**
- * 包名这一行是后门：1.2 秒内连点 5 次切换调试模式。
+ * 版本这一行是后门：1.2 秒内连点 5 次切换调试模式。
  * 不开调试时它就是一行普通信息，看不出任何入口。
  */
 @Composable
-private fun DebugEntry(packageName: String, enabled: Boolean, onToggle: (Boolean) -> Unit) {
+private fun VersionRow(version: String, enabled: Boolean, onToggle: (Boolean) -> Unit) {
     val colors = tallyColors
     var taps by remember { mutableIntStateOf(0) }
     var lastTapAt by remember { mutableLongStateOf(0L) }
@@ -444,11 +452,11 @@ private fun DebugEntry(packageName: String, enabled: Boolean, onToggle: (Boolean
             .padding(vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("数据包名", style = TallyType.listTitle, color = colors.ink2, modifier = Modifier.weight(1f))
+        Text("版本", style = TallyType.listTitle, color = colors.ink2, modifier = Modifier.weight(1f))
         Spacer(Modifier.width(10.dp))
         Text(
-            text = packageName,
-            style = TallyType.listTitle.copy(fontSize = 13.sp, lineHeight = 18.sp),
+            text = version,
+            style = TallyType.listTitle,
             color = colors.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
