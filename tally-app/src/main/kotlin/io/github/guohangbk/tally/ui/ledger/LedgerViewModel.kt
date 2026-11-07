@@ -110,19 +110,16 @@ class LedgerViewModel(private val graph: AppGraph) : ViewModel() {
         }
     }
 
-    /** 编辑入口一次改两样：名称与图标。图标同样只认图标库键域。 */
-    fun update(ledgerId: String, name: String, iconKey: String) {
+    /** 编辑入口一次改三样：名称、图标与默认身份。图标只认图标库键域。 */
+    fun update(ledgerId: String, name: String, iconKey: String, makeDefault: Boolean) {
         if (!IconLibrary.isKnown(iconKey)) {
             errorState.value = "图标不在图标库里，请从图标库选择"
             return
         }
         runOperation(onSaved = ::dismissDialog) {
             graph.ledgerRepository.updateProfile(ledgerId, name, iconKey)
+            if (makeDefault) graph.ledgerRepository.setDefault(ledgerId)
         }
-    }
-
-    fun setDefault(ledgerId: String) {
-        runOperation { graph.ledgerRepository.setDefault(ledgerId) }
     }
 
     fun setArchived(ledgerId: String, archived: Boolean) {

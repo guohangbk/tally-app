@@ -56,7 +56,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * 调试控制台：只有设置里连点包名 5 次开启后才会出现。
+ * 调试控制台：只有设置 → 关于 → 版本连点 5 次开启后才会出现。
  * 它要解决的是一个具体问题——麦克风权限在 logcat 里，而手机不一定连得上电脑。
  * 点开能看到应用自己记的日志，也能一键把整段分享出来。
  */

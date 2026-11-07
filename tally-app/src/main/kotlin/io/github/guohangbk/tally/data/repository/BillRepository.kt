@@ -7,6 +7,7 @@ import io.github.guohangbk.tally.data.db.dao.LedgerDao
 import io.github.guohangbk.tally.data.db.entity.BillEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.db.query.BillListItemRow
+import io.github.guohangbk.tally.data.db.query.StatsBillRow
 import io.github.guohangbk.tally.data.db.TallyDatabase
 import io.github.guohangbk.tally.data.preferences.TallyPreferences
 import io.github.guohangbk.tally.domain.Money
@@ -59,6 +60,14 @@ import java.util.UUID
  */
 private const val SEARCH_ROW_LIMIT = 1000
 
+/** 概览页的统计：合计与一级分类排行。口径与统计页是同一套聚合函数，只是不再产出整份快照。 */
+data class OverviewStats(
+    val expenseMinor: Long,
+    val incomeMinor: Long,
+    val balanceMinor: Long,
+    val categories: List<CategoryTotal>,
+)
+
 /**
  * M2 账单读写与统计口径。页面不自行计算金额，所有汇总都从同一查询结果派生。
  */
@@ -74,8 +83,20 @@ class BillRepository(
     private val zoneId: () -> ZoneId = ZoneId::systemDefault,
 ) : BillRepositoryContract {
 
+    /** 单账本与全账本各用一条等值/无条件的 SQL：可选条件写成 `:x IS NULL OR ...` 会丢掉索引。 */
+    private fun rangeRows(
+        ledgerId: String?,
+        startAt: Long,
+        endAtExclusive: Long,
+    ): Flow<List<BillListItemRow>> =
+        if (ledgerId == null) {
+            billDao.observeRangeRowsAllLedgers(startAt, endAtExclusive)
+        } else {
+            billDao.observeRangeRows(ledgerId, startAt, endAtExclusive)
+        }
+
     override fun observeMonth(ledgerId: String?, range: PeriodRange): Flow<BillMonthSnapshot> =
-        billDao.observeRangeRows(ledgerId, range.startAt, range.endAtExclusive).map { rows ->
+        rangeRows(ledgerId, range.startAt, range.endAtExclusive).map { rows ->
             val items = rows.map(::toItem)
             BillMonthSnapshot(
                 monthStart = range.startAt,
@@ -156,9 +177,9 @@ class BillRepository(
             if (cut >= bounds.endAtExclusive) fullDays else elapsedDays.toLong(),
         )
         return combine(
-            billDao.observeRangeRows(request.ledgerId, bounds.startAt, bounds.endAtExclusive),
-            billDao.observeRangeRows(request.ledgerId, previousStart, maxOf(previousStart, previousEnd)),
-            billDao.observeRangeRows(request.ledgerId, yearAgoStart, maxOf(yearAgoStart, yearAgoEnd)),
+            rangeRows(request.ledgerId, bounds.startAt, bounds.endAtExclusive),
+            rangeRows(request.ledgerId, previousStart, maxOf(previousStart, previousEnd)),
+            rangeRows(request.ledgerId, yearAgoStart, maxOf(yearAgoStart, yearAgoEnd)),
         ) { currentRows, previousRows, yearAgoRows ->
             val current = currentRows.map(::toItem)
             val previous = previousRows.map(::toItem)
@@ -178,6 +199,27 @@ class BillRepository(
     }
 
     /**
+     * 概览页要的只有合计与一级分类排行：只扫当期一段的瘦行，不跑上期/去年同期、
+     * 不建趋势桶、不算星期分布；聚合仍复用统计页那两份函数，口径不会分叉。
+     */
+    fun observeOverviewStats(ledgerId: String, range: PeriodRange): Flow<OverviewStats> =
+        billDao.observeStatsRows(ledgerId, range.startAt, range.endAtExclusive).map { rows ->
+            val entries = rows.map { it.toStatsEntry() }
+            val origins = refundOriginsOf(entries.mapNotNull { it.refundOfBillId })
+            val base = summaryOf(entries)
+            val categories = rankTotals(
+                aggregateEntries(entries, origins, BillType.EXPENSE, excludePendingReimburse = false),
+                emptyMap(),
+            ).first
+            OverviewStats(
+                expenseMinor = base.expenseMinor,
+                incomeMinor = base.incomeMinor,
+                balanceMinor = base.balanceMinor,
+                categories = categories,
+            )
+        }.flowOn(Dispatchers.Default)
+
+    /**
      * 分类报表下钻弹层的记录。筛选与合计都跟着排行走同一条规则，弹层上的「合计」才不会和
      * 上面那行对不上：退款按**原单**的分类归属（原单可能在区间外，所以要补一次原单查询）、
      * 未关联原单的退款是中性行、开「剔除未报销」时未报销的支出整行不进弹层。
@@ -194,7 +236,7 @@ class BillRepository(
         l2Id: String?,
         excludePendingReimburse: Boolean,
     ): Flow<CategoryBills> = flow {
-        val items = billDao.observeRangeRows(ledgerId, range.startAt, range.endAtExclusive).first().map(::toItem)
+        val items = rangeRows(ledgerId, range.startAt, range.endAtExclusive).first().map(::toItem)
         val origins = refundOrigins(items)
         val matched = items.filter { item ->
             val bill = item.bill
@@ -226,7 +268,7 @@ class BillRepository(
 
     /** 日报表/月报表点开一天或一月时的账单明细。 */
     override fun observeBucketBills(ledgerId: String?, range: PeriodRange): Flow<List<BillListItem>> =
-        billDao.observeRangeRows(ledgerId, range.startAt, range.endAtExclusive)
+        rangeRows(ledgerId, range.startAt, range.endAtExclusive)
             .map { rows -> rows.map(::toItem) }
             .flowOn(Dispatchers.Default)
 
@@ -235,7 +277,7 @@ class BillRepository(
      * 只是不再丢掉 0 与负值的桶、也不排序——预算要的是「每一类净支出是多少」。
      */
     override fun observeNetExpenseByCategory(ledgerId: String?, range: PeriodRange): Flow<Map<String, Long>> =
-        billDao.observeRangeRows(ledgerId, range.startAt, range.endAtExclusive).map { rows ->
+        rangeRows(ledgerId, range.startAt, range.endAtExclusive).map { rows ->
             val items = rows.map(::toItem)
             netExpenseByCategory(items)
         }.flowOn(Dispatchers.Default)
@@ -261,8 +303,11 @@ class BillRepository(
      * 退款行要归到原单的分类里，而原单可能落在区间外（9 月买的、10 月退的），
      * 列表查询拿不到它的分类名，所以只在真有退款行时补一次原单查询。
      */
-    private suspend fun refundOrigins(items: List<BillListItem>): Map<String, RefundOrigin> {
-        val ids = items.mapNotNull { it.bill.refundOfBillId }.distinct()
+    private suspend fun refundOrigins(items: List<BillListItem>): Map<String, RefundOrigin> =
+        refundOriginsOf(items.mapNotNull { it.bill.refundOfBillId })
+
+    private suspend fun refundOriginsOf(refundOriginIds: List<String>): Map<String, RefundOrigin> {
+        val ids = refundOriginIds.distinct()
         if (ids.isEmpty()) return emptyMap()
         val entities = billDao.findEntitiesByIds(ids).associateBy { it.id }
         val categoryIds = entities.values.flatMap { listOfNotNull(it.categoryL1Id, it.categoryL2Id) }.distinct()
@@ -534,7 +579,9 @@ class BillRepository(
     /** 退款行判定：新数据靠原单指针，旧导入数据只写过 is_refund。 */
     private fun isRefundRow(bill: BillEntity): Boolean = bill.isRefund || bill.refundOfBillId != null
 
-    private fun summary(items: List<BillListItem>): BillSummary {
+    private fun summary(items: List<BillListItem>): BillSummary = summaryOf(items.map { it.toStatsEntry() })
+
+    private fun summaryOf(entries: List<StatsEntry>): BillSummary {
         var expense = 0L
         var income = 0L
         var excluded = 0L
@@ -543,35 +590,34 @@ class BillRepository(
         var pendingReimburseCount = 0
         var reimbursed = 0L
         var reimbursedCount = 0
-        for (item in items) {
-            val bill = item.bill
+        for (entry in entries) {
             // 退款既不进收入，也不占「不计入」：它只在自己的周期里冲抵原单分类的支出。
-            if (isRefundRow(bill)) {
-                if (!bill.excludedFromStats && bill.refundOfBillId != null) expense -= bill.amountMinor
+            if (entry.refundRow) {
+                if (!entry.excludedFromStats && entry.refundOfBillId != null) expense -= entry.amountMinor
                 continue
             }
-            if (bill.excludedFromStats) {
-                excluded += bill.amountMinor
+            if (entry.excludedFromStats) {
+                excluded += entry.amountMinor
                 excludedCount++
-            } else when (bill.type) {
+            } else when (entry.type) {
                 BillType.EXPENSE.name -> {
                     // 已报销的钱会回来，不算这一期的支出；待报销照常计入。
-                    if (bill.reimbursed == ReimburseStatus.DONE.name) {
-                        reimbursed += bill.amountMinor
+                    if (entry.reimbursed == ReimburseStatus.DONE.name) {
+                        reimbursed += entry.amountMinor
                         reimbursedCount++
                     } else {
-                        expense += bill.amountMinor
-                        if (bill.reimbursed == ReimburseStatus.PENDING.name) {
-                            pendingReimburse += bill.amountMinor
+                        expense += entry.amountMinor
+                        if (entry.reimbursed == ReimburseStatus.PENDING.name) {
+                            pendingReimburse += entry.amountMinor
                             pendingReimburseCount++
                         }
                     }
                 }
-                BillType.INCOME.name -> income += bill.amountMinor
+                BillType.INCOME.name -> income += entry.amountMinor
             }
         }
         return BillSummary(
-            items.size, expense, income, excluded, excludedCount,
+            entries.size, expense, income, excluded, excludedCount,
             pendingReimburse, pendingReimburseCount, reimbursed, reimbursedCount,
         )
     }
@@ -783,9 +829,16 @@ class BillRepository(
         previous: List<BillListItem>,
         previousOrigins: Map<String, RefundOrigin>,
         excludePendingReimburse: Boolean,
+    ): Pair<List<CategoryTotal>, Int> = rankTotals(
+        aggregateEntries(current.map { it.toStatsEntry() }, origins, type, excludePendingReimburse),
+        aggregateEntries(previous.map { it.toStatsEntry() }, previousOrigins, type, excludePendingReimburse),
+    )
+
+    /** 排行只差「本期一组、上期一组」：概览没有上期，传空表即可，环比自然为 null。 */
+    private fun rankTotals(
+        currentGroups: Map<String, CategoryAggregate>,
+        previousGroups: Map<String, CategoryAggregate>,
     ): Pair<List<CategoryTotal>, Int> {
-        val currentGroups = aggregateByCategory(current, origins, type, excludePendingReimburse)
-        val previousGroups = aggregateByCategory(previous, previousOrigins, type, excludePendingReimburse)
         val positiveTotal = currentGroups.values.sumOf { maxOf(0L, it.amountMinor) }
 
         val totals = currentGroups
@@ -806,45 +859,52 @@ class BillRepository(
         return totals to totals.size
     }
 
-    /**
-     * 分类聚合：普通账单落在自己的分类上，退款落在原单的分类上。
-     * 原单不在本区间也能落到正确分类，靠调用方补来的 origins。
-     */
     private fun aggregateByCategory(
         items: List<BillListItem>,
         origins: Map<String, RefundOrigin>,
         type: BillType,
         excludePendingReimburse: Boolean,
+    ): Map<String, CategoryAggregate> =
+        aggregateEntries(items.map { it.toStatsEntry() }, origins, type, excludePendingReimburse)
+
+    /**
+     * 分类聚合：普通账单落在自己的分类上，退款落在原单的分类上。
+     * 原单不在本区间也能落到正确分类，靠调用方补来的 origins。
+     */
+    private fun aggregateEntries(
+        entries: List<StatsEntry>,
+        origins: Map<String, RefundOrigin>,
+        type: BillType,
+        excludePendingReimburse: Boolean,
     ): Map<String, CategoryAggregate> {
         val groups = LinkedHashMap<String, CategoryAggregate>()
-        for (item in items) {
-            val bill = item.bill
-            if (bill.type != type.name || bill.excludedFromStats) continue
-            val refund = isRefundRow(bill)
+        for (entry in entries) {
+            if (entry.type != type.name || entry.excludedFromStats) continue
+            val refund = entry.refundRow
             // 未关联原单的退款是中性行：不知道冲哪一类，就不进排行也不占分母。
-            if (refund && bill.refundOfBillId == null) continue
-            if (!refund && type == BillType.EXPENSE && bill.reimbursed == ReimburseStatus.DONE.name) continue
+            if (refund && entry.refundOfBillId == null) continue
+            if (!refund && type == BillType.EXPENSE && entry.reimbursed == ReimburseStatus.DONE.name) continue
             if (!refund && excludePendingReimburse && type == BillType.EXPENSE &&
-                bill.reimbursed == ReimburseStatus.PENDING.name
+                entry.reimbursed == ReimburseStatus.PENDING.name
             ) continue
-            val origin = if (refund) origins[bill.refundOfBillId] else null
+            val origin = if (refund) origins[entry.refundOfBillId] else null
             if (refund && origin == null) continue
-            val key = if (refund) origin?.l1Id.orEmpty() else bill.categoryL1Id.orEmpty()
+            val key = if (refund) origin?.l1Id.orEmpty() else entry.categoryL1Id.orEmpty()
             val group = groups.getOrPut(key) {
                 CategoryAggregate(
-                    name = if (refund) origin?.name ?: "未分类" else item.categoryL1Name ?: "未分类",
-                    iconKey = if (refund) origin?.iconKey else item.categoryL1Icon,
+                    name = if (refund) origin?.name ?: "未分类" else entry.categoryL1Name ?: "未分类",
+                    iconKey = if (refund) origin?.iconKey else entry.categoryL1Icon,
                 )
             }
-            val amount = if (refund) -bill.amountMinor else bill.amountMinor
+            val amount = if (refund) -entry.amountMinor else entry.amountMinor
             group.amountMinor += amount
             group.billCount++
-            val childKey = if (refund) origin?.l2Id.orEmpty() else bill.categoryL2Id.orEmpty()
+            val childKey = if (refund) origin?.l2Id.orEmpty() else entry.categoryL2Id.orEmpty()
             if (childKey.isNotEmpty()) {
                 val child = group.children.getOrPut(childKey) {
                     CategoryAggregate(
-                        name = (if (refund) origin?.l2Name else item.categoryL2Name) ?: "未分类",
-                        iconKey = if (refund) origin?.l2IconKey else item.categoryL2Icon,
+                        name = (if (refund) origin?.l2Name else entry.categoryL2Name) ?: "未分类",
+                        iconKey = if (refund) origin?.l2IconKey else entry.categoryL2Icon,
                     )
                 }
                 child.amountMinor += amount
@@ -932,6 +992,57 @@ class BillRepository(
             .atStartOfDay(zone).toInstant().toEpochMilli()
     }
 }
+
+/**
+ * 聚合只认这些字段：行可以来自列表查询，也可以来自概览的瘦查询，
+ * 进到这里之后合计与排行的算法只有一份，不会出现两套口径。
+ */
+private data class StatsEntry(
+    val type: String,
+    val amountMinor: Long,
+    val categoryL1Id: String?,
+    val categoryL2Id: String?,
+    val categoryL1Name: String?,
+    val categoryL2Name: String?,
+    val categoryL1Icon: String?,
+    val categoryL2Icon: String?,
+    val isRefund: Boolean,
+    val refundOfBillId: String?,
+    val reimbursed: String,
+    val excludedFromStats: Boolean,
+) {
+    val refundRow: Boolean get() = isRefund || refundOfBillId != null
+}
+
+private fun BillListItem.toStatsEntry(): StatsEntry = StatsEntry(
+    type = bill.type,
+    amountMinor = bill.amountMinor,
+    categoryL1Id = bill.categoryL1Id,
+    categoryL2Id = bill.categoryL2Id,
+    categoryL1Name = categoryL1Name,
+    categoryL2Name = categoryL2Name,
+    categoryL1Icon = categoryL1Icon,
+    categoryL2Icon = categoryL2Icon,
+    isRefund = bill.isRefund,
+    refundOfBillId = bill.refundOfBillId,
+    reimbursed = bill.reimbursed,
+    excludedFromStats = bill.excludedFromStats,
+)
+
+private fun StatsBillRow.toStatsEntry(): StatsEntry = StatsEntry(
+    type = type,
+    amountMinor = amountMinor,
+    categoryL1Id = categoryL1Id,
+    categoryL2Id = categoryL2Id,
+    categoryL1Name = categoryL1Name,
+    categoryL2Name = categoryL2Name,
+    categoryL1Icon = categoryL1Icon,
+    categoryL2Icon = categoryL2Icon,
+    isRefund = isRefund,
+    refundOfBillId = refundOfBillId,
+    reimbursed = reimbursed,
+    excludedFromStats = excludedFromStats,
+)
 
 /** 退款原单的分类落点：原单可能不在当前区间，名字和图标要提前取好。 */
 private data class RefundOrigin(

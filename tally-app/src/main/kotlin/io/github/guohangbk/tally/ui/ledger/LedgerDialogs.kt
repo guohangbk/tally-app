@@ -46,6 +46,7 @@ import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.RowGap
 import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
+import io.github.guohangbk.tally.ui.design.TallyLabeledSwitch
 import io.github.guohangbk.tally.ui.design.TallySegmented
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyTag
@@ -82,10 +83,11 @@ internal fun LedgerDialogHost(
                 initialName = "",
                 initialIcon = state.pendingIcon ?: "ledger",
                 reservedNames = state.items.map { it.ledger.name },
+                makeDefaultAvailable = false,
                 error = error,
                 onPickIcon = onPickLedgerIcon,
                 onCancel = viewModel::dismissDialog,
-                onSubmit = { name, iconKey -> viewModel.create(name, iconKey) },
+                onSubmit = { name, iconKey, _ -> viewModel.create(name, iconKey) },
             )
 
             LedgerDialogKind.EDIT -> {
@@ -96,10 +98,12 @@ internal fun LedgerDialogHost(
                     initialName = ledger.name,
                     initialIcon = state.pendingIcon ?: ledger.iconKey,
                     reservedNames = state.items.filter { it.ledger.id != ledger.id }.map { it.ledger.name },
+                    // 当前默认账本没有「取消默认」这条路；已结算的账本也不该被重新推成默认，开关都不出现。
+                    makeDefaultAvailable = !ledger.isDefault && !ledger.isArchived,
                     error = error,
                     onPickIcon = onPickLedgerIcon,
                     onCancel = viewModel::dismissDialog,
-                    onSubmit = { name, iconKey -> viewModel.update(ledger.id, name, iconKey) },
+                    onSubmit = { name, iconKey, makeDefault -> viewModel.update(ledger.id, name, iconKey, makeDefault) },
                 )
             }
 
@@ -108,7 +112,8 @@ internal fun LedgerDialogHost(
                 LedgerDeleteDialog(
                     item = source,
                     grouping = state.settings.showThousandsSeparator,
-                    otherLedgers = state.items.filter { it.ledger.id != source.ledger.id },
+                    // 已结算的账本不能当迁移目标：结算就是锁定，搬进去等于往里记新账。
+                    otherLedgers = state.items.filter { it.ledger.id != source.ledger.id && !it.ledger.isArchived },
                     error = error,
                     onCancel = viewModel::dismissDialog,
                     onConfirm = { disposition -> viewModel.delete(source.ledger.id, disposition) },
@@ -125,14 +130,16 @@ private fun LedgerEditorDialog(
     initialName: String,
     initialIcon: String,
     reservedNames: List<String>,
+    makeDefaultAvailable: Boolean,
     error: String?,
     onPickIcon: () -> Unit,
     onCancel: () -> Unit,
-    onSubmit: (name: String, iconKey: String) -> Unit,
+    onSubmit: (name: String, iconKey: String, makeDefault: Boolean) -> Unit,
 ) {
     val colors = tallyColors
     var name by remember { mutableStateOf(initialName) }
     var iconKey by remember { mutableStateOf(initialIcon) }
+    var makeDefault by remember { mutableStateOf(false) }
     // 从图标库选完返回时 initialIcon 会换成新键：不跟着回填，用户就看不到自己刚选的图标。
     LaunchedEffect(initialIcon) { iconKey = initialIcon }
     val trimmed = name.trim()
@@ -166,6 +173,13 @@ private fun LedgerEditorDialog(
             )
             Spacer(Modifier.height(9.dp))
             LedgerIconRow(iconKey = iconKey, onPickIcon = onPickIcon)
+            if (makeDefaultAvailable) {
+                TallyLabeledSwitch(
+                    checked = makeDefault,
+                    onCheckedChange = { makeDefault = it },
+                    label = "设为默认账本",
+                )
+            }
             if (duplicated) {
                 Spacer(Modifier.height(7.dp))
                 Text(
@@ -181,7 +195,7 @@ private fun LedgerEditorDialog(
             Spacer(Modifier.height(12.dp))
             TallyButton(
                 label = confirmLabel,
-                onClick = { onSubmit(trimmed, iconKey) },
+                onClick = { onSubmit(trimmed, iconKey, makeDefault) },
                 variant = ButtonVariant.BRAND,
                 height = 34,
                 modifier = Modifier.fillMaxWidth(),
@@ -310,8 +324,6 @@ private fun MigrationTargetList(
                 }
                 if (candidate.ledger.isDefault) {
                     TallyTag(text = "默认", tone = TagTone.BRAND)
-                } else if (candidate.ledger.isArchived) {
-                    TallyTag(text = "已归档", tone = TagTone.SLATE)
                 }
             }
         }

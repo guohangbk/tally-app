@@ -63,16 +63,18 @@ data class PosterUiState(
 class PosterViewModel(
     private val graph: AppGraph,
     private val appContext: Context,
-    initial: StatsRequest,
+    initial: StatsRequest?,
+    /** 结算长图模式：只带一本账，区间与预算由这本账自己现算，不再从统计页搬。 */
+    private val settlementLedgerId: String? = null,
 ) : ViewModel() {
     private val mutable = MutableStateFlow(
         PosterUiState(
-            granularity = initial.granularity,
-            anchorStart = initial.periodStart,
-            rangeEndExclusive = initial.rangeEndExclusive,
-            bucket = initial.bucket,
-            ledgerId = initial.ledgerId,
-            excludePendingReimburse = initial.excludePendingReimburse,
+            granularity = initial?.granularity ?: StatsGranularity.MONTH,
+            anchorStart = initial?.periodStart ?: Period.monthRange(System.currentTimeMillis()).startAt,
+            rangeEndExclusive = initial?.rangeEndExclusive,
+            bucket = initial?.bucket,
+            ledgerId = initial?.ledgerId ?: settlementLedgerId,
+            excludePendingReimburse = initial?.excludePendingReimburse == true,
         ),
     )
     val state: StateFlow<PosterUiState> = mutable.asStateFlow()
@@ -129,7 +131,11 @@ class PosterViewModel(
     private fun export(share: Boolean, snapshot: Bitmap) {
         val state = mutable.value
         viewModelScope.launch {
-            val fileName = PosterFiles.name(state.granularity, rangeOf(state))
+            val fileName = if (settlementLedgerId != null) {
+                PosterFiles.settlementName(state.ledgerName)
+            } else {
+                PosterFiles.name(state.granularity, rangeOf(state))
+            }
             val result = runCatching {
                 val bytes = withContext(Dispatchers.IO) { PosterRenderer.png(snapshot) }
                 if (share) {
@@ -164,10 +170,80 @@ class PosterViewModel(
     private fun refresh() {
         renderJob?.cancel()
         renderJob = viewModelScope.launch {
-            val state = mutable.value
-            val label = posterPeriodLabel(state.granularity, rangeOf(state), startDay)
-            mutable.value = state.copy(rendering = true, periodLabel = label, error = null)
-            val request = StatsRequest(
+            if (settlementLedgerId != null) refreshSettlement() else refreshPeriod()
+        }
+    }
+
+    /**
+     * 结算长图：没有周期参数可搬，全从这本账的跨度现算。
+     * 合计与分类占比仍走统计仓库的区间口径，预算读的是这本账各周期段的总额行之和。
+     */
+    private suspend fun refreshSettlement() {
+        val state = mutable.value
+        val id = settlementLedgerId ?: return
+        mutable.value = state.copy(rendering = true, error = null)
+        val built = runCatching {
+            val core = graph.ledgerRepository.observeOverview(id).first()
+                ?: throw IllegalStateException("账本已不存在")
+            val today = System.currentTimeMillis()
+            val start = core.span.startAt ?: today
+            val end = core.span.endAt ?: today
+            val snapshot = graph.billRepository.observeStatistics(
+                StatsRequest(
+                    ledgerId = id,
+                    periodStart = start,
+                    granularity = StatsGranularity.RANGE,
+                    rangeEndExclusive = Period.shiftDays(end, 1),
+                    bucket = StatsBucket.MONTH,
+                ),
+            ).first()
+            val days = Period.daysBetween(start, end) + 1
+            val limit = graph.budgetRepository.observeItems(id).first()
+                .filter { it.categoryId == null }
+                .sumOf { it.amountMinor }
+                .takeIf { it > 0L }
+            val spec = PosterSpec.buildSettlement(
+                snapshot = snapshot,
+                ledgerName = core.ledger.name,
+                // 结算图的抬头写完整日期：这张图会被单独发出去，脱离 App 后「3/15」认不出是哪一年。
+                spanLabel = Period.toDate(start).toString() + " ～ " + Period.toDate(end).toString() +
+                    " · ${core.billCount} 笔",
+                dayCount = days,
+                monthCount = monthsInclusive(start, end),
+                budgetLimitMinor = limit,
+                grouping = grouping,
+                masked = state.masked,
+            )
+            spec to (core.ledger.name to core.billCount)
+        }
+        val rendered = built.getOrNull()?.first?.let { spec ->
+            runCatching { withContext(Dispatchers.IO) { PosterRenderer.render(appContext, spec) } }.getOrNull()
+        }
+        bitmap?.recycle()
+        bitmap = rendered
+        mutable.value = mutable.value.copy(
+            rendering = false,
+            ledgerName = built.getOrNull()?.second?.first ?: state.ledgerName,
+            billCount = built.getOrNull()?.second?.second ?: 0,
+            preview = rendered?.asImageBitmap(),
+            heightPx = rendered?.height ?: 0,
+            error = built.exceptionOrNull()?.let { "这张没画出来：${it.message}" }
+                ?: if (rendered == null && built.isSuccess) "这张没画出来：位图分配失败" else null,
+        )
+    }
+
+    /** 跨到的自然月都算：07-03 ～ 08-12 是两个月，不是 1.3 个月。 */
+    private fun monthsInclusive(startAt: Long, endAt: Long): Int {
+        val start = Period.toDate(startAt)
+        val end = Period.toDate(endAt)
+        return (end.year - start.year) * 12 + end.monthValue - start.monthValue + 1
+    }
+
+    private suspend fun refreshPeriod() {
+        val state = mutable.value
+        val label = posterPeriodLabel(state.granularity, rangeOf(state), startDay)
+        mutable.value = state.copy(rendering = true, periodLabel = label, error = null)
+        val request = StatsRequest(
                 ledgerId = state.ledgerId,
                 periodStart = state.anchorStart,
                 granularity = state.granularity,
@@ -216,7 +292,6 @@ class PosterViewModel(
                 error = built.exceptionOrNull()?.let { "这张没画出来：${it.message}" }
                     ?: if (rendered == null && built.isSuccess) "这张没画出来：位图分配失败" else null,
             )
-        }
     }
 
     /**

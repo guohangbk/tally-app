@@ -80,7 +80,7 @@ object PosterRenderer {
     }
 
     private fun height(spec: PosterSpec, digestHeight: Int?): Int {
-        var y = TOP + 44f + 92f + 44f + RULE + 60f + 112f + 78f
+        var y = TOP + 44f + 92f + 44f + RULE + 60f + 136f + 112f
         if (spec.rankingTitle != null) y += RULE + 60f + spec.ranking.size * 96f + 16f
         if (spec.trendTitle != null) {
             y += RULE + 60f + 210f + (if (spec.trendCaption != null) 52f else 0f) + 34f
@@ -102,9 +102,9 @@ object PosterRenderer {
 
         y = section(canvas, ink, y, if (spec.expenseLabel == "收入") "收入" else "支出")
         drawHero(canvas, spec, ink, y)
-        y += 112f
+        y += 136f
         drawStats(canvas, spec.stats, ink, y)
-        y += 78f
+        y += 112f
 
         if (spec.rankingTitle != null) {
             y = section(canvas, ink, y, spec.rankingTitle)
@@ -127,7 +127,7 @@ object PosterRenderer {
         }
 
         if (spec.budgetText != null) {
-            y = section(canvas, ink, y, "预算")
+            y = section(canvas, ink, y, spec.budgetTitle)
             ink.text(canvas, spec.budgetText, MARGIN, y + 40f, ink.budget)
             y += 58f
             drawBudgetBar(canvas, spec, ink, y)
@@ -164,21 +164,22 @@ object PosterRenderer {
         val shownSymbol = spec.expenseValue.startsWith("¥")
         var x = MARGIN
         if (shownSymbol) {
-            ink.text(canvas, "¥", x, y + 60f, ink.heroSymbol)
+            ink.text(canvas, "¥", x, y + 84f, ink.heroSymbol)
             x += ink.heroSymbol.measureText("¥") + 8f
         }
         val paint = if (income) ink.heroIncome else ink.heroExpense
-        ink.text(canvas, value, x, y + 60f, paint)
+        ink.text(canvas, value, x, y + 84f, paint)
         x += paint.measureText(value)
-        spec.change?.let { ink.text(canvas, it, x + 22f, y + 60f, ink.change) }
+        spec.change?.let { ink.text(canvas, it, x + 22f, y + 84f, ink.change) }
     }
 
+    /** 三格统计：标签与数字之间留出一段基线间距，密排时两者会粘成一团。 */
     private fun drawStats(canvas: Canvas, stats: List<PosterStat>, ink: Ink, y: Float) {
         val slot = INNER / stats.size.coerceAtLeast(1)
         stats.forEachIndexed { index, stat ->
             val left = MARGIN + index * slot
-            ink.text(canvas, stat.label, left, y + 28f, ink.statLabel)
-            ink.text(canvas, stat.value, left, y + 72f, ink.statValue)
+            ink.text(canvas, stat.label, left, y + 30f, ink.statLabel)
+            ink.text(canvas, stat.value, left, y + 92f, ink.statValue)
         }
     }
 

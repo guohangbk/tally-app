@@ -140,15 +140,26 @@ interface CategoryDao {
      * 分类管理首屏要的「每个分类有多少笔账单」。以前是逐个分类发一次 COUNT，
      * 分类一多首帧就要等几十个往返；这里一次聚合完，首屏不再闪载入态。
      * 口径与 [BillDao.countBillsUsing] 一致：只算未删账单，一级/二级引用都算。
+     *
+     * 一次扫两张索引再相加，而不是拿 category 去 LEFT JOIN 一张 OR 条件的明细表：
+     * `a = x OR b = x` 用不上索引，几千笔时每个分类都要把明细表走一遍。没有引用行的分类
+     * 不出现在结果里，调用方按「查不到 = 0」读。
      */
     @Query(
         """
-        SELECT c.id AS id, COUNT(b.id) AS count
-        FROM category c
-        LEFT JOIN bill b ON b.deleted_at IS NULL
-             AND (b.category_l1_id = c.id OR b.category_l2_id = c.id)
-        WHERE c.deleted_at IS NULL
-        GROUP BY c.id
+        SELECT category_id AS id, SUM(count) AS count
+        FROM (
+            SELECT category_l1_id AS category_id, COUNT(*) AS count
+            FROM bill
+            WHERE deleted_at IS NULL AND category_l1_id IS NOT NULL
+            GROUP BY category_l1_id
+            UNION ALL
+            SELECT category_l2_id AS category_id, COUNT(*) AS count
+            FROM bill
+            WHERE deleted_at IS NULL AND category_l2_id IS NOT NULL
+            GROUP BY category_l2_id
+        )
+        GROUP BY category_id
         """,
     )
     fun observeBillCounts(): Flow<List<CategoryBillCount>>

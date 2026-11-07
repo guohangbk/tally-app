@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import io.github.guohangbk.tally.ui.design.BillBadge
 import io.github.guohangbk.tally.ui.design.Marker
 import io.github.guohangbk.tally.ui.design.MarkerTone
+import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
 
@@ -39,19 +41,22 @@ fun GuideScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 18.dp),
         ) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = "塔莉是一本只存在这台手机里的账本：没有账号，不联网也能全用。",
-                fontSize = 11.5.sp,
-                lineHeight = 18.sp,
+                style = TallyType.secondary.copy(lineHeight = 21.sp),
                 color = colors.ink2,
             )
-            GUIDE_SECTIONS.forEach { GuideBlock(it) }
-            Spacer(Modifier.height(20.dp))
-            MarkLegend()
-            Spacer(Modifier.height(28.dp))
+            // 标记图例挪在口径前面：那一节正是在解释这几枚标记怎么参与计算。
+            val caliber = GUIDE_SECTIONS.last()
+            GUIDE_SECTIONS.dropLast(1).forEachIndexed { index, section ->
+                GuideBlock(number = index + 1, section = section)
+            }
+            MarkLegend(number = GUIDE_SECTIONS.size)
+            GuideBlock(number = GUIDE_SECTIONS.size + 1, section = caliber)
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -60,29 +65,41 @@ private data class GuideItem(val term: String, val text: String)
 
 private data class GuideSection(val title: String, val items: List<GuideItem>)
 
-/** 一项一行：条目名在上、说明在下，宽度永远由自己那一行决定，不可能与邻居叠字。 */
+/** 节标题带编号：一眼能看出这一页被切成几段、现在读到第几段。 */
 @Composable
-private fun GuideBlock(section: GuideSection) {
+private fun GuideHeader(number: Int, title: String) {
     val colors = tallyColors
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 18.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = section.title,
-            fontSize = 15.sp,
-            lineHeight = 20.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colors.ink,
+            text = number.toString().padStart(2, '0'),
+            style = TallyType.eyebrow,
+            color = colors.gold,
         )
-        Spacer(Modifier.height(7.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.line))
+        Spacer(Modifier.width(10.dp))
+        Text(text = title, style = TallyType.sectionTitle, color = colors.ink)
+    }
+    Spacer(Modifier.height(10.dp))
+    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.line))
+}
+
+/** 一项一段：条目名在上、说明在下，段间留白大于行距，扫读时不会连成一片。 */
+@Composable
+private fun GuideBlock(number: Int, section: GuideSection) {
+    val colors = tallyColors
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 34.dp)) {
+        GuideHeader(number = number, title = section.title)
         section.items.forEach { item ->
-            Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                Text(item.term, fontSize = 11.5.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                Text(
+                    text = item.term,
+                    style = TallyType.listTitle.copy(fontWeight = FontWeight.SemiBold, lineHeight = 20.sp),
+                    color = colors.ink,
+                )
                 Text(
                     text = item.text,
-                    fontSize = 11.sp,
-                    lineHeight = 17.sp,
+                    style = TallyType.secondary.copy(lineHeight = 21.sp),
                     color = colors.ink2,
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
         }
@@ -91,21 +108,13 @@ private fun GuideBlock(section: GuideSection) {
 
 /** 口径那几张标记：图形与账单行、统计页、详情弹层完全同一套。 */
 @Composable
-private fun MarkLegend() {
+private fun MarkLegend(number: Int) {
     val colors = tallyColors
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "账目上的标记",
-            fontSize = 15.sp,
-            lineHeight = 20.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colors.ink,
-        )
-        Spacer(Modifier.height(7.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.line))
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 34.dp)) {
+        GuideHeader(number = number, title = "账目上的标记")
         MARKS.chunked(3).forEach { row ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 9.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -114,10 +123,9 @@ private fun MarkLegend() {
         }
         Text(
             text = "同一笔可以同时带好几枚标记，它们互不覆盖；报销与退款只有支出能带。",
-            fontSize = 10.5.sp,
-            lineHeight = 16.sp,
-            color = colors.ink3,
-            modifier = Modifier.padding(top = 8.dp),
+            style = TallyType.secondary.copy(lineHeight = 21.sp),
+            color = colors.ink2,
+            modifier = Modifier.padding(top = 10.dp),
         )
     }
 }
@@ -142,6 +150,11 @@ private val GUIDE_SECTIONS = listOf(
                     "备注、账单时间、一张凭证图、所属账本、要不要计入收支，都在同一页里改。",
             ),
             GuideItem(
+                "打开就记（秒开模式）",
+                "设置 → 记账偏好 → 秒开模式：开启后打开应用直接落在记账页——冷启动与「停在首页时点桌面图标」都算，" +
+                    "停在别的页不打断；从记账页返回或保存一笔后回首页。",
+            ),
+            GuideItem(
                 "记完之后那句话",
                 "这笔如果是靠关键词或截图认出来的，保存后底部气泡会问「以后『打车』都记到 交通 · 打车？」——点一下才写进规则，不点就只是一句话。",
             ),
@@ -163,8 +176,8 @@ private val GUIDE_SECTIONS = listOf(
             ),
             GuideItem(
                 "小莉（可选）",
-                "设置 → 小莉（AI）→ 小莉配置：填服务商、模型与 Key，测通了才保存。对话里可以发图，一次最多 3 张。" +
-                    "小莉只负责把草稿摆好，落库这一步永远留给人。",
+                "设置 → 小莉（AI）→ 小莉配置：可以存多份配置，右上角 ＋ 新增；填服务商、模型与 Key，测通了才保存。" +
+                    "对话里可以发图，一次最多 3 张。小莉只负责把草稿摆好，落库这一步永远留给人。",
             ),
         ),
     ),
@@ -173,7 +186,7 @@ private val GUIDE_SECTIONS = listOf(
         listOf(
             GuideItem(
                 "首页流水",
-                "按月分组。顶栏那行字就是当前账本，点它可以切换，也能选「全部账本」一起看；首页与统计、搜索共用这一个选择。",
+                "按月分组。顶栏那行字就是当前账本，点它可以切换，也能选「全部账本」一起看；统计跟着首页这个选择走，搜索页自己有一组筛选项。",
             ),
             GuideItem(
                 "批量",
@@ -217,14 +230,20 @@ private val GUIDE_SECTIONS = listOf(
                 "顶栏的 ‹ › 或在页面上左右滑；维度在 月 / 年 / 自定义区间 之间切。区间不超过 62 天按日分桶，更久按月，也可手动按周。",
             ),
             GuideItem(
-                "四段",
-                "收支总览 → 预算（设了才出现）→ 趋势与星期分布 → 分类报表 → 日报表。分类点一级展开二级小计、点二级进末级清单；" +
-                    "日报表点某天出当日清单，可以就地补一笔。",
+                "段序",
+                "收支总览 → 预算段（设了才出现）→ 每日统计（趋势与星期分布）→ 分类报表 → 日报表；年维度时最后一段是月报表。" +
+                    "分类点一级展开二级小计、点二级进末级清单；日报表点某天出当日清单，可以就地补一笔。",
+            ),
+            GuideItem(
+                "AI 小结",
+                "统计页右下角那颗「分析本月 / 分析本年 / 分析区间」：点一次算一次，没点之前这一屏没有任何 AI 痕迹；" +
+                    "没开小莉或模型没配好时，这颗按钮不出现。",
             ),
             GuideItem(
                 "生成长图",
-                "统计页右上角的分享图标，把当前这一段画成一张竖长图：概览、分类 Top 8、预算、趋势。打开「脱敏」后所有数字换成占位符，" +
-                    "比例条与排序保留。两条出口：直接分享，或存到 Download/Tally。",
+                "统计页右上角的分享图标，把当前这一段画成一张竖长图：概览、分类排行（最多 8 条）、预算、趋势；" +
+                    "这一段算过 AI 小结的话，还会带上一段结论。打开「脱敏」后所有数字换成占位符，比例条与排序保留。" +
+                    "两条出口：直接分享，或存到 Download/Tally。账本概览页的「生成结算长图」画的是同一套版式。",
             ),
         ),
     ),
@@ -240,7 +259,7 @@ private val GUIDE_SECTIONS = listOf(
             GuideItem(
                 "报销",
                 "抽屉 → 报销管理。它只改状态（未报销 / 已报销），不改金额——这里没有账户，标了报销不等于钱到账。" +
-                    "统计页支出视图有个开关「剔除未报销」，打开后那几笔暂时不算进支出。",
+                    "已报销的支出不再计入支出合计，未报销的照常计入；统计页支出视图还能临时打开「剔除未报销」，把那几笔先摘出去。",
             ),
             GuideItem(
                 "周期记账",
@@ -259,12 +278,15 @@ private val GUIDE_SECTIONS = listOf(
         listOf(
             GuideItem(
                 "账本",
-                "抽屉 → 我的账本。新建可以选图标、设成默认、勾「不计入收支」（整本都不进统计）。账本只管钱归属哪件事，不隔离分类。",
+                "抽屉 → 我的账本。新建只填名称、挑图标。卡片四个动作：概览 / 编辑 / 结算 / 删除。" +
+                    "「编辑」里能改名字与图标，也能勾「设为默认账本」——默认账本名字旁有标签，全机只有一本，它不能结算。" +
+                    "「概览」是一本账的结算页：支出合计、分类占比、最近几笔，加四个快速问答（收入和结余 / 最大一笔 / 每月平均 / 某分类花了多少），" +
+                    "页底可以生成结算长图。结算过的账本收在下半段，能恢复记账；删除时可以把账单整批搬到另一本。账本只管钱归属哪件事，分类全机共用。",
             ),
             GuideItem(
                 "分类",
-                "抽屉 → 分类管理。全机共用一套两级树：一级是卡片，二级在卡片下面密集平铺，不做缩进树。长按拖动排序，" +
-                    "归档区在页底，只有 0 笔的分类才能彻底删除。「查看统计数据」会带着这个分类进搜索。",
+                "抽屉 → 分类管理。全机共用一套两级树：一级是卡片，二级在卡片下面密集平铺，不做缩进树。长按一级卡片拖动排序。" +
+                    "有账单的分类删除时要先选一个去处；归档区在页底，归档后只有 0 笔的才能彻底删除。「查看统计数据」会带着这个分类进搜索。",
             ),
             GuideItem("关键词规则", "设置 → 数据 → 关键词规则。内置词只读，你自己的规则优先；规则只在你确认沉淀时才新增，不会偷偷学你。"),
         ),
@@ -290,13 +312,13 @@ private val GUIDE_SECTIONS = listOf(
         listOf(
             GuideItem(
                 "提醒与通知",
-                "设置 → 提醒 → 提醒与通知。四类各自可关：未记账、周期与分期到期、执行失败、预算阈值。" +
-                    "提醒只承诺「今天之内」不承诺准点；进程被系统杀掉时，回到 App 会补算一次。",
+                "设置 → 提醒 → 提醒与通知。四类各自可关：当日未记账、周期任务到期、分期到期、执行失败。" +
+                    "预算阈值不在这里，它挂在每条预算自己的编辑页里。提醒只承诺「今天之内」不承诺准点；进程被系统杀掉时，回到 App 会补算一次。",
             ),
             GuideItem(
                 "桌面组件",
-                "长按桌面 → 小部件，可加三枚：近七日支出（4×2）、预算环（2×2）、当日当月（2×2）。组件全部只读，" +
-                    "点哪儿就进 App 对应的页；取不到数时显示「—」并标「未更新」，不会拿 ¥0.00 冒充。",
+                "长按桌面 → 小部件，有八枚：近七日、收支速览（2×2 / 4×2 四格）、快速记账（2×2 / 4×2 八格）、预算环、消费节奏、记账连续记录。" +
+                    "组件全部只读，点哪儿就进 App 对应的页；取不到数时显示「—」并标「未更新」，不会拿 ¥0.00 冒充。",
             ),
             GuideItem("长按图标", "长按 App 图标只有两条：记一笔、查看统计。"),
         ),
@@ -305,7 +327,7 @@ private val GUIDE_SECTIONS = listOf(
         "统计口径",
         listOf(
             GuideItem("无标记", "正常计入。支出进支出、收入进收入，笔数一起算。"),
-            GuideItem("未报销 / 已报销", "两态都照原样计入支出；只有打开「剔除未报销」时，未报销那几笔才暂时不算。"),
+            GuideItem("未报销 / 已报销", "已报销的支出不再计入支出合计；未报销的照常计入，统计页支出视图打开「剔除未报销」时那几笔才暂时不算。"),
             GuideItem(
                 "退款",
                 "关联了原单的退款按负数冲抵原单所在分类的支出；没关联原单的退款不动金额，只出现在列表与笔数里。" +

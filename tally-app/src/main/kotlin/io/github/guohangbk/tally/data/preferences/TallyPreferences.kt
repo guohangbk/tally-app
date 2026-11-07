@@ -28,6 +28,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
     object Keys {
         val DEVICE_ID = stringPreferencesKey("device_id")
         val BILL_IMAGE_ENABLED = booleanPreferencesKey("bill_image_enabled")
+        /** 秒开模式：打开应用跳过首页，直接落在记账页。 */
+        val QUICK_OPEN_ENABLED = booleanPreferencesKey("quick_open_enabled")
         val REIMBURSE_ENABLED = booleanPreferencesKey("reimburse_enabled")
         val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -67,6 +69,7 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
         TallySettings(
             deviceId = prefs[Keys.DEVICE_ID] ?: "",
             billImageEnabled = prefs[Keys.BILL_IMAGE_ENABLED] ?: false,
+            quickOpenEnabled = prefs[Keys.QUICK_OPEN_ENABLED] ?: false,
             reimburseEnabled = prefs[Keys.REIMBURSE_ENABLED] ?: false,
             assistantEnabled = prefs[Keys.ASSISTANT_ENABLED] ?: false,
             themeMode = prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
@@ -104,6 +107,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun setBillImageEnabled(enabled: Boolean) = put(Keys.BILL_IMAGE_ENABLED, enabled)
+
+    suspend fun setQuickOpenEnabled(enabled: Boolean) = put(Keys.QUICK_OPEN_ENABLED, enabled)
 
     suspend fun setReimburseEnabled(enabled: Boolean) = put(Keys.REIMBURSE_ENABLED, enabled)
 
@@ -237,6 +242,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
 data class TallySettings(
     val deviceId: String,
     val billImageEnabled: Boolean,
+    /** 秒开模式：开启后打开应用直接进记账页，返回落在首页。 */
+    val quickOpenEnabled: Boolean,
     val reimburseEnabled: Boolean,
     val assistantEnabled: Boolean,
     val themeMode: ThemeMode,
@@ -251,7 +258,7 @@ data class TallySettings(
     val webDavUser: String,
     val webDavDirectory: String,
     val lastBackupAt: Long?,
-    /** 调试模式：设置里连点包名 5 次开启，开启后每个页面都能调出控制台。 */
+    /** 调试模式：设置 → 关于 → 版本，1.2 秒内连点 5 次开启，开启后每个页面都能调出控制台。 */
     val debugMode: Boolean = false,
     /** 通知总开关：关掉之后四类一条都不发，App 内也不留红点。 */
     val notificationsEnabled: Boolean = true,
@@ -271,6 +278,7 @@ data class TallySettings(
         val DEFAULT = TallySettings(
             deviceId = "",
             billImageEnabled = false,
+            quickOpenEnabled = false,
             reimburseEnabled = false,
             assistantEnabled = false,
             themeMode = ThemeMode.SYSTEM,

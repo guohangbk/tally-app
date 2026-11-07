@@ -20,6 +20,10 @@ interface LedgerDao {
     @Query("SELECT * FROM ledger WHERE id = :id AND deleted_at IS NULL")
     suspend fun findById(id: String): LedgerEntity?
 
+    /** 概览页只认这一本账：不跟着列表一起刷，也不为一行标题去跑整表聚合。 */
+    @Query("SELECT * FROM ledger WHERE id = :id AND deleted_at IS NULL LIMIT 1")
+    fun observeById(id: String): Flow<LedgerEntity?>
+
     @Query("SELECT * FROM ledger WHERE deleted_at IS NULL AND is_default = 1 LIMIT 1")
     fun observeDefault(): Flow<LedgerEntity?>
 

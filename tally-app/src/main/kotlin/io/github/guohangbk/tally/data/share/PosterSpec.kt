@@ -45,6 +45,7 @@ data class PosterSpec(
     val budgetText: String?,
     val budgetRatio: Float?,
     val budgetOver: Boolean,
+    val budgetTitle: String = "预算",
     /** 这段账没有 AI 小结时为 null：整段不画，不拿口径句冒充结论。 */
     val digest: String?,
     val footer: String,
@@ -174,10 +175,85 @@ data class PosterSpec(
                 budgetRatio = budgetUsage?.ratio?.coerceAtLeast(0f),
                 budgetOver = budgetUsage?.isOver == true,
                 digest = digestLine?.let { if (masked) maskDigits(it) else it },
-                footer = "由 Tally 塔莉生成 · " +
-                    Instant.ofEpochMilli(System.currentTimeMillis()).atZone(ZoneId.systemDefault()).toLocalDate().format(dayFormatter),
+                footer = footerLine(),
             )
         }
+
+        /**
+         * 结算长图：一本账从第一笔到最后一笔的整段，抬头换成账本名与跨度。
+         *
+         * 走的还是这套字段——排行条就是分类占比条，预算条还是预算条，
+         * 渲染器一句都不用改；区别只在抬头写法与不再讲环比 / 趋势（整本账没有「上期」）。
+         */
+        fun buildSettlement(
+            snapshot: StatisticsSnapshot,
+            ledgerName: String,
+            spanLabel: String,
+            dayCount: Int,
+            monthCount: Int,
+            budgetLimitMinor: Long?,
+            grouping: Boolean,
+            masked: Boolean,
+        ): PosterSpec {
+            val expense = snapshot.summary.expenseMinor
+            val ranking = snapshot.categoryRanking
+                .filter { it.amountMinor > 0L }
+                .take(MAX_CATEGORIES)
+            val topAmount = ranking.maxOfOrNull { it.amountMinor } ?: 0L
+            val limit = budgetLimitMinor?.takeIf { it > 0L }
+            val budgetRatio = limit?.let { expense.toFloat() / it }
+            val budgetText = limit?.let { amount ->
+                val delta = expense - amount
+                buildString {
+                    append("预算 ").append(money(amount, grouping, masked))
+                    append(" · ")
+                    append(
+                        when {
+                            delta > 0L -> "已超支 +" + money(delta, grouping, masked)
+                            delta < 0L -> "剩余 " + money(-delta, grouping, masked)
+                            else -> "正好用完"
+                        },
+                    )
+                }
+            }
+
+            return PosterSpec(
+                eyebrow = "TALLY · 账本结算",
+                periodTitle = ledgerName.ifBlank { "账本" },
+                subline = spanLabel,
+                expenseLabel = "支出",
+                expenseValue = money(expense, grouping, masked, symbol = true),
+                change = null,
+                stats = listOf(
+                    PosterStat("笔数", "${snapshot.summary.billCount} 笔"),
+                    PosterStat("日均", money(if (dayCount > 0) expense / dayCount else 0L, grouping, masked)),
+                    PosterStat("月均", money(if (monthCount > 0) expense / monthCount else 0L, grouping, masked)),
+                ),
+                rankingTitle = if (ranking.isEmpty()) null else "分类占比",
+                ranking = ranking.map { item ->
+                    PosterLine(
+                        label = item.name + " · " + (item.share * 100).toInt() + "%",
+                        value = money(item.amountMinor, grouping, masked),
+                        ratio = if (topAmount > 0) (item.amountMinor.toFloat() / topAmount).coerceIn(0.02f, 1f) else 0f,
+                        lead = item.amountMinor == topAmount,
+                    )
+                },
+                trendTitle = null,
+                bars = emptyList(),
+                averageRatio = null,
+                trendCaption = null,
+                budgetText = budgetText,
+                budgetRatio = budgetRatio,
+                budgetOver = limit != null && expense > limit,
+                budgetTitle = "预算对比",
+                digest = null,
+                footer = footerLine(),
+            )
+        }
+
+        /** 落款：两张海报同一句，日期取生成当天。 */
+        private fun footerLine(): String = "由 Tally 塔莉生成 · " +
+            Instant.ofEpochMilli(System.currentTimeMillis()).atZone(ZoneId.systemDefault()).toLocalDate().format(dayFormatter)
 
         /** 元为单位、带千分位；脱敏时换成点串，宽度靠排版对齐而不是保留位数。 */
         private fun money(minor: Long, grouping: Boolean, masked: Boolean, symbol: Boolean = false): String {

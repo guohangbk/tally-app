@@ -113,7 +113,8 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
                     month,
                 )
             }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+            // 首帧就用预热缓存的那份：预算条与黑框是同一块版式，晚到一步整块会往下跳。
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), graph.cachedHomeBudget)
 
     /** 抽屉里「分类管理」后面的「23 / 6」徽标：支出与收入的一级数量，与账本无关。 */
     private val categoryFlow = combine(

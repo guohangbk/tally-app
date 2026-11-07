@@ -63,10 +63,10 @@ android {
         applicationId = "io.github.guohangbk.tally"
         minSdk = 28
         targetSdk = 37
-        // 0.1.2 → 102。已发布的 0.1.0 是 versionCode 1、0.1.1 是 101
-        // （0.1.0 当年没走公式，属历史事实，不再改）。
-        versionCode = tallyVersionCode(major = 0, minor = 1, patch = 2)
-        versionName = "0.1.2"
+        // 0.1.3 → 103。已发布的 0.1.0 是 versionCode 1、0.1.1 是 101、
+        // 0.1.2 是 102（0.1.0 当年没走公式，属历史事实，不再改）。
+        versionCode = tallyVersionCode(major = 0, minor = 1, patch = 3)
+        versionName = "0.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

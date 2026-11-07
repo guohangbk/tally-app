@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.ui.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -24,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -66,6 +68,8 @@ import io.github.guohangbk.tally.ui.importexport.ExportScreen
 import io.github.guohangbk.tally.ui.importexport.ImportScreen
 import io.github.guohangbk.tally.ui.installment.InstallmentFormScreen
 import io.github.guohangbk.tally.ui.installment.InstallmentScreen
+import io.github.guohangbk.tally.ui.ledger.LedgerOverviewScreen
+import io.github.guohangbk.tally.ui.ledger.LedgerOverviewViewModel
 import io.github.guohangbk.tally.ui.ledger.LedgerScreen
 import io.github.guohangbk.tally.ui.ledger.LedgerViewModel
 import io.github.guohangbk.tally.ui.common.tallyViewModel
@@ -96,6 +100,10 @@ object Routes {
     const val RECYCLE = "recycle"
     const val LEDGERS = "ledgers"
     const val LEDGER_ICON = "ledger/icon"
+    /** 账本概览：一本账一屏。settle=1 表示从 ⋯ 的「结算」进来，页面就绪后直接弹确认框。 */
+    const val LEDGER_OVERVIEW = "ledger/overview/{ledgerId}?settle={settle}"
+    /** 结算长图：只认这一本账，走同一套海报渲染管线，不带周期维度。 */
+    const val SETTLE_POSTER = "ledger/settle/poster/{ledgerId}"
     const val CATEGORIES = "categories"
     const val BILL_NEW = "bill/new?l1={l1}&l2={l2}&type={type}&amount={amount}&note={note}&source={source}&sk={sk}&at={at}&kw={kw}"
     const val SEARCH = "search?ledgerId={ledgerId}&categoryL1={categoryL1}&categoryL2={categoryL2}"
@@ -128,6 +136,11 @@ object Routes {
     const val CATEGORY_ICON = "category/icon/{categoryId}"
 
     fun billEdit(id: String) = "bill/edit/$id"
+
+    fun ledgerOverview(ledgerId: String, settle: Boolean = false) =
+        "ledger/overview/$ledgerId?settle=${if (settle) 1 else 0}"
+
+    fun settlePoster(ledgerId: String) = "ledger/settle/poster/$ledgerId"
 
     /**
      * 首页选中的账本要跟着进统计与搜索，空串表示「全部账本」；
@@ -217,6 +230,7 @@ fun TallyAppRoot() {
                 TallyAppShell(
                     onboardingDone = loaded.onboardingCompleted,
                     assistantEnabled = loaded.assistantEnabled,
+                    quickOpen = loaded.quickOpenEnabled,
                     debugMode = loaded.debugMode,
                 )
             }
@@ -232,7 +246,12 @@ private fun isDark(mode: ThemeMode): Boolean = when (mode) {
 }
 
 @Composable
-private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, debugMode: Boolean = false) {
+private fun TallyAppShell(
+    onboardingDone: Boolean,
+    assistantEnabled: Boolean,
+    quickOpen: Boolean,
+    debugMode: Boolean = false,
+) {
     val graph = rememberAppGraph()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -243,8 +262,10 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
     // 引导期是从 ONBOARDING push 上去的：只 popBackStack 会把他退回引导页——
     // 账都已经进库了，人却被挡在门外，而且标记没落库，下次冷启动还是引导页。
     fun goHome() {
+        // 清到图根，不用 findStartDestination()：秒开模式把不带参数的 "bill/new" 写成起点时，
+        // 起始路由的哈希对不上带占位符的 dest 路由，那个 API 会直接抛 NoSuchElementException。
         navController.navigate(Routes.HOME) {
-            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+            popUpTo(navController.graph.id) { inclusive = true }
             launchSingleTop = true
         }
     }
@@ -294,6 +315,30 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
         }
     }
 
+    // 秒开模式的另一半：进程还活着时从桌面图标打开，起点不会重走一遍，
+    // 停在首页的会话在这里切成记账页。停在别的页说明人正在做别的事（可能在填表），不接管。
+    // 与冷启动保持同一个栈形：记账页当栈根，返回与保存都落到首页。
+    val quickOpenNow = rememberUpdatedState(quickOpen)
+    LaunchedEffect(graph) {
+        graph.launcherOpened.collect {
+            if (!quickOpenNow.value) return@collect
+            if (navController.currentDestination?.route != Routes.HOME) return@collect
+            navController.navigate(Routes.billNew(null, null, null)) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // 起点在本次进程里只定一次：在设置里切换秒开模式不该当场把导航栈重建到记账页。
+    val startDestination = remember {
+        when {
+            !onboardingDone -> Routes.ONBOARDING
+            quickOpen -> Routes.billNew(null, null, null)
+            else -> Routes.HOME
+        }
+    }
+
     WarmIconPainters()
 
     Scaffold { padding ->
@@ -311,7 +356,7 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
         ) {
                 NavHost(
                     navController = navController,
-                    startDestination = if (onboardingDone) Routes.HOME else Routes.ONBOARDING,
+                    startDestination = startDestination,
                     enterTransition = pushEnter,
                     exitTransition = pushExit,
                     popEnterTransition = popEnter,
@@ -410,6 +455,32 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                             viewModel = tallyViewModel { LedgerViewModel(graph) },
                             onBack = { navController.popBackStack() },
                             onPickLedgerIcon = { navController.navigate(Routes.LEDGER_ICON) },
+                            onOpenOverview = { ledgerId -> navController.navigate(Routes.ledgerOverview(ledgerId)) },
+                            onSettleLedger = { ledgerId ->
+                                navController.navigate(Routes.ledgerOverview(ledgerId, settle = true))
+                            },
+                        )
+                    }
+                    composable(Routes.LEDGER_OVERVIEW) { entry ->
+                        val ledgerId = entry.arguments?.getString("ledgerId").orEmpty()
+                        LedgerOverviewScreen(
+                            viewModel = tallyViewModel { LedgerOverviewViewModel(graph, ledgerId) },
+                            onBack = { navController.popBackStack() },
+                            onOpenStats = { navController.navigate(Routes.stats(ledgerId)) },
+                            onOpenCategory = { categoryId ->
+                                navController.navigate(Routes.search(ledgerId, categoryId))
+                            },
+                            onOpenBillEdit = { billId -> navController.navigate(Routes.billEdit(billId)) },
+                            onOpenSettlePoster = { navController.navigate(Routes.settlePoster(ledgerId)) },
+                            startSettle = entry.arguments?.getString("settle") == "1",
+                        )
+                    }
+                    composable(Routes.SETTLE_POSTER) { entry ->
+                        PosterScreen(
+                            graph = graph,
+                            request = null,
+                            settlementLedgerId = entry.arguments?.getString("ledgerId").orEmpty(),
+                            onBack = { navController.popBackStack() },
                         )
                     }
                     composable(Routes.LEDGER_ICON) { entry ->
@@ -490,6 +561,10 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                         popEnterTransition = sheetPopEnter,
                         popExitTransition = sheetPopExit,
                     ) { entry ->
+                        // 秒开模式把记账页当起点时栈里没有上一页：页内返回、系统返回、保存都落到首页。
+                        // 不能只靠 popBackStack()——它会连唯一这一页一起弹掉，Activity 随即结束退回桌面。
+                        val isRoot = remember(entry) { navController.previousBackStackEntry == null }
+                        BackHandler(enabled = isRoot) { goHome() }
                         BillEntryScreen(
                             prefillL1Id = entry.arguments?.getString("l1")?.ifEmpty { null },
                             prefillL2Id = entry.arguments?.getString("l2")?.ifEmpty { null },
@@ -500,8 +575,12 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                             prefillSourceKind = entry.arguments?.getString("sk")?.ifEmpty { null },
                             prefillOccurredAt = entry.arguments?.getString("at")?.toLongOrNull(),
                             prefillKeyword = entry.arguments?.getString("kw")?.ifEmpty { null },
-                            onBack = { navController.popBackStack() },
-                            onSaved = { navController.popBackStack() },
+                            onBack = {
+                                if (isRoot) goHome() else navController.popBackStack()
+                            },
+                            onSaved = {
+                                if (isRoot) goHome() else navController.popBackStack()
+                            },
                             onAddSubCategory = { parentId -> navController.navigate(Routes.categoryNewL2(parentId)) },
                         )
                     }
@@ -621,7 +700,7 @@ private fun TallyAppShell(onboardingDone: Boolean, assistantEnabled: Boolean, de
                     end = 20.dp,
                 ),
             )
-            // 调试模式：每个页面右下角都能调出控制台（设置里连点包名 5 次开启）。
+            // 调试模式：每个页面右下角都能调出控制台（设置 → 关于 → 版本，1.2 秒内连点 5 次开启）。
             if (debugMode) {
                 io.github.guohangbk.tally.ui.shell.DebugConsoleOverlay(
                     modifier = Modifier

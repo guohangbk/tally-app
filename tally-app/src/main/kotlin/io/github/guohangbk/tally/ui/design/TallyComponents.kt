@@ -147,7 +147,7 @@ fun TallyTag(
  * 高度 32dp、圆角 9dp、纸底 1dp 描边；图标 12.5 + 文字 11.5，四格等宽由调用方给 `weight(1f)`。
  * 不可用降透明度而不是消失——位置跳动的列表没法单手点。
  */
-enum class CardActionTone { NEUTRAL, BRAND, GOLD }
+enum class CardActionTone { NEUTRAL, BRAND, GOLD, DANGER }
 
 @Composable
 fun TallyCardAction(
@@ -167,6 +167,7 @@ fun TallyCardAction(
         CardActionTone.NEUTRAL -> Triple(colors.paper, colors.line, colors.ink)
         CardActionTone.BRAND -> Triple(colors.brandSurface, colors.brand.copy(alpha = 0.2f), colors.brand)
         CardActionTone.GOLD -> Triple(colors.glow, colors.gold.copy(alpha = 0.3f), colors.onGlow)
+        CardActionTone.DANGER -> Triple(colors.paper, colors.expense.copy(alpha = 0.35f), colors.expense)
     }
     val haptics = rememberTallyHaptics()
     val shape = RoundedCornerShape(9.dp)
@@ -203,7 +204,7 @@ fun TallyCardAction(
     }
 }
 
-/** ⋯ 里的一条动作；`danger` 是那一项转陶土（删除一律走这里，不平铺在卡上）。 */
+/** ⋯ 里的一条动作；`danger` 是那一项转陶土。低频动作走这里，常用的删除在动作条上是 [CardActionTone.DANGER] 单独一格。 */
 data class TallyMenuEntry(val label: String, val danger: Boolean = false, val onClick: () -> Unit)
 
 /**

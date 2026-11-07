@@ -190,8 +190,8 @@ fun SearchScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 FilterButton("全部", filter.ledgerId == null, { viewModel.setLedger(null) })
-                                state.ledgers.forEach { item ->
-                                    FilterButton(item.ledger.name, filter.ledgerId == item.ledger.id, { viewModel.setLedger(item.ledger.id) })
+                                state.ledgers.forEach { ledger ->
+                                    FilterButton(ledger.name, filter.ledgerId == ledger.id, { viewModel.setLedger(ledger.id) })
                                 }
                             }
                             Spacer(Modifier.height(9.dp))

@@ -3,8 +3,10 @@ package io.github.guohangbk.tally.data.repository
 import io.github.guohangbk.tally.data.db.dao.BillDao
 import io.github.guohangbk.tally.data.db.dao.LedgerDao
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
+import io.github.guohangbk.tally.data.db.query.LedgerSpan
 import io.github.guohangbk.tally.data.db.query.LedgerStat
 import io.github.guohangbk.tally.data.preferences.TallyPreferences
+import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.DefaultCategoryTree
 import io.github.guohangbk.tally.domain.model.TallyError
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +21,18 @@ data class LedgerListItem(
 ) {
     val isEmpty: Boolean get() = stat.billCount == 0
 }
+
+/** 概览页的固定数据：这一本账的身份、跨度、笔数、最近几笔与最大一笔。 */
+data class LedgerOverviewCore(
+    val ledger: LedgerEntity,
+    val span: LedgerSpan,
+    val billCount: Int,
+    val recent: List<BillListItem>,
+    val largestExpense: BillListItem?,
+)
+
+/** 概览页「最近几笔」的条数：三笔够看出这本账在记什么，再多就把分类占比挤出首屏。 */
+private const val RECENT_BILL_LIMIT = 3
 
 /**
  * 账本职责：创建、设默认、归档、删除迁移。
@@ -45,6 +59,29 @@ class LedgerRepository(
      * 去跑 [items] 里的整表 GROUP BY（observeLedgerStats 扫全部历史 bill）。
      */
     val active: Flow<List<LedgerEntity>> = ledgerDao.observeActive().distinctUntilChanged()
+
+    /**
+     * 概览页的一次取数：身份、跨度、笔数、最近三笔与最大一笔都从这一本账的索引上取，
+     * 不经过 [items] 的整表 GROUP BY。金额合计不在这里算——那是统计口径，
+     * 由 BillRepository.observeStatistics 按区间给出。
+     */
+    fun observeOverview(ledgerId: String): Flow<LedgerOverviewCore?> = combine(
+        ledgerDao.observeById(ledgerId),
+        billDao.observeLedgerSpan(ledgerId),
+        billDao.observeBillCount(ledgerId),
+        billDao.observeRecentRows(ledgerId, RECENT_BILL_LIMIT),
+        billDao.observeLargestExpenseRow(ledgerId),
+    ) { ledger, span, billCount, recent, largest ->
+        ledger?.let {
+            LedgerOverviewCore(
+                ledger = it,
+                span = span,
+                billCount = billCount,
+                recent = recent.map { row -> row.toListItem() },
+                largestExpense = largest?.toListItem(),
+            )
+        }
+    }.distinctUntilChanged()
 
     /** 首次启动创建「日常账本」并补齐全机默认分类。 */
     suspend fun bootstrap(): LedgerEntity {
