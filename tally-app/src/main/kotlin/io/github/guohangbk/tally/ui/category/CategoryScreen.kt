@@ -78,10 +78,10 @@ import io.github.guohangbk.tally.ui.shell.TallyTopBar
 import kotlin.math.roundToInt
 
 private val SCREEN_PAD = 14.dp
-private val CARD_HEIGHT = 40.dp
-private val CARD_ICON = 26.dp
+private val CARD_HEIGHT = 46.dp
+private val CARD_ICON = 30.dp
 private val TRAY_COLUMNS = 5
-private val TILE_ICON = 22.dp
+private val TILE_ICON = 26.dp
 private val BUBBLE_WIDTH = 244.dp
 private const val EXPANDED_KEY = "category.expanded.ids"
 private const val EXPANDED_SEPARATOR = ","
@@ -376,7 +376,7 @@ private fun CategoryCard(
                 Spacer(Modifier.width(9.dp))
                 Text(
                     text = category.name,
-                    fontSize = 13.5.sp, lineHeight = 16.9.sp,
+                    fontSize = 15.sp, lineHeight = 18.8.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     color = if (category.isArchived) colors.ink3 else colors.ink,
                     modifier = Modifier.weight(1f),
@@ -384,7 +384,7 @@ private fun CategoryCard(
                 )
                 Text(
                     text = "${state.billCount(category.id)} 笔",
-                    style = TallyType.helper.copy(fontSize = 10.5.sp, lineHeight = 13.1.sp),
+                    style = TallyType.helper.copy(fontSize = 11.5.sp, lineHeight = 14.4.sp),
                     color = if (expanded) colors.brand else colors.ink3,
                 )
                 Spacer(Modifier.width(9.dp))
@@ -499,8 +499,8 @@ private fun SubCategoryTile(
         Spacer(Modifier.height(3.dp))
         Text(
             text = child.name,
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
+            fontSize = 11.sp,
+            lineHeight = 13.2.sp,
             color = if (selected) colors.ink else if (child.isArchived) colors.ink3 else colors.ink2,
             fontWeight = if (selected) FontWeight.SemiBold else null,
             maxLines = 1,
@@ -527,10 +527,10 @@ private fun AddSubTile(onClick: () -> Unit) {
                 .border(1.dp, colors.line, RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            InlineIcon(iconKey = "plus", contentDescription = null, size = 12.dp, tint = colors.ink3)
+            InlineIcon(iconKey = "plus", contentDescription = null, size = 13.dp, tint = colors.ink3)
         }
         Spacer(Modifier.height(3.dp))
-        Text("添加子类", fontSize = 10.sp, lineHeight = 12.sp, color = colors.ink3, maxLines = 1)
+        Text("添加子类", fontSize = 11.sp, lineHeight = 13.2.sp, color = colors.ink3, maxLines = 1)
     }
 }
 
@@ -552,7 +552,7 @@ private fun GhostOperation(
     )
     Box(
         modifier = Modifier
-            .size(20.dp)
+            .size(22.dp)
             .clip(RoundedCornerShape(7.dp))
             .background(
                 when {
@@ -569,7 +569,7 @@ private fun GhostOperation(
             iconKey = iconKey,
             contentDescription = null,
             modifier = Modifier.rotate(chevronAngle),
-            size = 11.dp,
+            size = 12.5.dp,
             tint = when {
                 selected -> colors.onBrand
                 destructive -> colors.expense

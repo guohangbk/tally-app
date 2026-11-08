@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,15 +35,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.guohangbk.tally.data.preferences.ThemeMode
 import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.domain.model.TimePrecision
 import io.github.guohangbk.tally.ui.common.tallyViewModel
+import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
 import io.github.guohangbk.tally.ui.design.TallyErrorBanner
@@ -53,7 +57,7 @@ import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
 
-/** 项目主页：站点上有下载、截图与文档入口，App 里只留这一个出口，不再重复一遍链接。 */
+/** 项目主页：公开仓里有源码、发行包与文档入口，App 里只留这一个出口，不再重复一遍链接。 */
 private const val PROJECT_HOME = "https://github.com/guohangbk/tally-app"
 
 /**
@@ -73,14 +77,19 @@ private fun appVersionLabel(context: Context): String = appVersionInfo(context)?
 /** 关于页那一行带上 versionCode：用户报问题时能一眼定位到具体构建。 */
 private fun appVersion(context: Context): String {
     val info = appVersionInfo(context) ?: return "-"
+    return "${info.versionName} (${appVersionCode(context)})"
+}
+
+/** versionCode 与「检查更新」用的是同一个数：build.gradle 的公式 `major*10000 + minor*100 + patch`。 */
+private fun appVersionCode(context: Context): Long {
+    val info = appVersionInfo(context) ?: return 0L
     @Suppress("DEPRECATION")
-    val code = if (Build.VERSION.SDK_INT >= 33) info.longVersionCode else info.versionCode.toLong()
-    return "${info.versionName} ($code)"
+    return if (Build.VERSION.SDK_INT >= 33) info.longVersionCode else info.versionCode.toLong()
 }
 
 /** 打不开浏览器不是错误路径（可能只是没装浏览器），提示一句就够，不添第二套 UI。 */
-private fun openProjectHome(context: Context) {
-    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_HOME))) }
+private fun openInBrowser(context: Context, url: String) {
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
         .onFailure { TallyToast.show("打不开浏览器：${it.message ?: "未知原因"}", ToastTone.ERROR) }
 }
 
@@ -224,16 +233,16 @@ fun SettingsScreen(
                 )
             }
 
-            // 小莉分组：只有开启后才有金色触点；未开启时界面里没有任何人格化入口或装饰。
+            // 小莉分组：只有开启后才有金色触点；＋ 右臂那三个字常驻，但没开时只是去设置的路口。
             SettingsSection(title = "小莉（AI）", gold = assistantOn) {
                 SettingsSwitchRow(
                     checked = assistantOn,
                     onCheckedChange = viewModel::setAssistantEnabled,
                     label = "小莉（AI）",
                     description = if (assistantOn) {
-                        "首页长按 + ，往右划进入小莉"
+                        "已开启 · 长按 ＋ 右滑，配好就能聊"
                     } else {
-                        "已关闭 · 界面不显示 AI 入口"
+                        "已关闭 · 右滑仍会带你到这里的开关"
                     },
                     gold = assistantOn,
                 )
@@ -347,6 +356,10 @@ fun SettingsScreen(
                 VersionRow(
                     version = appVersion(context),
                     enabled = settings.debugMode,
+                    checking = state.checkingUpdate,
+                    onCheckUpdate = {
+                        viewModel.checkForUpdate(appVersionCode(context), appVersionLabel(context))
+                    },
                     onToggle = viewModel::setDebugMode,
                 )
                 SettingsDivider()
@@ -354,7 +367,7 @@ fun SettingsScreen(
                     title = "项目主页",
                     subtitle = "https://github.com/guohangbk/tally-app",
                     iconKey = "link",
-                    onClick = { openProjectHome(context) },
+                    onClick = { openInBrowser(context, PROJECT_HOME) },
                 )
                 SettingsDivider()
                 SettingsNavRow(
@@ -392,6 +405,20 @@ fun SettingsScreen(
     }
 
     SettingsDialogHost(state, viewModel)
+
+    state.updateAvailable?.let { update ->
+        TallyConfirmDialog(
+            title = "发现新版本 ${update.latest}",
+            message = "当前 v${appVersionLabel(context)}。升级不会影响账单、分类和图片，去 GitHub 看看这次改了什么？",
+            confirmLabel = "去下载",
+            dismissLabel = "稍后",
+            onConfirm = {
+                viewModel.dismissUpdate()
+                openInBrowser(context, update.pageUrl)
+            },
+            onDismiss = viewModel::dismissUpdate,
+        )
+    }
 
     if (monthStartPicker) {
         MonthStartDayDialog(
@@ -433,7 +460,13 @@ private fun SettingsDialogHost(
  * 不开调试时它就是一行普通信息，看不出任何入口。
  */
 @Composable
-private fun VersionRow(version: String, enabled: Boolean, onToggle: (Boolean) -> Unit) {
+private fun VersionRow(
+    version: String,
+    enabled: Boolean,
+    checking: Boolean,
+    onCheckUpdate: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+) {
     val colors = tallyColors
     var taps by remember { mutableIntStateOf(0) }
     var lastTapAt by remember { mutableLongStateOf(0L) }
@@ -452,15 +485,36 @@ private fun VersionRow(version: String, enabled: Boolean, onToggle: (Boolean) ->
             .padding(vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("版本", style = TallyType.listTitle, color = colors.ink2, modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("版本", style = TallyType.listTitle, color = colors.ink2)
+            // 版本号放描述位：右侧留给能点的「检查更新」，一行里两个动作不混在一起。
+            Text(version, style = TallyType.helper, color = colors.ink3, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         Spacer(Modifier.width(10.dp))
-        Text(
-            text = version,
-            style = TallyType.listTitle,
-            color = colors.ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // 软按钮：不抢版本号的注意力，但一眼看得出能点。检查中压暗并吞掉点击。
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(9.dp))
+                .background(if (checking) colors.card else colors.brandSurface)
+                .clickable { if (!checking) onCheckUpdate() }
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            InlineIcon(
+                iconKey = "refresh",
+                contentDescription = null,
+                size = 11.dp,
+                tint = if (checking) colors.ink3 else colors.brand,
+            )
+            Spacer(Modifier.width(3.dp))
+            Text(
+                text = if (checking) "检查中…" else "检查更新",
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                color = if (checking) colors.ink3 else colors.brand,
+                maxLines = 1,
+            )
+        }
         if (enabled) {
             Spacer(Modifier.width(6.dp))
             TallyTag(text = "调试", tone = TagTone.GOLD)
@@ -469,6 +523,6 @@ private fun VersionRow(version: String, enabled: Boolean, onToggle: (Boolean) ->
 }
 
 private const val PRIVACY_NOTE =    "隐私说明：账单、分类、图片与偏好都存在本地。" +
-        "小莉关闭时不会向任何服务发送数据；开启后发送哪些内容由您配置，密钥不进备份包。"
+        "小莉关闭时不会向任何服务发送数据；手动检查更新只查版本号，不带账本内容；密钥不进备份包。"
 
 

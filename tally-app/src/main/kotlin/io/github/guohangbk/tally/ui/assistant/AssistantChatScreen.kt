@@ -41,9 +41,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -86,13 +84,16 @@ import io.github.guohangbk.tally.ui.common.formatDay
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
 import io.github.guohangbk.tally.ui.design.TallyTag
 import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.TallyType
+import io.github.guohangbk.tally.ui.design.TallyToast
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
+import io.github.guohangbk.tally.ui.design.ToastTone
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
 import kotlinx.coroutines.CancellationException
@@ -347,9 +348,8 @@ fun AssistantChatScreen(
     }
 
     if (showConversations) {
-        ModalBottomSheet(
+        TallyBottomSheet(
             onDismissRequest = { showConversations = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = colors.paper,
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
@@ -1034,7 +1034,15 @@ private fun InputBar(
                     iconKey = "image",
                     label = if (imageEnabled) "发图片" else "当前模型未开启图片输入",
                     enabled = imageEnabled && voicePhase == VoicePhase.Idle,
-                    onClick = onPickImage,
+                    // 置灰但可点：看起来是禁用的，点一下告诉人为什么，而不是按了没反应。
+                    clickWhenDisabled = !imageEnabled && voicePhase == VoicePhase.Idle,
+                    onClick = {
+                        if (imageEnabled) {
+                            onPickImage()
+                        } else {
+                            TallyToast.show("当前模型不支持图片识别，换成支持图片的模型后再试", ToastTone.INFO)
+                        }
+                    },
                 )
                 Box(
                     modifier = Modifier
@@ -1120,6 +1128,8 @@ private fun BarButton(
     label: String,
     enabled: Boolean,
     onClick: () -> Unit = {},
+    /** 视觉上仍置灰，但允许点：用于把「为什么点不了」讲给人听。 */
+    clickWhenDisabled: Boolean = false,
     onPress: (() -> Unit)? = null,
     onRelease: (() -> Unit)? = null,
     tintIfActive: Boolean = false,
@@ -1146,7 +1156,7 @@ private fun BarButton(
                         )
                     }
                 } else {
-                    Modifier.clickable(enabled = enabled, onClick = onClick)
+                    Modifier.clickable(enabled = enabled || clickWhenDisabled, onClick = onClick)
                 },
             ),
         contentAlignment = Alignment.Center,
@@ -1197,7 +1207,7 @@ private fun ConversationList(
 ) {
     val colors = tallyColors
     TallyCard(corner = 15, contentPadding = 8.dp, modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)) {
-        Column(modifier = Modifier.heightIn(max = 260.dp)) {
+        Column(modifier = Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
             if (state.conversations.isEmpty()) {
                 Text("还没有对话。", style = TallyType.helper, color = colors.ink3, modifier = Modifier.padding(8.dp))
             }

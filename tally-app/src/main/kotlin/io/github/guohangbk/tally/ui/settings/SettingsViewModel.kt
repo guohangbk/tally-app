@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.preferences.ThemeMode
 import io.github.guohangbk.tally.data.preferences.TallySettings
+import io.github.guohangbk.tally.data.update.UpdateCheck
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.model.TallyError
 import io.github.guohangbk.tally.domain.model.TimePrecision
@@ -32,6 +33,10 @@ data class SettingsUiState(
     val error: String? = null,
     val notice: String? = null,
     val dialog: SettingsDialogKind? = null,
+    /** 「检查更新」进行中：按钮变成「检查中…」并暂时点不动。 */
+    val checkingUpdate: Boolean = false,
+    /** 查到比安装包新的版本才非空，弹窗由它驱动。 */
+    val updateAvailable: UpdateCheck.Available? = null,
 )
 
 /**
@@ -42,11 +47,15 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
     private val errorState = MutableStateFlow<String?>(null)
     private val noticeState = MutableStateFlow<String?>(null)
     private val dialogState = MutableStateFlow<SettingsDialogKind?>(null)
+    private val checkingUpdate = MutableStateFlow(false)
+    private val updateAvailable = MutableStateFlow<UpdateCheck.Available?>(null)
 
     private data class Signals(
         val error: String?,
         val notice: String?,
         val dialog: SettingsDialogKind?,
+        val checkingUpdate: Boolean,
+        val updateAvailable: UpdateCheck.Available?,
     )
 
     private val business = combine(
@@ -54,8 +63,14 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
         graph.settingRepository.monthStartDay,
     ) { currency, startDay -> currency to startDay }
 
-    private val signals = combine(errorState, noticeState, dialogState) { error, notice, dialog ->
-        Signals(error, notice, dialog)
+    private val signals = combine(
+        errorState,
+        noticeState,
+        dialogState,
+        checkingUpdate,
+        updateAvailable,
+    ) { error, notice, dialog, checking, update ->
+        Signals(error, notice, dialog, checking, update)
     }
 
     val state: StateFlow<SettingsUiState> = combine(
@@ -71,6 +86,8 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
             error = ui.error,
             notice = ui.notice,
             dialog = ui.dialog,
+            checkingUpdate = ui.checkingUpdate,
+            updateAvailable = ui.updateAvailable,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
@@ -133,20 +150,46 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
      *
      * 早先这里是「没通过连接测试就拒绝开启」，理由是当时还没有配置页；现在配置页在了，
      * 这一拒绝反而变成界面上一个点不动的开关。开关本来也不该承担校验职责：
-     * 有没有配好用 AiAvailability.showsEntry 判定，没配置时开着也只是对话页提示
-     * 「还没有配置小莉」，一次请求都不会发出去。
+     * 开与没开只决定 ＋ 右臂把人送到哪一页（`AssistantEntry`），一次请求都不会发出去。
      */
     fun setAssistantEnabled(enabled: Boolean) {
         persist(
             notice = if (enabled) {
-                "小莉已开启 · 长按 ＋ 出右臂"
+                "小莉已开启 · 长按 ＋ 右滑去配置，配好就能聊"
             } else {
-                "小莉已关闭 · 界面不再有 AI 入口"
+                "小莉已关闭 · 右滑仍会带你到这里的开关"
             },
         ) {
             // 沿用配置仓的口径：重新打开时，配置齐全但从未验证过的记为「疑似异常」，让下一次调用去确认。
             graph.aiConfigRepository.setEnabled(enabled)
         }
+    }
+
+    // ---- 检查更新 ------
+    // 只在用户点按钮时打一次公开仓的 latest release：不轮询、不自动下载、不静默安装。
+
+    fun checkForUpdate(installedCode: Long, installedLabel: String) {
+        if (checkingUpdate.value) return
+        checkingUpdate.value = true
+        viewModelScope.launch {
+            try {
+                when (val result = graph.updateChecker.check(installedCode)) {
+                    is UpdateCheck.Available -> updateAvailable.value = result
+                    is UpdateCheck.UpToDate ->
+                        noticeState.value = "已经是最新版本 $installedLabel，安心用。"
+                    UpdateCheck.Failed ->
+                        noticeState.value = "网络好像不太顺，过一会儿再试试。"
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } finally {
+                checkingUpdate.value = false
+            }
+        }
+    }
+
+    fun dismissUpdate() {
+        updateAvailable.value = null
     }
 
     fun requestResetPreferences() {

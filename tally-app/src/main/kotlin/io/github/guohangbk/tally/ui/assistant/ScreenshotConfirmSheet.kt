@@ -9,15 +9,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyTag
 import io.github.guohangbk.tally.ui.design.TallyType
@@ -50,9 +51,8 @@ fun ScreenshotConfirmSheet(
 ) {
     val colors = tallyColors
     val imageCount = (state.bills.map { it.imageIndex } + state.failures.map { it.imageIndex }).distinct().size
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
@@ -66,22 +66,30 @@ fun ScreenshotConfirmSheet(
                 TallyTag(text = "来自 $imageCount 张截图", tone = TagTone.OUTLINE)
             }
             Spacer(Modifier.height(4.dp))
-            state.bills.forEach { bill ->
-                ScanRow(
-                    bill = bill,
-                    onToggle = { onToggle(bill.key) },
-                    onEdit = { onEdit(bill.key) },
-                )
-            }
-            if (state.failures.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                state.failures.forEach { failure ->
-                    Text(
-                        text = "第 ${failure.imageIndex + 1} 张：${failure.reason}，这张没有记上账单",
-                        fontSize = 10.5.sp,
-                        lineHeight = 15.sp,
-                        color = colors.expense,
+            // 一次最多三张截图，但每张可能认出好几笔：行数跟着数据走，给个上限免得顶满整屏。
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                state.bills.forEach { bill ->
+                    ScanRow(
+                        bill = bill,
+                        onToggle = { onToggle(bill.key) },
+                        onEdit = { onEdit(bill.key) },
                     )
+                }
+                if (state.failures.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    state.failures.forEach { failure ->
+                        Text(
+                            text = "第 ${failure.imageIndex + 1} 张：${failure.reason}，这张没有记上账单",
+                            fontSize = 10.5.sp,
+                            lineHeight = 15.sp,
+                            color = colors.expense,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(11.dp))

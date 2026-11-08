@@ -87,6 +87,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import io.github.guohangbk.tally.R
+import io.github.guohangbk.tally.data.ai.AssistantEntry
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.TallyIconTileShape
 import io.github.guohangbk.tally.ui.design.TallyType
@@ -101,7 +102,8 @@ val TallyBottomBarHeight = 50.dp
 /** 账单页的悬浮 ＋：它是本页的动作，不是导航目的地。 */
 /**
  * ＋ 长按放射菜单的三个方向：上＝语音记账、左＝截图记账、右＝小莉。
- * 没有下臂——＋ 贴在屏幕底部，向下的行程会撞系统手势区。右臂只在开关开着时出现。
+ * 没有下臂——＋ 贴在屏幕底部，向下的行程会撞系统手势区。右臂常驻：
+ * 小莉关着或没配好时仍然出，只是落点变成设置或配置页，入口不会随开关凭空消失。
  *
  * 语音是「按住不放」的连续动作：指尖滑进上臂即开始收音，松手即结束并识别——
  * 这样设计板那句「松手结束并识别」和「滑回 ＋ 原位置松手 = 取消」才同时成立。
@@ -158,6 +160,9 @@ private const val TrailStaggerMillis = 380
 private const val RingMillis = 1500
 private const val TrailChevrons = 3
 
+/** 引导光晕一圈走完的时间；三圈错开三分之一周期。 */
+private const val GuideRingMillis = 2100
+
 /** 光晕在 72% 处已经消散完，后面那段空转不值得再算。 */
 private const val RingFade = 0.72f
 
@@ -186,8 +191,10 @@ fun BoxScope.TallyRecordFab(
     raised: Boolean,
     onClick: () -> Unit,
     onFanEvent: (TallyFanEvent) -> Unit = {},
-    /** 右臂＝小莉。开关关着或没配好服务时这一臂根本不出现，而不是灰在那里点不动。 */
-    xiaoliEnabled: Boolean = false,
+    /** 右臂＝小莉。三态常驻：关闭去设置、开启未配置去配置页、可用才进对话。 */
+    xiaoliEntry: AssistantEntry = AssistantEntry.Settings,
+    /** 首页一次性引导浮着时，＋ 外面走一圈圈扩散波纹，提示按住这里。 */
+    guide: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = tallyColors
@@ -246,6 +253,7 @@ fun BoxScope.TallyRecordFab(
     // 走绘制不走重组——首页为冷启动付过的代价，不该被一个常驻动画抹掉。
     val trailPhase = remember { mutableFloatStateOf(0f) }
     val ringPhase = remember { mutableFloatStateOf(0f) }
+    val guidePhase = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(fan, reduced) {
         if (!fan || reduced) {
             trailPhase.floatValue = 0f
@@ -257,6 +265,19 @@ fun BoxScope.TallyRecordFab(
             val elapsed = (withFrameNanos { it } - started) / 1_000_000L
             trailPhase.floatValue = (elapsed % TrailMillis) / TrailMillis.toFloat()
             ringPhase.floatValue = (elapsed % RingMillis) / RingMillis.toFloat()
+        }
+    }
+
+    // 引导波纹是常驻循环，和扇区互斥（扇区一展开就停），相位同样只在绘制里读。
+    LaunchedEffect(guide, fan, reduced) {
+        if (!guide || fan || reduced) {
+            guidePhase.floatValue = 0f
+            return@LaunchedEffect
+        }
+        val started = withFrameNanos { it }
+        while (isActive) {
+            val elapsed = (withFrameNanos { it } - started) / 1_000_000L
+            guidePhase.floatValue = (elapsed % GuideRingMillis) / GuideRingMillis.toFloat()
         }
     }
 
@@ -298,21 +319,29 @@ fun BoxScope.TallyRecordFab(
                 reduced = reduced,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = sideEnd, bottom = sideBottom),
             )
-            if (xiaoliEnabled) {
-                // 右臂＝小莉：底部导航那一格搬到这里，入口从此只有一个。
-                FanArm(
-                    iconKey = "ai",
-                    label = "问小莉",
-                    hint = if (armed == TallyFanEvent.Xiaoli) "松手进入" else "右滑 →",
-                    hot = armed == TallyFanEvent.Xiaoli,
-                    ghost = armed != TallyFanEvent.Xiaoli,
-                    up = false,
-                    stacked = true,
-                    enterDelayMillis = FanArmStaggerMillis * 2,
-                    reduced = reduced,
-                    modifier = Modifier.align(Alignment.BottomStart).padding(start = rightStart, bottom = sideBottom),
-                )
-            }
+            // 右臂＝小莉：底部导航那一格搬到这里，入口从此只有一个。
+            // 它不随开关消失——没开时这一滑落到设置里的开关区，开了没配好落到配置页。
+            FanArm(
+                iconKey = "ai",
+                label = "问小莉",
+                hint = when {
+                    armed == TallyFanEvent.Xiaoli -> when (xiaoliEntry) {
+                        AssistantEntry.Settings -> "松手去设置"
+                        AssistantEntry.Configure -> "松手去配置"
+                        AssistantEntry.Chat -> "松手进入"
+                    }
+                    xiaoliEntry == AssistantEntry.Settings -> "右滑 → 设置"
+                    xiaoliEntry == AssistantEntry.Configure -> "右滑 → 配置"
+                    else -> "右滑 →"
+                },
+                hot = armed == TallyFanEvent.Xiaoli,
+                ghost = armed != TallyFanEvent.Xiaoli,
+                up = false,
+                stacked = true,
+                enterDelayMillis = FanArmStaggerMillis * 2,
+                reduced = reduced,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = rightStart, bottom = sideBottom),
+            )
             // 只有「起势但未命中」才需要指路；命中之后各臂自己会说话。
             if (armed == null) {
                 FanTrail(
@@ -335,26 +364,28 @@ fun BoxScope.TallyRecordFab(
                         .padding(end = maxWidth / 2 + FabHalf, bottom = bottomPad)
                         .size(FanCorridor, FAB_BOX_DP.dp),
                 )
-                if (xiaoliEnabled) {
-                    // 右臂的拖尾：之前只画了两条，右滑没有指路，看起来就像那一臂不能滑。
-                    FanTrail(
-                        up = false,
-                        flip = true,
-                        phase = trailPhase,
-                        reduced = reduced,
-                        tint = colors.paper,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = maxWidth / 2 + FabHalf, bottom = bottomPad)
-                            .size(FanCorridor, FAB_BOX_DP.dp),
-                    )
-                }
+                // 右臂的拖尾：三条手臂都得指路，少一条看起来就像那一臂不能滑。
+                FanTrail(
+                    up = false,
+                    flip = true,
+                    phase = trailPhase,
+                    reduced = reduced,
+                    tint = colors.paper,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = maxWidth / 2 + FabHalf, bottom = bottomPad)
+                        .size(FanCorridor, FAB_BOX_DP.dp),
+                )
             }
             Text(
                 text = when (armed) {
                     TallyFanEvent.VoiceStart -> "正在收音 · 松手结束并识别"
                     TallyFanEvent.Screenshot -> "松手打开相册 · 可一次选多张"
-                    TallyFanEvent.Xiaoli -> "松手进入小莉"
+                    TallyFanEvent.Xiaoli -> when (xiaoliEntry) {
+                        AssistantEntry.Settings -> "松手去设置 · 打开小莉"
+                        AssistantEntry.Configure -> "松手去配置 · 配好就能聊"
+                        AssistantEntry.Chat -> "松手进入小莉"
+                    }
                     else -> "继续上滑、左滑或右滑 · 松手取消"
                 },
                 fontSize = 13.sp,
@@ -395,7 +426,7 @@ fun BoxScope.TallyRecordFab(
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (fan) {
                                 // 命中只看臂中心 40dp 内；滑回 ＋ 原位置即 null = 取消。
-                                val next = armAt(change.position, xiaoliEnabled)
+                                val next = armAt(change.position)
                                 if (next == TallyFanEvent.VoiceStart && !voiceStarted) {
                                     voiceStarted = true
                                     onFanEvent(TallyFanEvent.VoiceStart)
@@ -438,7 +469,8 @@ fun BoxScope.TallyRecordFab(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .shadow(12.dp, shape, ambientColor = colors.brand, spotColor = colors.brand)
+                    // shadow 默认 clip = true，会把后面画在 56dp 外沿的波纹连圈裁掉；形状由下面的 clip 管。
+                    .shadow(12.dp, shape, clip = false, ambientColor = colors.brand, spotColor = colors.brand)
                     .graphicsLayer {
                         rotationZ = fabRotation
                         scaleX = fabPop.value
@@ -446,7 +478,10 @@ fun BoxScope.TallyRecordFab(
                     }
                     // 光晕画在 clip 之前，否则那一圈外沿会被盒子切掉。
                     .drawBehind {
-                        if (fan) drawFanHalo(ringPhase.floatValue, reduced, colors.paper)
+                        when {
+                            fan -> drawFanHalo(ringPhase.floatValue, reduced, colors.paper)
+                            guide -> drawGuideRings(guidePhase.floatValue, reduced, colors.paper)
+                        }
                     }
                     .clip(shape)
                     .background(Brush.linearGradient(gradient), shape),
@@ -458,8 +493,8 @@ fun BoxScope.TallyRecordFab(
     }
 }
 
-/** 指尖落在哪一臂的命中圈（半径 40dp）内；两臂都不在就是取消。坐标以 ＋ 自身为原点，所以能直接算。 */
-private fun PointerInputScope.armAt(position: Offset, xiaoliEnabled: Boolean): TallyFanEvent? {
+/** 指尖落在哪一臂的命中圈（半径 40dp）内；三臂都不在就是取消。坐标以 ＋ 自身为原点，所以能直接算。 */
+private fun PointerInputScope.armAt(position: Offset): TallyFanEvent? {
     val center = FAB_BOX_DP.dp.toPx() / 2f
     val reach = FanArmReach.toPx()
     val radius = FanArmHitRadius.toPx()
@@ -471,7 +506,7 @@ private fun PointerInputScope.armAt(position: Offset, xiaoliEnabled: Boolean): T
     return when {
         inside(Offset(center, center - reach)) -> TallyFanEvent.VoiceStart
         inside(Offset(center - reach, center)) -> TallyFanEvent.Screenshot
-        inside(Offset(center + reach, center)) && xiaoliEnabled -> TallyFanEvent.Xiaoli
+        inside(Offset(center + reach, center)) -> TallyFanEvent.Xiaoli
         else -> null
     }
 }
@@ -630,6 +665,32 @@ private fun FanTrail(
             }
         }
     }
+}
+
+/**
+ * 引导光晕：三圈从 ＋ 外沿依次散开，淡下去再从头来，像往水里丢了一颗石子。
+ * 扩展止于 30dp——再高就碰到引导卡的尾巴了（卡底在 98dp，尾巴尖 92dp）。
+ */
+private fun DrawScope.drawGuideRings(phase: Float, reduced: Boolean, color: Color) {
+    if (reduced) {
+        drawGuideRing(color.copy(alpha = 0.34f), 9.dp.toPx())
+        return
+    }
+    repeat(3) { index ->
+        val p = (phase + index / 3f) % 1f
+        val eased = 1f - (1f - p) * (1f - p)
+        drawGuideRing(color.copy(alpha = 0.58f * (1f - p)), 3.dp.toPx() + 27.dp.toPx() * eased)
+    }
+}
+
+private fun DrawScope.drawGuideRing(color: Color, grow: Float) {
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(-grow, -grow),
+        size = Size(size.width + grow * 2f, size.height + grow * 2f),
+        cornerRadius = CornerRadius(FabCorner.toPx() + grow),
+        style = Stroke(width = 1.6.dp.toPx()),
+    )
 }
 
 /** 光晕：起势期间从 ＋ 外沿呼出并消散（1.5s 一轮），就是「按住了，还有东西要出来」那句确认。 */

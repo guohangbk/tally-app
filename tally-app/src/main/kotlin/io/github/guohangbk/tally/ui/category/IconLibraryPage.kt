@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,14 +66,13 @@ private val EMOJI_FALLBACK = listOf("🍜", "🚕", "🎮", "🎁", "💡", "�
 fun IconLibraryPage(
     mode: IconLibraryMode,
     onBack: () -> Unit,
-    onSaved: (String?) -> Unit,
+    onSaved: () -> Unit,
 ) {
     val graph = rememberAppGraph()
     val key = when (mode) {
         is IconLibraryMode.NewLevel1 -> "icon-lib-l1-${mode.type.name}"
         is IconLibraryMode.NewLevel2 -> "icon-lib-l2-${mode.parentId}"
         is IconLibraryMode.EditIcon -> "icon-lib-edit-${mode.categoryId}"
-        IconLibraryMode.LedgerIcon -> "icon-lib-ledger"
     }
     val viewModel = tallyViewModel(key = key) { IconLibraryViewModel(graph, mode) }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -87,7 +87,7 @@ fun IconLibraryPage(
                     label = if (state.batch) "保存 ${state.creatableCount} 个" else "保存",
                     onClick = { viewModel.save(onSaved) },
                     variant = ButtonVariant.BRAND,
-                    enabled = if (state.ledgerIcon) state.selectedIcon != null else state.canSave,
+                    enabled = state.canSave,
                     height = 32,
                     modifier = Modifier.width(96.dp),
                 )
@@ -124,7 +124,7 @@ fun IconLibraryPage(
                     lines = state.batchLines,
                     onValueChange = viewModel::setBatchText,
                 )
-            } else if (!state.ledgerIcon) {
+            } else {
                 TallyCard(corner = 14, contentPadding = 9.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         SelectedIconTile(iconKey = state.selectedIcon, label = state.name.ifBlank { "图标" })
@@ -137,9 +137,8 @@ fun IconLibraryPage(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            // 批量是「一次建多个」，改一个已有分类时用不上，留着还会让人以为能批量改名；
-            // 账本图标没有名称也没有批量，两种卡都不出现。
-            if (!state.editing && !state.ledgerIcon) {
+            // 批量是「一次建多个」，改一个已有分类时用不上，留着还会让人以为能批量改名。
+            if (!state.editing) {
                 TallyCard(corner = 14, contentPadding = 9.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("批量添加", style = TallyType.listTitle, color = colors.ink, modifier = Modifier.weight(1f))
@@ -154,7 +153,7 @@ fun IconLibraryPage(
                 Spacer(Modifier.height(10.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text(if (state.ledgerIcon) "账本图标" else "分类图标", style = TallyType.eyebrow, color = colors.gold)
+                Text("分类图标", style = TallyType.eyebrow, color = colors.gold)
                 SearchField(value = state.query, onValueChange = viewModel::setQuery, modifier = Modifier.weight(1f))
             }
 
@@ -184,7 +183,7 @@ fun IconLibraryPage(
                             onEmoji = { emoji -> viewModel.selectFallbackKey(emoji) },
                         )
                     } else {
-                        state.results.chunked(4).forEach { row ->
+                        state.results.chunked(5).forEach { row ->
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 row.forEach { meta ->
                                     Box(modifier = Modifier.weight(1f)) {
@@ -196,7 +195,7 @@ fun IconLibraryPage(
                                         )
                                     }
                                 }
-                                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                                repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }
@@ -206,9 +205,8 @@ fun IconLibraryPage(
             Spacer(Modifier.height(8.dp))
             PickBar(
                 iconKey = state.selectedIcon,
-                label = if (state.ledgerIcon) "账本" else if (state.batch) state.batchLines.joinToString(" · ") { it.name }.ifBlank { "未命名" } else state.name.ifBlank { "未命名" },
+                label = if (state.batch) state.batchLines.joinToString(" · ") { it.name }.ifBlank { "未命名" } else state.name.ifBlank { "未命名" },
                 status = when {
-                    state.ledgerIcon -> if (state.selectedIcon == null) "还没选图标" else "选中后点右上角保存"
                     state.batch -> "创建 ${state.creatableCount} 个 · ${state.batchLines.count { it.duplicate }} 个跳过"
                     state.selectedIcon == null -> "还没选图标"
                     else -> "选中后点右上角保存"
@@ -224,7 +222,7 @@ private fun GroupRail(selected: String, onSelect: (String) -> Unit) {
     val colors = tallyColors
     Column(
         modifier = Modifier
-            .width(58.dp)
+            .width(66.dp)
             .fillMaxHeight()
             .background(colors.paper)
             .verticalScroll(rememberScrollState()),
@@ -233,8 +231,8 @@ private fun GroupRail(selected: String, onSelect: (String) -> Unit) {
             val active = group == selected
             Text(
                 text = group,
-                fontSize = 11.5.sp,
-                lineHeight = 14.sp,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
                 color = if (active) colors.ink else colors.ink2,
                 fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
@@ -242,7 +240,7 @@ private fun GroupRail(selected: String, onSelect: (String) -> Unit) {
                     .fillMaxWidth()
                     .background(if (active) colors.card else colors.paper)
                     .clickable { onSelect(group) }
-                    .padding(vertical = 7.dp, horizontal = 2.dp),
+                    .padding(vertical = 8.dp, horizontal = 2.dp),
             )
         }
     }
@@ -267,22 +265,23 @@ private fun LibraryItem(
     ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(31.dp)
                 .clip(shape)
                 .background(if (selected) colors.ink else colors.paper)
                 .border(1.dp, if (selected) colors.ink else colors.line, shape),
             contentAlignment = Alignment.Center,
         ) {
-            CategoryGlyph(iconKey = meta.key, label = meta.displayName, size = 15.dp, tint = if (selected) colors.paper else colors.ink)
+            CategoryGlyph(iconKey = meta.key, label = meta.displayName, size = 17.dp, tint = if (selected) colors.paper else colors.ink)
         }
         Spacer(Modifier.height(3.dp))
         Text(
             text = if (showGroupTag) "${meta.displayName}·${meta.group}" else meta.displayName,
-            fontSize = 10.5.sp,
+            fontSize = 10.sp,
             lineHeight = 12.sp,
             color = if (selected) colors.ink else colors.ink2,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
     }

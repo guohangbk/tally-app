@@ -28,10 +28,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,8 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.repository.LedgerListItem
-import io.github.guohangbk.tally.ui.design.BottomSheetGrabber
 import io.github.guohangbk.tally.ui.design.CategoryGlyph
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyListRow
 import io.github.guohangbk.tally.ui.design.TallyTag
@@ -355,13 +353,11 @@ fun CategoryPickerSheet(
     var activeL1 by remember(selectedL1) { mutableStateOf(selectedL1) }
     var activeL2 by remember(selectedL2) { mutableStateOf(selectedL2) }
 
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 20.dp)) {
-            BottomSheetGrabber(modifier = Modifier.align(Alignment.CenterHorizontally))
             Spacer(Modifier.height(10.dp))
             Text("选择分类", style = TallyType.sectionTitle, color = colors.ink)
             Spacer(Modifier.height(12.dp))
@@ -409,13 +405,11 @@ fun LedgerPickerSheet(
         onSelect(id)
         onDismiss()
     }
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
-            BottomSheetGrabber(modifier = Modifier.align(Alignment.CenterHorizontally))
             Spacer(Modifier.height(12.dp))
             Text("切换账本", style = TallyType.sectionTitle, color = colors.ink)
             Spacer(Modifier.height(4.dp))

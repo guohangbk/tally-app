@@ -1,11 +1,20 @@
 package io.github.guohangbk.tally.ui.ledger
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,23 +37,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import io.github.guohangbk.tally.data.repository.DeleteDisposition
 import io.github.guohangbk.tally.data.repository.LedgerListItem
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.TallyError
 import io.github.guohangbk.tally.ui.design.ButtonVariant
+import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.IconLibrary
+import io.github.guohangbk.tally.ui.design.IconMeta
 import io.github.guohangbk.tally.ui.design.IconTile
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.RowGap
 import io.github.guohangbk.tally.ui.design.TagTone
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
 import io.github.guohangbk.tally.ui.design.TallyLabeledSwitch
 import io.github.guohangbk.tally.ui.design.TallySegmented
@@ -63,7 +77,6 @@ private enum class BillDisposal {
 internal fun LedgerDialogHost(
     state: LedgerUiState,
     viewModel: LedgerViewModel,
-    onPickLedgerIcon: () -> Unit,
 ) {
     val dialog = state.dialog ?: return
     val pendingItem = state.itemOf(dialog.ledgerId)
@@ -77,31 +90,29 @@ internal fun LedgerDialogHost(
     // key(dialog) 让每次重新打开弹窗都回到初始输入，而不是沿用上一次的草稿。
     key(dialog) {
         when (dialog.kind) {
-            LedgerDialogKind.CREATE -> LedgerEditorDialog(
+            LedgerDialogKind.CREATE -> LedgerEditorSheet(
                 title = "新建账本",
                 confirmLabel = "创建",
                 initialName = "",
-                initialIcon = state.pendingIcon ?: "ledger",
+                initialIcon = "ledger",
                 reservedNames = state.items.map { it.ledger.name },
                 makeDefaultAvailable = false,
                 error = error,
-                onPickIcon = onPickLedgerIcon,
                 onCancel = viewModel::dismissDialog,
                 onSubmit = { name, iconKey, _ -> viewModel.create(name, iconKey) },
             )
 
             LedgerDialogKind.EDIT -> {
                 val ledger = pendingItem!!.ledger
-                LedgerEditorDialog(
+                LedgerEditorSheet(
                     title = "编辑账本",
                     confirmLabel = "保存",
                     initialName = ledger.name,
-                    initialIcon = state.pendingIcon ?: ledger.iconKey,
+                    initialIcon = ledger.iconKey,
                     reservedNames = state.items.filter { it.ledger.id != ledger.id }.map { it.ledger.name },
                     // 当前默认账本没有「取消默认」这条路；已结算的账本也不该被重新推成默认，开关都不出现。
                     makeDefaultAvailable = !ledger.isDefault && !ledger.isArchived,
                     error = error,
-                    onPickIcon = onPickLedgerIcon,
                     onCancel = viewModel::dismissDialog,
                     onSubmit = { name, iconKey, makeDefault -> viewModel.update(ledger.id, name, iconKey, makeDefault) },
                 )
@@ -124,7 +135,7 @@ internal fun LedgerDialogHost(
 }
 
 @Composable
-private fun LedgerEditorDialog(
+private fun LedgerEditorSheet(
     title: String,
     confirmLabel: String,
     initialName: String,
@@ -132,7 +143,6 @@ private fun LedgerEditorDialog(
     reservedNames: List<String>,
     makeDefaultAvailable: Boolean,
     error: String?,
-    onPickIcon: () -> Unit,
     onCancel: () -> Unit,
     onSubmit: (name: String, iconKey: String, makeDefault: Boolean) -> Unit,
 ) {
@@ -140,39 +150,58 @@ private fun LedgerEditorDialog(
     var name by remember { mutableStateOf(initialName) }
     var iconKey by remember { mutableStateOf(initialIcon) }
     var makeDefault by remember { mutableStateOf(false) }
-    // 从图标库选完返回时 initialIcon 会换成新键：不跟着回填，用户就看不到自己刚选的图标。
-    LaunchedEffect(initialIcon) { iconKey = initialIcon }
+    var showIcons by remember { mutableStateOf(false) }
+    var iconQuery by remember { mutableStateOf("") }
+    // 打开时落在当前图标所在那组：编辑场景下先去翻「出行」比从「收入」翻起省事。
+    var iconGroup by remember { mutableStateOf(IconLibrary.groupOf(initialIcon) ?: IconLibrary.groupNames.first()) }
     val trimmed = name.trim()
     val duplicated = trimmed.isNotEmpty() && reservedNames.any { it == trimmed }
 
-    Dialog(onDismissRequest = onCancel) {
+    TallyBottomSheet(onDismissRequest = onCancel, containerColor = colors.card) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(colors.card)
-                .border(1.dp, colors.line, RoundedCornerShape(20.dp))
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 14.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = TallyType.screenTitle.copy(fontSize = 16.sp, lineHeight = 20.sp), color = colors.ink, modifier = Modifier.weight(1f))
-                InlineIcon(
-                    iconKey = "close",
-                    contentDescription = "关闭",
-                    size = 14.dp,
-                    tint = colors.ink3,
-                    modifier = Modifier.clickable(onClick = onCancel),
-                )
-            }
-            Spacer(Modifier.height(14.dp))
+            Text(
+                text = title,
+                style = TallyType.screenTitle.copy(fontSize = 16.sp, lineHeight = 20.sp),
+                color = colors.ink,
+            )
+            Spacer(Modifier.height(12.dp))
             LedgerNameField(
                 value = name,
                 onValueChange = { name = it },
                 placeholder = "账本名称，例如「日常账本」",
+                // 新建时名字是空的，直接落键盘；编辑时名字现成，弹键盘反而把图标行挤走。
+                autoFocus = initialName.isEmpty(),
             )
             Spacer(Modifier.height(9.dp))
-            LedgerIconRow(iconKey = iconKey, onPickIcon = onPickIcon)
+            LedgerIconRow(
+                iconKey = iconKey,
+                expanded = showIcons,
+                onToggle = { showIcons = !showIcons },
+            )
+            AnimatedVisibility(
+                visible = showIcons,
+                enter = expandVertically(animationSpec = tween(220)) + fadeIn(tween(160)),
+                exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(tween(120)),
+            ) {
+                Column {
+                    Spacer(Modifier.height(8.dp))
+                    LedgerIconLibrary(
+                        query = iconQuery,
+                        onQueryChange = { iconQuery = it },
+                        group = iconGroup,
+                        onGroupChange = {
+                            iconGroup = it
+                            iconQuery = ""
+                        },
+                        selected = iconKey,
+                        onSelect = { iconKey = it },
+                    )
+                }
+            }
             if (makeDefaultAvailable) {
                 TallyLabeledSwitch(
                     checked = makeDefault,
@@ -335,10 +364,13 @@ private fun LedgerNameField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
+    autoFocus: Boolean,
 ) {
     val colors = tallyColors
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    if (autoFocus) {
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,10 +396,16 @@ private fun LedgerNameField(
 }
 
 @Composable
-private fun LedgerIconRow(iconKey: String, onPickIcon: () -> Unit) {
+private fun LedgerIconRow(iconKey: String, expanded: Boolean, onToggle: () -> Unit) {
     val colors = tallyColors
     val meta = IconLibrary.meta(iconKey)
     val haptics = rememberTallyHaptics()
+    // 箭头跟着展开状态转，同一次点击里就能看出「打开了 / 收起了」。
+    val arrow by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "ledgerIconArrow",
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -376,7 +414,7 @@ private fun LedgerIconRow(iconKey: String, onPickIcon: () -> Unit) {
             .border(1.dp, colors.brand.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
             .clickable {
                 haptics.tap()
-                onPickIcon()
+                onToggle()
             }
             .padding(start = 10.dp, end = 8.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -385,14 +423,18 @@ private fun LedgerIconRow(iconKey: String, onPickIcon: () -> Unit) {
         // 与账本卡同一张纸面瓦：选完图标这里立刻换脸，不用保存后回列表验证。
         IconTile(iconKey = iconKey, label = meta?.displayName ?: "账本", size = 34.dp, corner = 10.dp)
         Column(modifier = Modifier.weight(1f)) {
-            Text("图标", style = TallyType.helper.copy(fontSize = 9.5.sp, lineHeight = 11.9.sp, fontWeight = FontWeight.Bold), color = colors.ink)
+            Text(
+                text = "图标",
+                style = TallyType.helper.copy(fontSize = 9.5.sp, lineHeight = 11.9.sp, fontWeight = FontWeight.Bold),
+                color = colors.ink,
+            )
             Text(
                 text = meta?.let { "${it.displayName} · ${it.group}" } ?: "不在图标库里",
                 style = TallyType.helper,
                 color = colors.ink3,
             )
         }
-        // 整行就是入口，右端一枚 ⇄ 说「点这里换」，不再摆一个写着「换图标」的按钮。
+        // 整行就是入口，右端一枚 chevron 说「点这里展开」；展开后箭头转向上。
         Box(
             modifier = Modifier
                 .size(30.dp)
@@ -401,8 +443,180 @@ private fun LedgerIconRow(iconKey: String, onPickIcon: () -> Unit) {
                 .border(1.dp, colors.line, RoundedCornerShape(9.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            InlineIcon(iconKey = "switch", contentDescription = "换图标", size = 14.dp, tint = colors.brand)
+            InlineIcon(
+                iconKey = "chevron_down",
+                contentDescription = if (expanded) "收起图标库" else "展开图标库",
+                size = 14.dp,
+                tint = colors.brand,
+                modifier = Modifier.rotate(arrow),
+            )
         }
+    }
+}
+
+/**
+ * 账本弹层里就地展开的全量图标库：搜索、12 组筛选、四列网格。
+ * 网格自己封顶并在内部滚动——展开后弹层不该把整屏吃掉。
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LedgerIconLibrary(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    group: String,
+    onGroupChange: (String) -> Unit,
+    selected: String,
+    onSelect: (String) -> Unit,
+) {
+    val colors = tallyColors
+    val results = remember(query, group) {
+        val q = query.trim()
+        if (q.isEmpty()) IconLibrary.library.filter { it.group == group } else IconLibrary.search(q)
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(colors.card)
+            .border(1.dp, colors.line, RoundedCornerShape(10.dp))
+            .padding(horizontal = 9.dp, vertical = 8.dp),
+    ) {
+        IconSearchField(value = query, onValueChange = onQueryChange)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            IconLibrary.groupNames.forEach { name ->
+                // 输入了搜索词时结果是全库的，任何一组都不算「当前」。
+                val active = query.isBlank() && name == group
+                Text(
+                    text = name,
+                    fontSize = 10.sp,
+                    lineHeight = 10.sp,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                    color = if (active) colors.paper else colors.ink2,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (active) colors.ink else colors.card)
+                        .border(1.dp, if (active) colors.ink else colors.line, RoundedCornerShape(20.dp))
+                        .clickable { onGroupChange(name) }
+                        .padding(horizontal = 7.dp, vertical = 4.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(7.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 210.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            if (results.isEmpty()) {
+                Text(
+                    text = "图标库里没有「${query.trim()}」",
+                    style = TallyType.helper,
+                    color = colors.ink3,
+                    modifier = Modifier.padding(vertical = 10.dp),
+                )
+            } else {
+                results.chunked(5).forEach { row ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        row.forEach { meta ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                LedgerIconTile(
+                                    meta = meta,
+                                    selected = meta.key == selected,
+                                    onClick = { onSelect(meta.key) },
+                                )
+                            }
+                        }
+                        repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IconSearchField(value: String, onValueChange: (String) -> Unit) {
+    val colors = tallyColors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(29.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.paper)
+            .border(1.dp, colors.line, RoundedCornerShape(20.dp))
+            .padding(horizontal = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        InlineIcon(iconKey = "search", contentDescription = null, size = 12.dp, tint = colors.ink3)
+        Spacer(Modifier.size(5.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            if (value.isEmpty()) {
+                Text("搜索图标或分组", fontSize = 10.5.sp, lineHeight = 13.sp, color = colors.ink3)
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TallyType.helper.copy(color = colors.ink),
+                cursorBrush = SolidColor(colors.brand),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (value.isNotEmpty()) {
+            InlineIcon(
+                iconKey = "close",
+                contentDescription = "清空",
+                size = 11.dp,
+                tint = colors.ink3,
+                modifier = Modifier.clickable { onValueChange("") },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LedgerIconTile(meta: IconMeta, selected: Boolean, onClick: () -> Unit) {
+    val colors = tallyColors
+    val shape = RoundedCornerShape(9.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(shape)
+                .background(if (selected) colors.ink else colors.paper)
+                .border(1.dp, if (selected) colors.ink else colors.line, shape),
+            contentAlignment = Alignment.Center,
+        ) {
+            CategoryGlyph(
+                iconKey = meta.key,
+                label = meta.displayName,
+                size = 18.dp,
+                tint = if (selected) colors.paper else colors.ink,
+            )
+        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = meta.displayName,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            color = if (selected) colors.ink else colors.ink2,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

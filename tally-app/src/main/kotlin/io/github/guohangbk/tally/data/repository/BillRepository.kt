@@ -465,20 +465,21 @@ class BillRepository(
     }
 
     /**
-     * 某个周期任务已经生成的那些期：明细弹层用。
-     * 分类名在这里一起取——弹层不该为每一行再查一次库，也不该让人只看到一串 id。
+     * 某个周期任务生成过的每一期：明细弹层用，含回收站里的行。
+     *
+     * 这里只做形状转换；缺号补灰行由界面按期号对齐，
+     * 因为要不要补、补到第几期取决于规则的生成水位，不在账单表里。
      */
     suspend fun recurringPeriods(ruleId: String): List<RecurringPeriodRow> =
-        billDao.findByRecurringRule(ruleId).map { bill ->
-            val categoryId = bill.categoryL2Id ?: bill.categoryL1Id
+        billDao.findByRecurringRule(ruleId).map { row ->
             RecurringPeriodRow(
-                billId = bill.id,
-                index = bill.periodIndex ?: 0,
-                occurredAt = bill.occurredAt,
-                amountMinor = bill.amountMinor,
-                isIncome = bill.type == BillType.INCOME.name,
-                categoryName = categoryId?.let { categoryDao.findById(it) }?.name ?: "未分类",
-                note = bill.note?.takeIf { it.isNotBlank() },
+                billId = row.billId,
+                index = row.periodIndex ?: 0,
+                occurredAt = row.occurredAt,
+                amountMinor = row.amountMinor,
+                isIncome = row.type == BillType.INCOME.name,
+                note = row.note?.takeIf { it.isNotBlank() },
+                deleted = row.deletedAt != null,
             )
         }
 

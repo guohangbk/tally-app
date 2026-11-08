@@ -19,9 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,10 +44,10 @@ import io.github.guohangbk.tally.ui.common.formatDay
 import io.github.guohangbk.tally.ui.common.startOfDay
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.BillBadges
-import io.github.guohangbk.tally.ui.design.BottomSheetGrabber
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
@@ -204,14 +202,11 @@ fun ReimbursementScreen(
         }
 
         if (state.showConfirm) {
-            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-            ModalBottomSheet(
+            TallyBottomSheet(
                 onDismissRequest = viewModel::closeConfirm,
-                sheetState = sheetState,
                 containerColor = colors.paper,
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 20.dp)) {
-                    BottomSheetGrabber(modifier = Modifier.align(Alignment.CenterHorizontally))
                     Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("确认报销 ${state.selected.size} 笔", style = TallyType.sectionTitle, color = colors.ink, modifier = Modifier.weight(1f))

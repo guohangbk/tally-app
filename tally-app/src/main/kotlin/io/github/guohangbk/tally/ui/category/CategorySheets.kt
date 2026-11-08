@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -17,10 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,13 +28,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.guohangbk.tally.domain.model.Category
 import io.github.guohangbk.tally.domain.model.CategoryType
-import io.github.guohangbk.tally.ui.design.BottomSheetGrabber
 import io.github.guohangbk.tally.ui.design.Hairline
 import io.github.guohangbk.tally.ui.design.IconTile
 import io.github.guohangbk.tally.ui.design.IconTone
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.TallyListRow
-import io.github.guohangbk.tally.ui.design.TallySheetShape
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.tallyColors
 
@@ -66,7 +61,7 @@ internal fun CategorySheetHost(
             } else {
                 val siblings = state.siblingIdsOf(sheet.categoryId)
                 val index = siblings.indexOf(sheet.categoryId)
-                TallyBottomSheet(onDismissRequest = onDismiss) {
+                TallyBottomSheet(onDismissRequest = onDismiss, containerColor = tallyColors.card) {
                     CategoryEditorSheet(
                         category = target,
                         type = target.type,
@@ -96,7 +91,7 @@ internal fun CategorySheetHost(
             if (target == null) {
                 onDismiss()
             } else {
-                TallyBottomSheet(onDismissRequest = onDismiss) {
+                TallyBottomSheet(onDismissRequest = onDismiss, containerColor = tallyColors.card) {
                     MoveParentSheet(
                         child = target,
                         parents = state.moveParents(target.id),
@@ -108,31 +103,6 @@ internal fun CategorySheetHost(
 
         null -> {}
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TallyBottomSheet(
-    onDismissRequest: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val colors = tallyColors
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = colors.card,
-        shape = TallySheetShape,
-        scrimColor = colors.ink.copy(alpha = if (colors.isDark) 0.62f else 0.42f),
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) { BottomSheetGrabber() }
-        },
-        content = content,
-    )
 }
 
 /**

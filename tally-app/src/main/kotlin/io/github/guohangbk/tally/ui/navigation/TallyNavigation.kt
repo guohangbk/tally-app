@@ -68,6 +68,7 @@ import io.github.guohangbk.tally.ui.importexport.ExportScreen
 import io.github.guohangbk.tally.ui.importexport.ImportScreen
 import io.github.guohangbk.tally.ui.installment.InstallmentFormScreen
 import io.github.guohangbk.tally.ui.installment.InstallmentScreen
+import io.github.guohangbk.tally.data.ai.AssistantEntry
 import io.github.guohangbk.tally.ui.ledger.LedgerOverviewScreen
 import io.github.guohangbk.tally.ui.ledger.LedgerOverviewViewModel
 import io.github.guohangbk.tally.ui.ledger.LedgerScreen
@@ -99,7 +100,6 @@ object Routes {
     const val KEYWORD_RULES = "keyword-rules"
     const val RECYCLE = "recycle"
     const val LEDGERS = "ledgers"
-    const val LEDGER_ICON = "ledger/icon"
     /** 账本概览：一本账一屏。settle=1 表示从 ⋯ 的「结算」进来，页面就绪后直接弹确认框。 */
     const val LEDGER_OVERVIEW = "ledger/overview/{ledgerId}?settle={settle}"
     /** 结算长图：只认这一本账，走同一套海报渲染管线，不带周期维度。 */
@@ -375,7 +375,15 @@ private fun TallyAppShell(
                         TallyHomeScreen(
                             currentRoute = currentRoute,
                             onOpenLedgers = { navController.navigate(Routes.LEDGERS) },
-                            onOpenAssistant = { navController.navigate(Routes.ASSISTANT) },
+                            onOpenAssistant = { entry ->
+                                navController.navigate(
+                                    when (entry) {
+                                        AssistantEntry.Settings -> Routes.SETTINGS
+                                        AssistantEntry.Configure -> Routes.ASSISTANT_CONFIG
+                                        AssistantEntry.Chat -> Routes.ASSISTANT
+                                    },
+                                )
+                            },
                             onOpenStats = { ledgerId, anchor -> navController.navigate(Routes.stats(ledgerId, anchor)) },
                             onOpenBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
                             onOpenShotDraft = { bill ->
@@ -454,7 +462,6 @@ private fun TallyAppShell(
                         LedgerScreen(
                             viewModel = tallyViewModel { LedgerViewModel(graph) },
                             onBack = { navController.popBackStack() },
-                            onPickLedgerIcon = { navController.navigate(Routes.LEDGER_ICON) },
                             onOpenOverview = { ledgerId -> navController.navigate(Routes.ledgerOverview(ledgerId)) },
                             onSettleLedger = { ledgerId ->
                                 navController.navigate(Routes.ledgerOverview(ledgerId, settle = true))
@@ -483,19 +490,6 @@ private fun TallyAppShell(
                             onBack = { navController.popBackStack() },
                         )
                     }
-                    composable(Routes.LEDGER_ICON) { entry ->
-                        // 挂在账本页的宿主上取同一份 ViewModel：图标库保存的键才落得进编辑弹窗的草稿。
-                        val ledgerEntry = remember(entry) { navController.getBackStackEntry(Routes.LEDGERS) }
-                        val ledgerViewModel = tallyViewModel(ledgerEntry) { LedgerViewModel(graph) }
-                        IconLibraryPage(
-                            mode = IconLibraryMode.LedgerIcon,
-                            onBack = { navController.popBackStack() },
-                            onSaved = { key ->
-                                ledgerViewModel.setPendingIcon(key)
-                                navController.popBackStack()
-                            },
-                        )
-                    }
                     composable(Routes.CATEGORIES) {
                         CategoryScreen(
                             onBack = { navController.popBackStack() },
@@ -512,7 +506,7 @@ private fun TallyAppShell(
                         IconLibraryPage(
                             mode = IconLibraryMode.NewLevel1(if (type == "INCOME") CategoryType.INCOME else CategoryType.EXPENSE),
                             onBack = { navController.popBackStack() },
-                            onSaved = { _ -> navController.popBackStack() },
+                            onSaved = { navController.popBackStack() },
                         )
                     }
                     composable(Routes.CATEGORY_NEW_L2) { entry ->
@@ -520,7 +514,7 @@ private fun TallyAppShell(
                         IconLibraryPage(
                             mode = IconLibraryMode.NewLevel2(parentId),
                             onBack = { navController.popBackStack() },
-                            onSaved = { _ -> navController.popBackStack() },
+                            onSaved = { navController.popBackStack() },
                         )
                     }
                     composable(Routes.CATEGORY_ICON) { entry ->
@@ -528,7 +522,7 @@ private fun TallyAppShell(
                         IconLibraryPage(
                             mode = IconLibraryMode.EditIcon(categoryId),
                             onBack = { navController.popBackStack() },
-                            onSaved = { _ -> navController.popBackStack() },
+                            onSaved = { navController.popBackStack() },
                         )
                     }
                     composable(Routes.SETTINGS) {

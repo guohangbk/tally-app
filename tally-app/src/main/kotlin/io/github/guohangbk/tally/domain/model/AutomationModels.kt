@@ -90,7 +90,10 @@ data class RecurringRuleView(
         get() = runCatching { RecurringStatus.valueOf(rule.status) }.getOrDefault(RecurringStatus.ACTIVE)
 }
 
-/** 周期任务「明细」弹层里的一行：这一期落在哪天、多少钱、进的是哪个分类。 */
+/**
+ * 周期任务「明细」弹层里的一行：这一期落在哪天、多少钱。
+ * 期次是排期里的真实编号；删掉的那一期仍占一行（[deleted]），回收站也清掉后连日期都不剩。
+ */
 data class RecurringPeriodRow(
     val billId: String,
     /** 期次（从 1 起）；库里没记期号的老数据为 0，界面按顺序补号。 */
@@ -98,8 +101,9 @@ data class RecurringPeriodRow(
     val occurredAt: Long,
     val amountMinor: Long,
     val isIncome: Boolean,
-    val categoryName: String,
     val note: String?,
+    /** 这一期已经从账上删掉：灰着占位，金额不进合计。 */
+    val deleted: Boolean = false,
 )
 
 /** 一次应生成但尚未生成的周期账单。periodIndex 从 1 开始，与任务 ID 组成幂等键。 */

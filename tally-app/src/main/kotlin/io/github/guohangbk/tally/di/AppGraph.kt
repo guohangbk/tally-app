@@ -40,6 +40,7 @@ import io.github.guohangbk.tally.data.repository.RecycleBinRepository
 import io.github.guohangbk.tally.data.repository.SettingRepository
 import io.github.guohangbk.tally.data.speech.SpeechPort
 import io.github.guohangbk.tally.data.speech.SystemSpeechPort
+import io.github.guohangbk.tally.data.update.UpdateChecker
 import io.github.guohangbk.tally.domain.Period
 import io.github.guohangbk.tally.domain.ai.AiClient
 import io.github.guohangbk.tally.domain.model.StatsGranularity
@@ -168,6 +169,9 @@ class AppGraph(
         secrets = secretVault,
         client = WebDavClient(),
     )
+
+    /** 设置页「检查更新」的唯一出口：用户点一次才打一次公开仓的 latest release。 */
+    val updateChecker: UpdateChecker = UpdateChecker()
 
     // ---- 小莉：AI 是增强层，任何一条都要能在没有小莉的时候被跳过 ----
 

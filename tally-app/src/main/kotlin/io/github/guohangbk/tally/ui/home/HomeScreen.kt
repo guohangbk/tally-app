@@ -20,6 +20,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,14 +38,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.scale
@@ -75,6 +76,7 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.guohangbk.tally.data.debug.DebugLog
+import io.github.guohangbk.tally.data.ai.AssistantEntry
 import io.github.guohangbk.tally.data.notify.NotificationLink
 import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.ui.bill.BillDetailSheet
@@ -104,6 +106,7 @@ import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.MoneySign
 import io.github.guohangbk.tally.ui.design.MoneyText
 import io.github.guohangbk.tally.ui.design.SkeletonBar
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
@@ -112,6 +115,7 @@ import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.rememberSkeletonShown
+import io.github.guohangbk.tally.ui.design.sheetBody
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.navigation.Routes
 import io.github.guohangbk.tally.ui.shell.TallyDrawer
@@ -136,8 +140,8 @@ fun TallyHomeScreen(
     onOpenStats: (String?, Long) -> Unit = { _, _ -> },
     onOpenBill: (String?, String?, BillType?) -> Unit = { _, _, _ -> },
     onOpenDraftBill: (VoiceCapture) -> Unit = {},
-    /** ＋ 右臂＝小莉。原来这是底部导航的一格，入口撤了之后只剩这一条路。 */
-    onOpenAssistant: () -> Unit = {},
+    /** ＋ 右臂＝小莉：关闭去设置、开启未配置去配置页、可用才进对话。 */
+    onOpenAssistant: (AssistantEntry) -> Unit = {},
     onOpenShotDraft: (ScannedBill) -> Unit = {},
     onNavigateRoute: (String) -> Unit = {},
     onOpenSearch: (String?) -> Unit = {},
@@ -148,8 +152,10 @@ fun TallyHomeScreen(
     val graph = rememberAppGraph()
     val context = LocalContext.current
     val viewModel = tallyViewModel { HomeViewModel(graph) }
+    val guidance = tallyViewModel(key = "home-guidance") { HomeGuidanceViewModel(graph) }
     val batch = tallyViewModel(key = "home-batch") { BillBatchViewModel(graph) }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val guidanceState by guidance.state.collectAsStateWithLifecycle()
     // 账本切换弹层的每本笔数才需要整表聚合：点开弹层前是空列表，不占首屏。
     val ledgerStats by viewModel.ledgerStats.collectAsStateWithLifecycle()
     // 卡片下那条预算进度 + 速览弹层的数据源（总额 + 各分类）。
@@ -158,7 +164,6 @@ fun TallyHomeScreen(
     val colors = tallyColors
     val snapshot = state.snapshot
     val summary = snapshot?.summary
-    val assistantEnabled = state.settings.assistantEnabled
     var showLedgerSheet by remember { mutableStateOf(false) }
     /** 点年月开的面板：跳远月不必一格一格按箭头。 */
     var monthPicker by remember { mutableStateOf(false) }
@@ -196,6 +201,14 @@ fun TallyHomeScreen(
         viewModel.resume()
         onPauseOrDispose { }
     }
+
+    val listState = rememberLazyListState()
+
+    // 每回到一次首页报一次；浮不浮由 ViewModel 按「第几次」和一次性标记判断。
+    LaunchedEffect(Unit) { guidance.onHomeShown() }
+
+    // G-01 不自己走：这次没看到就算白教了，只有点掉、点「更多手势」或用掉 ＋ 才收起。
+    // 一次性标记在浮出时就落下了，所以下次打开 App 不会再出现。
 
     // 首页 ＋ 上滑的语音链路：识别复用速记页那套管线，结果交给记账页，不在这里落库。
     val voice = tallyViewModel(key = "home-voice") { QuickNoteViewModel(graph) }
@@ -489,6 +502,7 @@ fun TallyHomeScreen(
                     .orEmpty()
             }
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
@@ -589,12 +603,39 @@ fun TallyHomeScreen(
         // 录音期间必须保留 FAB：这次「按住→上滑→松手」手势由 FAB 自己的 pointerInput 持有，
         // 一旦因 recording=true 把 FAB 移出组合，协程被取消，松手（VoiceFinish）永远收不到。
         // 只在 analyzing（已松手、识别中）时收起，改由下面的 VoiceRecordBar 接管。
+        val coach = guidanceState.coach?.takeIf { fabShown }
+
+        coach?.let {
+            // 蒙层只做两件事：把底下的页面压暗、把空白处的点击吃掉。
+            // 不接管关闭——误触空白不该丢引导；关闭只认气泡右上角的 ✕、更多手势、以及真的去用 ＋。
+            // 画在 FAB 之前，所以 ＋ 和它外面的引导波纹都浮在蒙层上面，看着就是「点亮这一个按钮」。
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        if (colors.isDark) Color.Black.copy(alpha = 0.58f) else colors.ink.copy(alpha = 0.36f),
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    )
+                    // 它只是个吃点击的挡板，不该被读屏念成一个没有名字的按钮。
+                    .clearAndSetSemantics {},
+            )
+        }
+
         if (fabShown) {
             TallyRecordFab(
                 // 底部 bar 撤了，＋ 不再为它抬高一档。
                 raised = false,
-                onClick = { onOpenBill(null, null, null) },
+                onClick = {
+                    guidance.dismissCoach()
+                    onOpenBill(null, null, null)
+                },
                 onFanEvent = { event ->
+                    // 用上 ＋ 就说明手势已经学会；右滑更是直接把人送走，气泡不留到下一页。
+                    guidance.dismissCoach()
                     when (event) {
                         TallyFanEvent.VoiceStart -> startVoice()
                         TallyFanEvent.VoiceFinish -> stopVoice()
@@ -607,10 +648,25 @@ fun TallyHomeScreen(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                         )
                         // 右臂＝小莉：底部导航那一格搬到这里，入口从此只有一个。
-                        TallyFanEvent.Xiaoli -> onOpenAssistant()
+                        TallyFanEvent.Xiaoli -> onOpenAssistant(guidanceState.assistantEntry)
                     }
                 },
-                xiaoliEnabled = assistantEnabled,
+                xiaoliEntry = guidanceState.assistantEntry,
+                guide = coach != null,
+            )
+        }
+
+        // 卡放在 ＋ 之后画：波纹要往 ＋ 上方散开，不能被卡面整片盖住；尾巴正好压在波纹上。
+        coach?.let {
+            // 卡底边离 ＋ 顶边（69dp）留出约 23dp，尾巴不至于贴到按钮上。
+            HomeCoachBubble(
+                coach = it,
+                assistantEntry = guidanceState.assistantEntry,
+                onDismiss = guidance::dismissCoach,
+                onMoreGestures = guidance::openMoreGestures,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 98.dp),
             )
         }
 
@@ -757,6 +813,14 @@ fun TallyHomeScreen(
 
     // 四件弹层与搜索页同一份实现，见 BillBatchOverlays。
     BillBatchOverlays(selection, batch)
+
+    if (guidanceState.sheetOpen) {
+        HomeMoreGesturesSheet(
+            assistantEntry = guidanceState.assistantEntry,
+            onOpenAssistant = onOpenAssistant,
+            onDismiss = guidance::closeMoreGestures,
+        )
+    }
 }
 
 /** 选择态顶栏：动作条取代主导航，计数常驻。 */
@@ -1176,12 +1240,11 @@ private fun BudgetOverviewSheet(
     onDismiss: () -> Unit,
 ) {
     val colors = tallyColors
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().sheetBody().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Text("预算速览 · 本月", style = TallyType.sectionTitle, color = colors.ink)
             summary.total?.let {
                 BudgetUsageRow(usage = it, title = "总额", iconKey = "coin", grouping = grouping, onClick = onOpen)
@@ -1349,9 +1412,8 @@ private fun VoiceFailureSheet(
     onDismiss: () -> Unit,
 ) {
     val colors = tallyColors
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {

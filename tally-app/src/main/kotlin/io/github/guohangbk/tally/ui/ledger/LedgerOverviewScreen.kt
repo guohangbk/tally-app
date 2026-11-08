@@ -20,9 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,7 +49,6 @@ import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.CategoryTotal
 import io.github.guohangbk.tally.ui.bill.BillDetailSheet
 import io.github.guohangbk.tally.ui.common.BillRow
-import io.github.guohangbk.tally.ui.design.BottomSheetGrabber
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.IconTone
 import io.github.guohangbk.tally.ui.design.IconTile
@@ -59,6 +56,7 @@ import io.github.guohangbk.tally.ui.design.MoneySign
 import io.github.guohangbk.tally.ui.design.MoneyText
 import io.github.guohangbk.tally.ui.design.SkeletonBar
 import io.github.guohangbk.tally.ui.design.TagTone
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyColors
@@ -70,6 +68,7 @@ import io.github.guohangbk.tally.ui.design.TallyTag
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.rememberSkeletonShown
+import io.github.guohangbk.tally.ui.design.sheetBody
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyIconAction
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
@@ -707,13 +706,11 @@ private fun SettlementSheet(
     onGeneratePoster: () -> Unit,
 ) {
     val colors = tallyColors
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.card,
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp).padding(bottom = 18.dp)) {
-            BottomSheetGrabber(modifier = Modifier.align(Alignment.CenterHorizontally))
+        Column(modifier = Modifier.fillMaxWidth().sheetBody().padding(horizontal = 15.dp).padding(bottom = 18.dp)) {
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "${state.ledgerName} · 结算",
