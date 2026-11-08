@@ -27,9 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -51,10 +49,10 @@ import io.github.guohangbk.tally.ui.common.BarAction
 import io.github.guohangbk.tally.ui.common.CheckBox
 import io.github.guohangbk.tally.ui.common.SelectionBarShell
 import io.github.guohangbk.tally.ui.common.tallyViewModel
-import io.github.guohangbk.tally.ui.design.BottomSheetGrabber
 import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.Hairline
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
@@ -437,13 +435,11 @@ private fun KeepDaysSheet(
     onDismiss: () -> Unit,
 ) {
     val colors = tallyColors
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
-            BottomSheetGrabber(modifier = Modifier.align(Alignment.CenterHorizontally))
             Spacer(Modifier.height(12.dp))
             TallySectionLabel(text = "保留多久")
             // 这里不能再传 contentPadding = 0.dp：TallyListRow 自身不带水平内边距，

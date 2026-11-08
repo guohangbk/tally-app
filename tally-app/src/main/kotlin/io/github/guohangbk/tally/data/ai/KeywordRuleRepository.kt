@@ -46,13 +46,27 @@ class KeywordRuleRepository(
         )
     }
 
-    /** [source] 是 `MANUAL`（用户在规则页加）还是 `LEARNED`（记账页沉淀），见 `KeywordSource`。 */
-    suspend fun add(keyword: String, categoryId: String, source: String = KeywordSource.MANUAL) {
-        val trimmed = keyword.trim()
-        if (trimmed.isEmpty()) throw TallyError.EmptyName
+    /**
+     * 一次往同一个分类加多个词；已存在的词直接跳过，不报错也不改绑它的分类。
+     * 分组页的「就地加词」一次写一批，重名按界面文案处理成「保存时跳过」。
+     */
+    suspend fun addMany(keywords: List<String>, categoryId: String, source: String = KeywordSource.MANUAL): AddKeywordsResult {
         categoryDao.findById(categoryId) ?: throw TallyError.CategoryNotFound
-        if (dao.findKeyword(trimmed) != null) throw TallyError.KeywordExists
-        insert(trimmed, categoryId, source)
+        val added = mutableListOf<String>()
+        val skipped = mutableListOf<String>()
+        keywords.asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .forEach { keyword ->
+                if (dao.findKeyword(keyword) != null) {
+                    skipped += keyword
+                } else {
+                    insert(keyword, categoryId, source)
+                    added += keyword
+                }
+            }
+        return AddKeywordsResult(added = added, skipped = skipped)
     }
 
     /**
@@ -76,8 +90,26 @@ class KeywordRuleRepository(
         dao.updateCategory(id, categoryId, now())
     }
 
+    /** 整组换分类：一个分类下的词一起搬走。 */
+    suspend fun updateCategoryFor(ids: List<String>, categoryId: String) {
+        categoryDao.findById(categoryId) ?: throw TallyError.CategoryNotFound
+        val timestamp = now()
+        ids.forEach { dao.updateCategory(it, categoryId, timestamp) }
+    }
+
     suspend fun remove(id: String) {
         dao.softDelete(id, now())
+    }
+
+    /** 整组删除：逐条软删，撤销时按同一批 id 救回来。 */
+    suspend fun removeMany(ids: List<String>) {
+        val timestamp = now()
+        ids.forEach { dao.softDelete(it, timestamp) }
+    }
+
+    /** 撤销删除。只认这一批 id，不会把更早删掉的词一起带回来。 */
+    suspend fun restore(ids: List<String>) {
+        if (ids.isNotEmpty()) dao.restore(ids, now())
     }
 
     /** 解析前现取一次；一次性读者用（对话页每次抽账前都要拿最新的表）。 */
@@ -133,8 +165,13 @@ class KeywordRuleRepository(
     }
 }
 
-/** 管理页一屏所需的全部只读数据；规则写入后由页面重新取一次。 */
-data class KeywordRuleSnapshot(
+/** 批量加词的结果：重名的词不报错，交给界面说一句「跳过」。 */
+data class AddKeywordsResult(
+    val added: List<String>,
+    val skipped: List<String>,
+)
+
+/** 管理页一屏所需的全部只读数据；规则写入后由页面重新取一次。 */data class KeywordRuleSnapshot(
     val categories: List<CategoryEntity>,
     val activeCategories: List<CategoryEntity>,
     val rules: List<KeywordRuleEntity>,

@@ -4,7 +4,14 @@
 
 **一本只存在手机里的账本**：原生安卓的离线记账 App，数据只存在手机本地，没有账号、没有服务端。
 
-项目主页：<https://tally.guohang.asia> · 源码与发行包：<https://github.com/guohangbk/tally-app>
+官网：<https://tally.guohang.asia> · 源码与发行包：<https://github.com/guohangbk/tally-app>
+
+<p align="center">
+  <img src="site/assets/shot-home.jpg" width="200" alt="首页：本月支出与收入、预算进度条，下面是按天分组的账单">
+  <img src="site/assets/shot-entry.jpg" width="200" alt="记账页：4×4 金额键盘，算式 18.00 + 12.00 = 30.00">
+  <img src="site/assets/shot-stats.jpg" width="200" alt="统计页：年视图的收支总览、每月柱状、星期分布与分类环">
+  <img src="site/assets/shot-chat.jpg" width="200" alt="小莉：说一句「火锅 168，打车 26」，回来一张两笔待确认的账单卡">
+</p>
 
 ## 下载与安装
 
@@ -24,13 +31,6 @@
 ```bash
 git clone https://github.com/guohangbk/tally-app.git
 ```
-
-<p align="center">
-  <img src="site/assets/shot-home.jpg" width="200" alt="首页：本月支出与收入、预算进度条，下面是按天分组的账单">
-  <img src="site/assets/shot-entry.jpg" width="200" alt="记账页：4×4 金额键盘，算式 18.00 + 12.00 = 30.00">
-  <img src="site/assets/shot-stats.jpg" width="200" alt="统计页：年视图的收支总览、每月柱状、星期分布与分类环">
-  <img src="site/assets/shot-chat.jpg" width="200" alt="小莉：说一句「火锅 168，打车 26」，回来一张两笔待确认的账单卡">
-</p>
 
 ## 这是什么
 
@@ -68,7 +68,7 @@ git clone https://github.com/guohangbk/tally-app.git
 | 找回删掉的账 | 设置 → 数据 → 回收站 |
 | 导诊断包给作者排障 | 设置 → 数据 → 导出诊断包 |
 | 看怎么用 | 设置 → 关于 → 使用指南 |
-| 打开项目主页 | 设置 → 关于 → 项目主页（用浏览器打开 <https://tally.guohang.asia>） |
+| 打开项目主页 | 设置 → 关于 → 项目主页（用浏览器打开 <https://github.com/guohangbk/tally-app>） |
 | 看许可与第三方依赖 | 设置 → 关于 → 许可与依赖 |
 
 ### 不做的事
@@ -86,7 +86,7 @@ git clone https://github.com/guohangbk/tally-app.git
 | 逐功能 / 逐模块的处理逻辑与边界    | [`详细设计说明书.md`](docs/release/详细设计说明书.md)                         |
 | 表结构、索引、统计口径与版本策略   | [`数据库设计文档.md`](docs/release/数据库设计文档.md)                         |
 | 设计语言、组件与交互判据           | [`界面与交互规范.md`](docs/release/界面与交互规范.md)                         |
-| 界面长什么样（自包含，可离线打开） | [`界面设计图.html`](docs/release/界面设计图.html)（29 节 / 127 屏）           |
+| 界面长什么样（自包含，可离线打开） | [`界面设计图.html`](docs/release/界面设计图.html)（29 节 / 137 屏）           |
 | 为什么这么设计、否决过什么         | [`设计决策.md`](docs/release/设计决策.md)                                     |
 | 交给使用者看的说明书               | [`用户操作手册.md`](docs/release/用户操作手册.md) + App 内「设置 → 使用指南」 |
 
@@ -143,7 +143,7 @@ Debug 与 Release 都走同一把签名钥匙，仓库里带的是 `tally-app/ke
 tally/
 ├── tally-app/              # Android 客户端（:tally-app，唯一应用模块）
 ├── docs/                   # 对外只发布 docs/release/ 这一份当前口径
-├── site/                   # 项目主页（单页 HTML + 截图资源，无构建）
+├── site/                   # 官网（单页 HTML + 截图资源，无构建）
 ├── gradle/                 # Gradle wrapper 与守护进程 JVM 配置（发行包 9.6.0，走腾讯镜像）
 └── LICENSE                 # BUSL-1.1
 ```

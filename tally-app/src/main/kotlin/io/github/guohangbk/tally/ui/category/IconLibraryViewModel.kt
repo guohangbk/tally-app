@@ -19,8 +19,6 @@ sealed class IconLibraryMode {
     data class NewLevel1(val type: CategoryType) : IconLibraryMode()
     data class NewLevel2(val parentId: String) : IconLibraryMode()
     data class EditIcon(val categoryId: String) : IconLibraryMode()
-    /** 账本图标：只选图标，名称在账本弹层里填。键域只认图标库，不放首字/emoji 兜底。 */
-    data object LedgerIcon : IconLibraryMode()
 }
 
 data class BatchLine(val name: String, val duplicate: Boolean)
@@ -41,8 +39,6 @@ data class IconLibraryUiState(
     val error: String? = null,
     /** 改已有分类：批量新增没有意义，点图标也不该把用户起的名字盖掉。 */
     val editing: Boolean = false,
-    /** 账本图标模式：名称与批量都不出现，保存的键只认图标库。 */
-    val ledgerIcon: Boolean = false,
 ) {
     val results: List<IconMeta> = run {
         val q = query.trim()
@@ -87,7 +83,6 @@ init {
                     is IconLibraryMode.NewLevel1 -> "添加一级分类"
                     is IconLibraryMode.NewLevel2 -> "添加二级分类"
                     is IconLibraryMode.EditIcon -> "修改分类"
-                    IconLibraryMode.LedgerIcon -> "选择账本图标"
                 },
                 parentHint = context.parentName?.let { "上级「$it」 · 建完直接进它的纸盘" },
                 type = context.type,
@@ -96,7 +91,6 @@ init {
                 // 自己那条名字要留在集合外：否则改名页里名字一个字没动也判「已存在该名字」，永远保存不了。
                 existing = preset?.name?.let { existing - it.trim() } ?: existing,
                 editing = preset != null,
-                ledgerIcon = mode is IconLibraryMode.LedgerIcon,
                 // 改分类时开在它自己那一组：进来先看得见当前选中的图标，不用从左边的栏里找。
                 group = preset?.iconKey?.let { IconLibrary.groupOf(it) } ?: IconLibrary.groupNames.first(),
             )
@@ -137,13 +131,6 @@ init {
                 categoryId = mode.categoryId,
             )
         }
-
-        IconLibraryMode.LedgerIcon -> Context(
-            type = CategoryType.EXPENSE,
-            parentId = null,
-            parentName = null,
-            categoryId = null,
-        )
     }
 
 
@@ -160,10 +147,6 @@ init {
     }
 
     fun selectFallbackKey(key: String) {
-        if (mutable.value.ledgerIcon && !IconLibrary.isKnown(key)) {
-            mutable.value = mutable.value.copy(error = "账本图标只能从图标库里选")
-            return
-        }
         mutable.value = mutable.value.copy(selectedIcon = key, error = null)
     }
 
@@ -196,14 +179,10 @@ init {
         mutable.value = mutable.value.copy(notice = null, error = null)
     }
 
-    /** 保存才写库；返回即丢弃（F7.9）。账本模式把选中的键交给调用方，其余模式不需要。 */
-    fun save(onSaved: (String?) -> Unit) {
+    /** 保存才写库；返回即丢弃（F7.9）。 */
+    fun save(onSaved: () -> Unit) {
         val current = mutable.value
-        if (current.ledgerIcon && current.selectedIcon == null) {
-            mutable.value = current.copy(error = "先选一个图标")
-            return
-        }
-        if (!current.ledgerIcon && !current.canSave) {
+        if (!current.canSave) {
             mutable.value = current.copy(error = "先选一个图标并填名称")
             return
         }
@@ -213,9 +192,8 @@ init {
                     is IconLibraryMode.NewLevel1 -> createLevels1(current)
                     is IconLibraryMode.NewLevel2 -> createLevels2(mode.parentId, current)
                     is IconLibraryMode.EditIcon -> applyEdit(mode.categoryId, current)
-                    IconLibraryMode.LedgerIcon -> {}
                 }
-                onSaved(current.selectedIcon)
+                onSaved()
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: TallyError) {

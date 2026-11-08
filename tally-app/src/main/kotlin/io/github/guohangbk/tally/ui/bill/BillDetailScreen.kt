@@ -16,9 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +46,7 @@ import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.FullScreenImageViewer
 import io.github.guohangbk.tally.ui.design.ImageThumbnail
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
 import io.github.guohangbk.tally.ui.design.TallyTag
@@ -56,6 +55,7 @@ import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.ToastTone
 import io.github.guohangbk.tally.ui.design.rememberTallyHaptics
+import io.github.guohangbk.tally.ui.design.sheetBody
 import io.github.guohangbk.tally.ui.design.tallyColors
 
 /**
@@ -104,13 +104,12 @@ fun BillDetailSheet(
         }
     }
 
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         val item = state.item
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp).padding(bottom = 18.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().sheetBody().padding(horizontal = 15.dp).padding(bottom = 18.dp)) {
             when {
                 item == null && state.loaded -> Text("这笔账单已经不在了。", style = TallyType.helper, color = colors.ink3)
                 item == null -> Text("正在读取…", style = TallyType.helper, color = colors.ink3)

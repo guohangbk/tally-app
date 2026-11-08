@@ -63,6 +63,12 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
         val BUDGET_ALERTS_SENT = stringSetPreferencesKey("budget_alerts_sent")
         /** 预算自动续期的上次执行段（当前月周期起始日的 ISO）。只在真的跑了一次后写，避免同月重复复制。 */
         val BUDGET_LAST_ROLLOVER_AT = stringPreferencesKey("budget_last_rollover_at")
+        /** 进过几次首页：第二次回来才浮一次性手势引导，第一次留给欢迎页刚收尾的那段。 */
+        val HOME_VISIT_COUNT = intPreferencesKey("home_visit_count")
+        val FAN_GUIDE_SEEN = booleanPreferencesKey("fan_guide_seen")
+        /** 小莉第一次配置成功时挂上的待办：回首页浮一次金色气泡，取出即销。 */
+        val ASSISTANT_READY_HINT = booleanPreferencesKey("assistant_ready_hint")
+        val ASSISTANT_READY_HINT_SEEN = booleanPreferencesKey("assistant_ready_hint_seen")
     }
 
     val settings: Flow<TallySettings> = dataStore.data.map { prefs ->
@@ -130,6 +136,43 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
 
     /** 隐藏手势的一次性引导：看过不再出现，设置里可重开（AC-MC-2）。 */
     suspend fun setDragGuideSeen(seen: Boolean) = put(Keys.DRAG_GUIDE_SEEN, seen)
+
+    /** 首页进一次记一次；第二次回来才浮手势气泡。 */
+    suspend fun registerHomeVisit(): Int {
+        var visit = 0
+        dataStore.edit { prefs ->
+            visit = (prefs[Keys.HOME_VISIT_COUNT] ?: 0) + 1
+            prefs[Keys.HOME_VISIT_COUNT] = visit
+        }
+        return visit
+    }
+
+    suspend fun fanGuideSeen(): Boolean = dataStore.data.map { it[Keys.FAN_GUIDE_SEEN] ?: false }.first()
+
+    suspend fun markFanGuideSeen() = put(Keys.FAN_GUIDE_SEEN, true)
+
+    /**
+     * 小莉第一次配置成功时挂一个待办。已经浮过（或用户早就自己进过对话）就不再补，
+     * 「小莉可用了」这件事只值得说一次。
+     */
+    suspend fun markAssistantReadyHint() {
+        dataStore.edit { prefs ->
+            if (prefs[Keys.ASSISTANT_READY_HINT_SEEN] != true) prefs[Keys.ASSISTANT_READY_HINT] = true
+        }
+    }
+
+    /** 取出并销掉待办：同一台机器只浮一次。 */
+    suspend fun consumeAssistantReadyHint(): Boolean {
+        var pending = false
+        dataStore.edit { prefs ->
+            pending = prefs[Keys.ASSISTANT_READY_HINT] == true
+            if (pending) {
+                prefs[Keys.ASSISTANT_READY_HINT] = false
+                prefs[Keys.ASSISTANT_READY_HINT_SEEN] = true
+            }
+        }
+        return pending
+    }
 
     /**
      * 海报的脱敏开关属于这台设备：反复发图给同一个人时不该每次重开，

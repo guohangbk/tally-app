@@ -678,7 +678,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 .sh-h{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .sh-h b{font-family:var(--serif);font-size:14px;font-weight:600}
 .modal{position:absolute;left:26px;right:26px;top:50%;transform:translateY(-50%);background:var(--paper);
-  border-radius:20px;padding:18px 17px 15px;box-shadow:0 24px 50px rgba(18,25,28,.45)}
+  z-index:3;border-radius:20px;padding:18px 17px 15px;box-shadow:0 24px 50px rgba(18,25,28,.45)}
 .toast{position:absolute;left:15px;right:15px;bottom:74px;background:rgba(22,33,29,.94);color:#F6F3EB;
   border-radius:12px;padding:9px 11px;font-size:10.5px;display:flex;align-items:center;gap:8px;line-height:1.45}
 .toast svg{width:14px;height:14px;flex:none;stroke:var(--gold-hi);stroke-width:1.9;fill:none;stroke-linecap:round}
@@ -2204,7 +2204,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       这块板收录该版本的全部界面：设计语言、图标系统、导航与组件规格，以及 20 个页面的逐屏样子。</p>
     <div class="facts">
       <div><b>20</b><span>页面</span></div>
-      <div><b>73</b><span>屏（含组件卡）</span></div>
+      <div><b>137</b><span>屏（含组件卡）</span></div>
       <div><b>136</b><span>分类图标 · 12 组</span></div>
       <div><b>15</b><span>本地数据表</span></div>
     </div>
@@ -2519,17 +2519,19 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="ab"><span class="tt" style="font-size:14px">日常</span><span class="sp"></span><span class="iB"><svg><use href="#i-search"/></svg></span><span class="iB"><svg><use href="#i-menu"/></svg></span></div>
         <div class="cscroll" style="opacity:.42"><div class="grp" style="padding:2px 11px"><div class="set"><div class="x"><div class="t">日用品 · 超市</div><div class="s">10-21 20:05</div></div><b style="font-family:var(--serif);font-size:13px">−64.20</b></div></div></div>
         <div class="fmask">
-          <div class="hint">继续上滑或左滑 · 松手取消</div>
+          <div class="hint">关闭的只是入口 · 手势照旧可用</div>
           <div class="arm up"><span class="bub"><svg><use href="#i-mic"/></svg></span><div class="lb"><b>语音记账</b><em>↑ 上滑</em></div></div>
           <div class="arm lf stk"><span class="bub"><svg><use href="#i-img"/></svg></span><div class="lb"><b>截图记账</b><em>← 左滑</em></div></div>
+          <div class="arm rt stk"><span class="bub"><svg><use href="#i-ai"/></svg></span><div class="lb"><b>问小莉</b><em>右滑 → 去设置开</em></div></div>
           <span class="trail up"><i></i><i></i><i></i></span>
           <span class="trail lf"><i></i><i></i><i></i></span>
+          <span class="trail rt"><i></i><i></i><i></i></span>
           <span class="fabf"><svg><use href="#i-plus"/></svg></span>
         </div>
       </div>
     </div></div>
-    <figcaption><div class="pn">N-03</div><div class="ph">小莉关闭时 · 只有两臂</div>
-      <div class="pd">右臂随小莉开关出现或消失，其余两臂不动。关掉的是入口，而不是留一个点了没反应的按钮。</div></figcaption></figure>
+    <figcaption><div class="pn">N-03</div><div class="ph">小莉关闭时 · 右臂仍在</div>
+      <div class="pd">右臂不随开关消失：关闭时照常出现，右滑落在「设置 → 小莉」的开关组；开启但没配置，落在配置页；配好可用，才进对话页。一个手势三种落点，不让人先记住状态。</div></figcaption></figure>
 
 <figure class="pc"><div class="dev"><div class="scr meas">
       <div class="notch"></div><div class="sb"><span>9:41</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -2581,9 +2583,9 @@ html,body{margin:0;padding:0;background:#F2EEE4}
   <div class="pl mt2"><i></i>信息架构 · 谁从哪里进谁</div>
   <div class="grid tight" style="gap:20px;margin-top:8px">
     <div class="grp" style="flex:1 1 300px;padding:2px 12px">
-      <div class="grpt" style="margin-top:8px">根页面 · 最多两个</div>
+      <div class="grpt" style="margin-top:8px">根页面 · 常驻入口</div>
       <div class="set"><span class="ic" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-home"/></svg></span><div class="x"><div class="t">账单</div><div class="s">唯一的常驻根页面 · 悬浮 ＋ 记一笔</div></div><span class="tag">常驻</span></div>
-      <div class="set"><span class="ic g" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-ai"/></svg></span><div class="x"><div class="t">小莉</div><div class="s">仅开启后出现；关闭时底栏整条隐藏</div></div><span class="tag g">可选</span></div>
+      <div class="set"><span class="ic g" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-ai"/></svg></span><div class="x"><div class="t">小莉</div><div class="s">不是根页面 · 入口只有 ＋ 右臂；关闭时右臂仍在，落在设置</div></div><span class="tag g">可选</span></div>
       <div class="hair" style="margin:9px 0"></div>
       <div class="grpt" style="margin:0 0 4px">账单页顶栏</div>
       <div class="set"><span class="ic" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-menu"/></svg></span><div class="x"><div class="t">左 · 抽屉把手</div><div class="s">全部二级入口的唯一集合点</div></div></div>
@@ -3760,8 +3762,38 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 </section>
 <section class="sec">
   <div class="sec-h"><span class="no">10</span><h2>账本与首次引导</h2>
-    <div class="meta">账本只是数据分组<br>引导只给两条路</div></div>
-  <p class="lead">账本不是「账户」：没有资产账户这一层，账本只是数据分组——决定一笔记在哪里、算进哪组统计。分类是全机共用的一套字典，不随账本切换；这句话必须在引导里对用户讲明白，否则用户会拿它当钱包，把结余读成余额。</p>
+    <div class="meta">账本只是数据分组<br>手势只教藏起来的那层</div></div>
+  <p class="lead">账本不是「账户」：没有资产账户这一层，账本只是数据分组——决定一笔记在哪里、算进哪组统计。分类是全机共用的一套字典，不随账本切换；这句话必须在引导里对用户讲明白，否则用户会拿它当钱包，把结余读成余额。
+    装完第一次看到的引导只到「数据在哪」这一层；真正要教的只剩一件藏起来的事——＋ 的长按扇形。它不占首屏，也不该在导入刚结束时抢注意力：<b>第二次回到首页才浮一句，且只浮一次</b>。一句讲不完的（长按账单批量选、账本名与菜单、小莉开关）收在气泡右侧的「更多手势」里，点开是半屏四行，不在首页再铺第二层字。</p>
+  <style>
+  /* ---------- §10 首页一次性手势引导（coachmark） ---------- */
+  /* 蒙层压在页面内容上、＋ 与气泡下：空白处点击被吃掉，只有右上角 ✕ 能关。 */
+  .gmask{position:absolute;inset:0;z-index:4;background:rgba(18,25,28,.44)}
+  .coach{position:absolute;left:50%;bottom:138px;transform:translateX(-50%);z-index:6;
+    width:max-content;max-width:272px;background:rgba(22,33,29,.96);color:#F6F3EB;
+    border-radius:16px;padding:14px 16px 12px;text-align:center;
+    font-size:12px;line-height:1.42;box-shadow:0 12px 26px -13px rgba(18,25,28,.6)}
+  .coach .cl{position:absolute;top:8px;right:6px;width:24px;height:24px;display:grid;place-items:center;
+    color:rgba(246,243,235,.62)}
+  .coach .cl svg{width:12px;height:12px;stroke:currentColor;stroke-width:2.4;fill:none}
+  .coach b{display:block;font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:4px}
+  .coach .ch{display:flex;justify-content:center;align-items:center;margin-bottom:0}
+  .coach .ch b{display:inline;margin:0}
+  .coach .ml{margin-top:8px}
+  .coach .more{font-style:normal;font-size:11.5px;color:var(--gold-hi);display:inline-flex;align-items:center;gap:2px;white-space:nowrap}
+  .coach .more svg{width:10px;height:10px;stroke:var(--gold-hi);stroke-width:2.4;fill:none}
+  .coach em{font-style:normal;color:rgba(246,243,235,.76);white-space:nowrap}
+  .coach i{display:block;font-style:normal;font-size:12px;color:rgba(246,243,235,.66);margin-top:4px;white-space:nowrap}
+  .coach .cai{width:14px;height:14px;vertical-align:-3px;margin-right:5px;stroke:var(--gold-hi);fill:none;stroke-width:1.8}
+  .coach::after{content:'';position:absolute;left:50%;bottom:-6px;width:12px;height:12px;border-radius:2px;
+    background:rgba(22,33,29,.96);transform:translateX(-50%) rotate(45deg)}
+  .coach.gold{border:1px solid rgba(232,197,122,.4)}
+  /* ＋ 外面两圈错开的波纹，提示按住这里 */
+  .fabf.guide::before,.fabf.guide::after{content:'';position:absolute;inset:-6px;border-radius:26px;
+    border:1.3px solid rgba(246,243,235,.55);animation:guideRing 2.1s ease-out infinite}
+  .fabf.guide::before{animation-delay:1.05s}
+  @keyframes guideRing{0%{transform:scale(.92);opacity:.55}100%{transform:scale(1.6);opacity:0}}
+  </style>
   <div class="grid q4">
 
     <figure class="pc"><div class="dev"><div class="scr">
@@ -3894,6 +3926,70 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     </div></div>
     <figcaption><div class="pn">P01</div><div class="ph">启动引导 · 三条路</div>
       <div class="pd">首屏一次给三个入口：导入历史账单进导入向导、导入 Tally 备份直接选包恢复、直接从零开始建默认账本。点前两项只进对应流程，不自动弹文件选择器。下方常驻「数据存在哪里」与默认账本的就位状态。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:47</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-menu"/></svg></span><span class="tt">日常账本</span><svg style="width:11px;height:11px;stroke:var(--ink3);stroke-width:2;fill:none"><use href="#i-chevd"/></svg><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span><span class="iB"><svg><use href="#i-search"/></svg></span></div>
+        <div class="mth"><span class="st lf"><svg><use href="#i-chev"/></svg></span><span class="lb">2026年10月<svg><use href="#i-chevd"/></svg></span><span class="st"><svg><use href="#i-chev"/></svg></span></div>
+        <div class="sum"><div><span class="l">本月支出</span><div class="money"><span class="cur">¥</span><span class="int">2,780</span><span class="dec">.45</span></div><span class="k">136 笔 · 日均 198</span></div>
+          <div><span class="l">本月收入</span><div class="money"><span class="cur">¥</span><span class="int">15,000</span><span class="dec">.00</span></div><span class="k">结余 +12,219.55</span></div></div>
+        <div class="dh">10月14日 周三<span class="x"></span><b>－216.00</b></div>
+        <div class="li"><span class="ic g"><svg><use href="#i-food"/></svg></span><div class="x"><div class="t">三餐 · 晚餐</div><div class="s">海底捞</div></div><div class="money s e"><span class="int">198</span><span class="dec">.00</span></div></div>
+        <div class="li"><span class="ic"><svg><use href="#i-cup"/></svg></span><div class="x"><div class="t">零食 · 咖啡</div><div class="s">14:20</div></div><div class="money s e"><span class="int">18</span><span class="dec">.00</span></div></div>
+      </div>
+      <div class="gmask"></div>
+      <div class="coach"><span class="cl"><svg><use href="#i-close"/></svg></span><div class="ch"><b>长按</b></div><em>上滑语音 · 左滑截图 · 右滑小莉</em><i>小莉还没开启，右滑先去设置</i><div class="ml"><span class="more">更多手势<svg><use href="#i-chev"/></svg></span></div></div>
+      <span class="fabf rest up guide"><svg><use href="#i-plus"/></svg></span>
+    </div></div>
+    <figcaption><div class="pn">G-01</div><div class="ph">首页手势引导 · 第二次回来</div>
+      <div class="pd">小莉开没开都浮这一句：没开启时多一行「右滑先去设置」，开启未配置写「右滑去配置」，可用就省掉——三条手势一次教全。标题只写「长按」，指针就是下面的 ＋。首次进首页不弹（导入向导刚收尾，信息已经够多），第二次回到首页才出现，只出现一次；这次不点掉就一直留着（不自动消失，滑页与多选也不收），下次打开 App 不再出现。出现时整页压一层蒙层、只留 ＋ 与气泡是亮的，＋ 外面一圈圈波纹在扩散，提示按住这里；空白处点击被吃掉不关，只有右上角 ✕、点最下排的「更多手势」或用 ＋ 才收起。点「更多手势」开 G-01b，把长按账单、账本名与菜单、小莉开关一并讲完。AI 已可用的机器不再出 G-02；开着「减弱动态效果」时扇形只留静态终态、波纹只留静态一圈，都不做扩散。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:44</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-menu"/></svg></span><span class="tt">日常账本</span><svg style="width:11px;height:11px;stroke:var(--ink3);stroke-width:2;fill:none"><use href="#i-chevd"/></svg><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span><span class="iB"><svg><use href="#i-search"/></svg></span></div>
+        <div class="mth"><span class="st lf"><svg><use href="#i-chev"/></svg></span><span class="lb">2026年10月<svg><use href="#i-chevd"/></svg></span><span class="st"><svg><use href="#i-chev"/></svg></span></div>
+        <div class="sum"><div><span class="l">本月支出</span><div class="money"><span class="cur">¥</span><span class="int">2,780</span><span class="dec">.45</span></div><span class="k">136 笔 · 日均 198</span></div>
+          <div><span class="l">本月收入</span><div class="money"><span class="cur">¥</span><span class="int">15,000</span><span class="dec">.00</span></div><span class="k">结余 +12,219.55</span></div></div>
+        <div class="dh">10月14日 周三<span class="x"></span><b>－216.00</b></div>
+        <div class="li"><span class="ic g"><svg><use href="#i-food"/></svg></span><div class="x"><div class="t">三餐 · 晚餐</div><div class="s">海底捞</div></div><div class="money s e"><span class="int">198</span><span class="dec">.00</span></div></div>
+        <div class="li"><span class="ic"><svg><use href="#i-cup"/></svg></span><div class="x"><div class="t">零食 · 咖啡</div><div class="s">14:20</div></div><div class="money s e"><span class="int">18</span><span class="dec">.00</span></div></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet" style="z-index:3">
+        <div class="grab"></div>
+        <div class="sh-h"><b>更多手势</b></div>
+        <div class="grp">
+          <div class="set"><span class="ic b"><svg><use href="#i-plus"/></svg></span><div class="x"><div class="t">长按 ＋ 不动</div><div class="s">上滑语音 · 左滑截图 · 右滑小莉</div></div></div>
+          <div class="set"><span class="ic"><svg><use href="#i-receipt"/></svg></span><div class="x"><div class="t">长按一笔账单</div><div class="s">批量选：改分类、标报销、不计入或删除</div></div></div>
+          <div class="set"><span class="ic"><svg><use href="#i-menu"/></svg></span><div class="x"><div class="t">点账本名 · 左上角菜单</div><div class="s">切换账本；导入、导出、备份都在菜单里</div></div></div>
+          <div class="set"><span class="ic" style="color:#B98A34;background:var(--glow);border-color:rgba(185,138,52,.3)"><svg><use href="#i-ai"/></svg></span><div class="x"><div class="t">小莉默认关闭</div><div class="s">打开并配置后，右滑才进对话</div></div><span class="ar" style="display:flex;align-items:center;gap:2px;font-size:9.5px;color:var(--brand);font-weight:600;white-space:nowrap">去设置<svg style="stroke:var(--brand)"><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="btn gr" style="width:100%;margin-top:12px">知道了</div>
+        <div style="text-align:center;font-size:9px;color:var(--ink3);margin-top:8px">以后想重看：设置 → 使用指南</div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">G-01b</div><div class="ph">更多手势 · 半屏</div>
+      <div class="pd">气泡里点「更多手势」才有这一屏，不占首屏。四行讲完剩下的三件事：长按账单进批量选、账本名与左上角菜单各管什么、小莉默认关闭要怎么开——最后一行直接跳设置，不让人自己找。底部一句指回「使用指南」，看过一次就不再自动出现。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>21:16</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-menu"/></svg></span><span class="tt">日常账本</span><svg style="width:11px;height:11px;stroke:var(--ink3);stroke-width:2;fill:none"><use href="#i-chevd"/></svg><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span><span class="iB"><svg><use href="#i-search"/></svg></span></div>
+        <div class="mth"><span class="st lf"><svg><use href="#i-chev"/></svg></span><span class="lb">2026年10月<svg><use href="#i-chevd"/></svg></span><span class="st"><svg><use href="#i-chev"/></svg></span></div>
+        <div class="sum"><div><span class="l">本月支出</span><div class="money"><span class="cur">¥</span><span class="int">2,780</span><span class="dec">.45</span></div><span class="k">136 笔 · 日均 198</span></div>
+          <div><span class="l">本月收入</span><div class="money"><span class="cur">¥</span><span class="int">15,000</span><span class="dec">.00</span></div><span class="k">结余 +12,219.55</span></div></div>
+        <div class="dh">10月14日 周三<span class="x"></span><b>－216.00</b></div>
+        <div class="li"><span class="ic g"><svg><use href="#i-food"/></svg></span><div class="x"><div class="t">三餐 · 晚餐</div><div class="s">海底捞</div></div><div class="money s e"><span class="int">198</span><span class="dec">.00</span></div></div>
+        <div class="li"><span class="ic"><svg><use href="#i-cup"/></svg></span><div class="x"><div class="t">零食 · 咖啡</div><div class="s">14:20</div></div><div class="money s e"><span class="int">18</span><span class="dec">.00</span></div></div>
+      </div>
+      <div class="gmask"></div>
+      <div class="coach gold"><span class="cl"><svg><use href="#i-close"/></svg></span><b><svg class="cai"><use href="#i-ai"/></svg>小莉已经就绪</b><em>长按 ＋ 右滑，直接问她</em></div>
+      <span class="fabf rest up guide"><svg><use href="#i-plus"/></svg></span>
+    </div></div>
+    <figcaption><div class="pn">G-02</div><div class="ph">小莉可用后的右臂提示</div>
+      <div class="pd">小莉第一次配置成功、回到首页时出现，只出现一次；金色只说明「这是小莉」，不另加按钮。同样压蒙层，点右上角 ✕ 或真的右滑进对话即收起。</div></figcaption></figure>
 
     
   </div>
@@ -5281,7 +5377,9 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <div class="meta">备份不含图片要说清<br>本机统计可查可清</div></div>
   <p class="lead">备份页只解决一件事：<b>换机之后哪些东西会回来、哪些不会</b>。图片默认不进包，这条必须在导出前就说，而不是恢复后才发现。
     设置页新增「记账偏好」分组——再记的行为（分类是否记忆、备注是否保留）是可配置的，不该由设计稿替用户决定。
-    数据与隐私页把本地承诺写成四条可核对的陈述，并把清除做成两次确认。</p>
+    数据与隐私页把本地承诺写成四条可核对的陈述，并把清除做成两次确认。
+    版本行右侧放一个「检查更新」软按钮：只在用户主动点时才查一次 GitHub Release，发现新版用弹窗问去不去下载，
+    已是最新或网络失败都只吐一句人话，不做后台轮询、不静默下载。</p>
   <div class="grid q4">
 
     <figure class="pc"><div class="dev"><div class="scr">
@@ -5321,7 +5419,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:51</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.1-dev</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
         <div class="grpt">记账偏好</div>
         <div class="grp" style="padding:0 12px">
           <div class="set"><div><div class="t">秒开模式</div><div class="s">默认关闭 · 开启后打开应用直接进记账页</div></div><span class="sw"></span></div>
@@ -5351,8 +5449,8 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="grpt">关于</div>
         <div class="grp" style="padding:0 12px">
-          <div class="set"><div><div class="t">版本</div><div class="s">0.1.1-dev (101) · 从 APK 读，不硬编码</div></div></div>
-          <div class="set"><div><div class="t">项目主页</div><div class="s">tally.guohang.asia · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
       </div>
@@ -5373,8 +5471,8 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="grpt">关于</div>
         <div class="grp" style="padding:0 12px">
-          <div class="set"><div><div class="t">版本</div><div class="s">0.1.1-dev (101) · 从 APK 读，不硬编码</div></div></div>
-          <div class="set"><div><div class="t">项目主页</div><div class="s">tally.guohang.asia · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
         <div class="card mt" style="padding:9px 11px">
@@ -5389,7 +5487,90 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       </div>
     </div></div>
     <figcaption><div class="pn">P20b</div><div class="ph">设置 · 恢复默认与关于</div>
-      <div class="pd">恢复默认只回偏好，账单数据一律不动，且这句话就写在确认弹窗里。关于区给版本、项目主页与依赖清单；连点版本五次开调试台，浮层贴在页面左下。</div></figcaption></figure>
+      <div class="pd">恢复默认只回偏好，账单数据一律不动，且这句话就写在确认弹窗里。关于区给版本、项目主页与依赖清单；连点版本五次开调试台，浮层贴在页面左下。版本行右侧是「检查更新」软按钮，点下后变成「检查中…」并禁用，结果回来才恢复。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:53</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
+        <div class="grp mt0" style="opacity:.3">
+          <div class="set"><div><div class="t">备份与同步</div><div class="s">.tally 加密备份、恢复与 WebDAV 手动快照</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="grpt">恢复默认</div>
+        <div class="grp" style="padding:0 12px">
+          <div class="set"><div><div class="t">恢复默认偏好</div><div class="s">设置重置到出厂默认，不影响账单数据</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="grpt">关于</div>
+        <div class="grp" style="padding:0 12px">
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="card mt" style="padding:9px 11px">
+          <div class="row" style="gap:6px;align-items:flex-start"><svg style="width:13px;height:13px;stroke:var(--brand);stroke-width:1.8;fill:none;flex:none;margin-top:1px"><use href="#i-shield"/></svg>
+            <span style="font-size:9.5px;color:var(--ink2);line-height:1.6">隐私说明：账单、分类、图片与偏好都存在本地。小莉关闭时不会向任何服务发送数据；开启后发送哪些内容由您配置，密钥不进备份包。</span></div></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="modal" style="left:16px;right:16px;padding:16px 15px 13px">
+        <div style="font-family:var(--serif);font-size:14px;font-weight:600">发现新版本 0.1.4</div>
+        <div style="font-size:10px;color:var(--ink2);line-height:1.7;margin-top:6px">当前 0.1.3。升级不会影响账单和分类，去 GitHub 看看这次改了什么？</div>
+        <div class="row" style="gap:7px;margin-top:13px"><span class="btn gh" style="flex:1;height:34px">稍后</span><span class="btn gr" style="flex:1;height:34px">去下载</span></div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">P20c</div><div class="ph">检查更新 · 发现新版本</div>
+      <div class="pd">只有点「检查更新」才会出现。确认后打开 GitHub Release 页，不自动下载、不自动安装；点「稍后」什么都不变。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:54</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
+        <div class="grp mt0" style="opacity:.3">
+          <div class="set"><div><div class="t">备份与同步</div><div class="s">.tally 加密备份、恢复与 WebDAV 手动快照</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="grpt">恢复默认</div>
+        <div class="grp" style="padding:0 12px">
+          <div class="set"><div><div class="t">恢复默认偏好</div><div class="s">设置重置到出厂默认，不影响账单数据</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="grpt">关于</div>
+        <div class="grp" style="padding:0 12px">
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="card mt" style="padding:9px 11px">
+          <div class="row" style="gap:6px;align-items:flex-start"><svg style="width:13px;height:13px;stroke:var(--brand);stroke-width:1.8;fill:none;flex:none;margin-top:1px"><use href="#i-shield"/></svg>
+            <span style="font-size:9.5px;color:var(--ink2);line-height:1.6">隐私说明：账单、分类、图片与偏好都存在本地。小莉关闭时不会向任何服务发送数据；开启后发送哪些内容由您配置，密钥不进备份包。</span></div></div>
+      </div>
+      <div class="toast g" style="bottom:20px;z-index:5"><svg><use href="#i-check"/></svg><span>已经是最新版本 0.1.3，安心用。</span></div>
+    </div></div>
+    <figcaption><div class="pn">P20d</div><div class="ph">检查更新 · 已是最新</div>
+      <div class="pd">底部气泡，2.5 秒自动收起；不建通知、不写日志、不改任何状态。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:55</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
+        <div class="grp mt0" style="opacity:.3">
+          <div class="set"><div><div class="t">备份与同步</div><div class="s">.tally 加密备份、恢复与 WebDAV 手动快照</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="grpt">恢复默认</div>
+        <div class="grp" style="padding:0 12px">
+          <div class="set"><div><div class="t">恢复默认偏好</div><div class="s">设置重置到出厂默认，不影响账单数据</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="grpt">关于</div>
+        <div class="grp" style="padding:0 12px">
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="card mt" style="padding:9px 11px">
+          <div class="row" style="gap:6px;align-items:flex-start"><svg style="width:13px;height:13px;stroke:var(--brand);stroke-width:1.8;fill:none;flex:none;margin-top:1px"><use href="#i-shield"/></svg>
+            <span style="font-size:9.5px;color:var(--ink2);line-height:1.6">隐私说明：账单、分类、图片与偏好都存在本地。小莉关闭时不会向任何服务发送数据；开启后发送哪些内容由您配置，密钥不进备份包。</span></div></div>
+      </div>
+      <div class="toast" style="bottom:20px;z-index:5"><svg><use href="#i-wifi"/></svg><span>网络好像不太顺，过一会儿再试试。</span></div>
+    </div></div>
+    <figcaption><div class="pn">P20e</div><div class="ph">检查更新 · 网络失败</div>
+      <div class="pd">失败只用人话提示，不弹窗；离线时记账、统计照常可用。</div></figcaption></figure>
   </div>
 </section>
 
@@ -5445,13 +5626,15 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>选中态</td><td>不能只靠颜色：加勾、加描边或左侧色条（批量选择是 3dp 品牌色左边线 + 半透明底）。</td></tr>
       <tr><td>触摸目标</td><td>≥ 48dp；视觉上可以只是一个小图标，触摸框按 48dp 撑开。</td></tr>
       <tr><td>尾部文字</td><td>「进入 / 选择 / 下载」一律换成 chevron 或下载字形，一次改全站。</td></tr>
-      <tr><td>＋ 三臂</td><td>短按＝记账页；长按＝扇形：上语音、左截图、右小莉（小莉关闭不出这一臂）。＋ 56dp、气泡 52dp、臂心距 118dp、命中半径 40dp，静置底部居中。</td></tr>
+      <tr><td>＋ 三臂</td><td>短按＝记账页；长按＝扇形：上语音、左截图、右小莉（关闭时右滑进设置开关区，开启未配置进配置页，可用才进对话页）。＋ 56dp、气泡 52dp、臂心距 118dp、命中半径 40dp，静置底部居中。</td></tr>
       <tr><td>语音</td><td>点击开关：点一下开录、再点结束并发送，说满 20 秒先提示再收尾；识别中不可点。</td></tr>
       <tr><td>记账卡</td><td>卡片只由 propose_bills / not_a_bill 产出，一次调用交一批（≤6 笔），落默认账本，点「记入」才写库；「先不记」划掉保留，不删气泡。</td></tr>
       <tr><td>对话发图</td><td>一条消息最多 3 张；待发条在输入框上方展开，可点开大图、可逐张移除。配置未勾「支持图片输入」时图片入口禁用。</td></tr>
       <tr><td>账单详情</td><td>底部弹窗，不提供详情页，也不在弹窗里就地编辑；要改跳记账页并带上日期与金额。</td></tr>
       <tr><td>分类管理</td><td>一级卡片 + 二级密集平铺，不做缩进树；弹层只列动作，「修改」打开预填全屏页；笔数与删除文案按全部账本口径；归档区在页底，0 笔才能彻底删除。</td></tr>
       <tr><td>分类归属</td><td>全机一套两级树，账本不隔离；新建账本复用同一棵树，「上次分类」是全机一对键；笔数与删除提示按全部账本口径。</td></tr>
+      <tr><td>关键词规则</td><td>展示按分类成组、存储仍一词一行；组内就地加词（空格 / 顿号可写多个），不再开表单弹窗；组 ⋯ 只放换分类与删除整组，词 ⋯ 只放改绑与删词；内置词组只读，没有 ＋ 与 ⋯。</td></tr>
+      <tr><td>底部弹层</td><td>顶部只留一条抓手（M3 默认 dragHandle 位），不再另画一根；内容区给上限高度 + 内部滚动，长列表不顶满整屏。新建 / 编辑账本也走这一形态，不再用居中弹窗。</td></tr>
       <tr><td>小莉配置</td><td>一屏只维护当前模型：服务商与模型走下拉，图片能力是保存前的一次勾选，测通才落库；保存后只留当前配置卡，不放状态点与状态标签。</td></tr>
       <tr><td>震动</td><td>按键 KEYBOARD_TAP、点击 CONTEXT_CLICK、长按 LONG_PRESS、确认 CONFIRM、取消 REJECT（API 30 以下回退），全部跟随系统触感开关。</td></tr>
       <tr><td>金晕</td><td>只有小莉相关触点用金晕与金色按钮；其余保持纸墨，避免哪里都在发光。</td></tr>
@@ -5469,7 +5652,29 @@ html,body{margin:0;padding:0;background:#F2EEE4}
   <div class="sec-h"><span class="no">16</span><h2>输入与找回</h2>
     <div class="meta">规则要看得见<br>标记要追得回</div></div>
   <p class="lead">关键词、时刻、退款、判重四样都长在录入这条路上。判据只有一条：<b>凡是界面上碰不到的字段，都不算交付</b>——
-    规则表要能增删改绑，时刻开关要真的落到那一条账单上，退款要能回到原单，重复要在导入当场说破。<b>伪交付比缺口更伤信任</b>，用户以为它存在。</p>
+    规则表要能增删改绑，时刻开关要真的落到那一条账单上，退款要能回到原单，重复要在导入当场说破。<b>伪交付比缺口更伤信任</b>，用户以为它存在。
+    关键词这条线按<b>分类成组</b>展示、存储仍一词一行：组行看分类，展开看词，加词不再开表单弹窗。</p>
+
+  <style>
+  .kx{flex:1;min-width:0}
+  .kwn{font-size:8.5px;color:var(--ink3);flex:none;letter-spacing:.02em}
+  .kmore{display:inline-flex;align-items:center;flex:none;color:var(--ink3)}
+  .kmore svg{width:13px;height:13px;stroke:var(--ink3);stroke-width:2;fill:none;stroke-linecap:round}
+  .kwgrp .set{padding:9px 0}
+  .kwgrp .set .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kww{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 10px 39px}
+  .kwchip{display:inline-flex;align-items:center;gap:3px;font-size:9px;line-height:1;color:var(--ink2);
+    background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:3.5px 6px}
+  .kwchip i{width:4px;height:4px;border-radius:50%;background:var(--gold);font-style:normal;flex:none}
+  .kwchip.add{border-style:dashed;color:var(--ink3);background:transparent;padding:3.5px 7px}
+  .kwin{display:flex;align-items:center;gap:6px;height:33px;margin:0 0 5px 39px;padding:0 9px;border-radius:10px;
+    background:var(--card);border:1px solid rgba(185,138,52,.55)}
+  .kwin .tx{font-size:11px;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden}
+  .kwin .caret{width:1px;height:13px;background:var(--brand);flex:none}
+  .kwnote{font-size:8.5px;color:var(--ink3);line-height:1.45;margin:0 0 8px 39px}
+  .kwbtns{display:flex;gap:6px;justify-content:flex-end;margin:0 0 10px 39px}
+  .kwbtns .btn{height:28px;border-radius:9px;font-size:9.5px;padding:0 13px}
+  </style>
 
   <div class="grid q4">
 
@@ -5478,45 +5683,113 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <div class="body">
         <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">关键词规则</span><span class="sp"></span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
         <div class="inp"><svg><use href="#i-search"/></svg><span class="x mut">搜索关键词或分类…</span></div>
-        <div class="grpt" style="margin-top:11px">内置词组 · 只读</div>
-        <div class="grp">
-          <div class="set"><span class="ic"><svg><use href="#i-food"/></svg></span><div><div class="t">吃饭 · 外卖 · 食堂 · 火锅</div><div class="s">→ 三餐 · 按分类 id 绑定</div></div><span class="tag">内置</span></div>
-          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div><div class="t">打车 · 滴滴 · 出租车</div><div class="s">→ 交通</div></div><span class="tag">内置</span></div>
-          <div class="set"><span class="ic" style="border-color:rgba(191,78,59,.4);color:var(--exp)"><svg style="stroke:var(--exp)"><use href="#i-warn"/></svg></span><div><div class="t">健身 · 私教 · 场馆</div><div class="s" style="color:var(--exp)">原分类已删 · 该组失效</div></div><span class="tag">内置</span></div>
+        <div class="grpt" style="margin-top:11px">内置词组（只读）</div>
+        <div class="grp kwgrp">
+          <div class="set"><span class="ic"><svg><use href="#i-food"/></svg></span><div class="kx"><div class="t">三餐</div><div class="s">吃饭 · 外卖 · 食堂 · 火锅</div></div><span class="kwn">4 个词</span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div class="kx"><div class="t">交通</div><div class="s">地铁 · 公交 · 打车</div></div><span class="kwn">3 个词</span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic" style="border-color:rgba(191,78,59,.4);color:var(--exp)"><svg style="stroke:var(--exp)"><use href="#i-warn"/></svg></span><div class="kx"><div class="t">健身</div><div class="s" style="color:var(--exp)">原分类已删 · 该组失效</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
         </div>
-        <div class="grpt" style="margin-top:11px">我的规则 · 8 条</div>
-        <div class="grp">
-          <div class="set"><span class="ic b"><svg><use href="#i-bus"/></svg></span><div><div class="t">打车</div><div class="s">→ 交通</div></div><span class="tag g">沉淀</span><span class="ar"><svg><use href="#i-more"/></svg></span></div>
-          <div class="set"><span class="ic"><svg><use href="#i-cup"/></svg></span><div><div class="t">生椰拿铁</div><div class="s">→ 零食 / 咖啡</div></div><span class="tag g">沉淀</span><span class="ar"><svg><use href="#i-more"/></svg></span></div>
-          <div class="set"><span class="ic"><svg><use href="#i-med"/></svg></span><div><div class="t">挂号</div><div class="s">→ 医疗 · 手动添加</div></div><span class="ar"><svg><use href="#i-more"/></svg></span></div>
+        <div class="grpt" style="margin-top:14px">我的规则（8条）</div>
+        <div class="grp kwgrp">
+          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div class="kx"><div class="t">交通 · 打车</div><div class="s">滴滴 · 顺风车 · 出租车</div></div><span class="kwn">3 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-noodle"/></svg></span><div class="kx"><div class="t">三餐 · 外卖</div><div class="s">外卖 · 食堂</div></div><span class="kwn">2 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-cup"/></svg></span><div class="kx"><div class="t">零食 · 咖啡</div><div class="s">生椰拿铁</div></div><span class="kwn">1 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-med"/></svg></span><div class="kx"><div class="t">医疗</div><div class="s">挂号 · 买药</div></div><span class="kwn">2 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
         </div>
-        <div class="cmhint" style="padding-top:9px"><svg><use href="#i-info"/></svg><span>语音与截图都读这张表；我的规则优先于内置</span></div>
       </div>
     </div></div>
-    <figcaption><div class="pn">KW-01</div><div class="ph">关键词规则 · 能看能删</div>
-      <div class="pd">规则表是人维护的清单，不是要学的模型：只做增、删、查、改绑，不放命中次数，也不放「训练」面板。</div></figcaption></figure>
+    <figcaption><div class="pn">KW-01</div><div class="ph">关键词规则 · 按分类成组</div>
+      <div class="pd">展示按分类归组，存储仍一词一行——表结构不变。组行只写分类、几个词、词数，展开才铺词：先看「哪些分类被喂过词」，再决定点开哪一组。标题固定「内置词组（只读）」「我的规则（8条）」，括号里就是词数。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:41</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
         <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">关键词规则</span><span class="sp"></span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
-        <div class="grp" style="opacity:.45"><div class="set"><span class="ic"><svg><use href="#i-food"/></svg></span><div><div class="t">吃饭 · 外卖 · 食堂 · 火锅</div><div class="s">→ 三餐</div></div><span class="tag">内置</span></div></div>
-      </div>
-      <div class="scrim"></div>
-      <div class="sheet">
-        <div class="grab"></div>
-        <div class="hd"><span class="ti"><svg><use href="#i-plus"/></svg></span><div style="flex:1"><div class="nm">新增规则</div><div class="mt">说这句话时，自动记到哪个分类</div></div></div>
-        <div class="inp foc" style="margin-top:10px"><span class="x">打车</span><span class="cnt">2/20</span></div>
-        <div class="grpt" style="margin:12px 0 6px">绑定分类</div>
-        <div class="grp">
-          <div class="set"><span class="ic b"><svg><use href="#i-bus"/></svg></span><div><div class="t">交通</div><div class="s">一级分类</div></div><svg style="width:13px;height:13px;stroke:var(--brand);stroke-width:2;fill:none"><use href="#i-check"/></svg></div>
-          <div class="set"><span class="ic"><svg><use href="#i-taxi"/></svg></span><div><div class="t">交通 · 打车</div><div class="s">二级分类 · 更精确</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        <div class="grpt" style="margin-top:4px">我的规则（8条）</div>
+        <div class="grp kwgrp">
+          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div class="kx"><div class="t">交通 · 打车</div><div class="s">滴滴 · 顺风车 · 出租车</div></div><span class="kwn">3 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chevd"/></svg></span></div>
+          <div class="kww">
+            <span class="kwchip"><i></i>滴滴</span>
+            <span class="kwchip"><i></i>顺风车</span>
+            <span class="kwchip">出租车</span>
+            <span class="kwchip add">＋ 加词</span>
+          </div>
+          <div class="set"><span class="ic"><svg><use href="#i-noodle"/></svg></span><div class="kx"><div class="t">三餐 · 外卖</div><div class="s">外卖 · 食堂</div></div><span class="kwn">2 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-cup"/></svg></span><div class="kx"><div class="t">零食 · 咖啡</div><div class="s">生椰拿铁</div></div><span class="kwn">1 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-med"/></svg></span><div class="kx"><div class="t">医疗</div><div class="s">挂号 · 买药</div></div><span class="kwn">2 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
         </div>
-        <div class="row" style="gap:7px;margin-top:12px"><span class="btn gh" style="flex:1;height:34px">取消</span><span class="btn gr" style="flex:1;height:34px">保存</span></div>
       </div>
     </div></div>
-    <figcaption><div class="pn">KW-02</div><div class="ph">新增规则 · 就地完成</div>
-      <div class="pd">分类选择复用现成的分类弹层，不新造一个。优先级不开放调节——只留「我的规则优先于内置」这一条规则，够用。</div></figcaption></figure>
+    <figcaption><div class="pn">KW-01b</div><div class="ph">展开一组 · 词是瓦片</div>
+      <div class="pd">组内不缩进成树，词按一行瓦片平铺；末位虚线「＋ 加词」直接往这一组加。组里没有单独的「编辑」：改绑在组 ⋯ 里整组一起搬，删词在词的 ⋯ 里单独删。内置词组展开只读，没有 ＋ 也没有 ⋯。带金点的词来自沉淀，其余是手动加的。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:41</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">关键词规则</span><span class="sp"></span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
+        <div class="grpt" style="margin-top:4px">我的规则（8条）</div>
+        <div class="grp kwgrp">
+          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div class="kx"><div class="t">交通 · 打车</div><div class="s">滴滴 · 顺风车 · 出租车</div></div><span class="kwn">3 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chevd"/></svg></span></div>
+          <div class="kww" style="padding-bottom:8px">
+            <span class="kwchip"><i></i>滴滴</span>
+            <span class="kwchip"><i></i>顺风车</span>
+            <span class="kwchip">出租车</span>
+          </div>
+          <div class="kwin"><span class="tx">出租车 机场大巴</span><span class="caret"></span></div>
+          <div class="kwnote">空格分隔；「出租车」已有，保存时跳过</div>
+          <div class="kwbtns"><span class="btn gh">取消</span><span class="btn gr">保存</span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-noodle"/></svg></span><div class="kx"><div class="t">三餐 · 外卖</div><div class="s">外卖 · 食堂</div></div><span class="kwn">2 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">KW-02</div><div class="ph">加词 · 组内就地写</div>
+      <div class="pd">加词不再有表单弹窗。页头 ＋ 先用现成的分类面板选分类（记账页那套，不新造），选完落到那一组、展开并聚焦输入框；组内末位「＋ 加词」省掉选分类这一步。空格或顿号分隔可一次写多个，重名的词保存时跳过并说一句，不报错。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:42</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">关键词规则</span><span class="sp"></span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
+        <div class="grpt" style="margin-top:4px">我的规则（8条）</div>
+        <div class="grp kwgrp" style="opacity:.5">
+          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div class="kx"><div class="t">交通 · 打车</div><div class="s">滴滴 · 顺风车 · 出租车</div></div><span class="kwn">3 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic"><svg><use href="#i-noodle"/></svg></span><div class="kx"><div class="t">三餐 · 外卖</div><div class="s">外卖 · 食堂</div></div><span class="kwn">2 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet" style="z-index:3">
+        <div class="grab"></div>
+        <div class="hd"><span class="ti"><svg><use href="#i-bus"/></svg></span><div style="flex:1"><div class="nm">交通 · 打车（3 个词）</div></div></div>
+        <div class="grp" style="margin-top:11px;padding:2px 12px">
+          <div class="set"><span class="ic"><svg><use href="#i-switch"/></svg></span><div class="kx"><div class="t">换分类</div><div class="s">这 3 个词一起搬走</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic" style="border-color:rgba(191,78,59,.4);color:var(--exp)"><svg style="stroke:var(--exp)"><use href="#i-trash"/></svg></span><div class="kx"><div class="t" style="color:var(--exp)">删除整组</div><div class="s">3 个词一起删，8 秒内可撤销</div></div></div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">KW-03</div><div class="ph">组 ⋯ · 只放整组动作</div>
+      <div class="pd">组级菜单只有两件事：换分类、删除整组。换分类复用同一个分类面板；删除走确认 + 8 秒撤销。弹层顶部只有一条抓手——这是全站所有底部弹层的统一形态（§15）。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:43</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">关键词规则</span><span class="sp"></span><span class="iB on"><svg><use href="#i-plus"/></svg></span></div>
+        <div class="grpt" style="margin-top:4px">我的规则（8条）</div>
+        <div class="grp kwgrp" style="opacity:.5">
+          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div class="kx"><div class="t">交通 · 打车</div><div class="s">滴滴 · 顺风车 · 出租车</div></div><span class="kwn">3 个词</span><span class="kmore"><svg><use href="#i-more"/></svg></span><span class="ar"><svg><use href="#i-chevd"/></svg></span></div>
+          <div class="kww"><span class="kwchip"><i></i>滴滴</span><span class="kwchip"><i></i>顺风车</span><span class="kwchip">出租车</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet" style="z-index:3">
+        <div class="grab"></div>
+        <div class="hd"><span class="ti"><svg><use href="#i-key"/></svg></span><div style="flex:1"><div class="nm">关键词：打车</div></div><span class="tag g">沉淀</span></div>
+        <div class="grp" style="margin-top:11px;padding:2px 12px">
+          <div class="set"><span class="ic"><svg><use href="#i-bus"/></svg></span><div class="kx"><div class="t">改绑分类</div><div class="s">交通 · 打车</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><span class="ic" style="border-color:rgba(191,78,59,.4);color:var(--exp)"><svg style="stroke:var(--exp)"><use href="#i-trash"/></svg></span><div class="kx"><div class="t" style="color:var(--exp)">删除这个词</div><div class="s">不影响同组的其他词</div></div></div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">KW-04</div><div class="ph">词 ⋯ · 关键词：打车</div>
+      <div class="pd">词级弹层只放动作，不再承担「展示」——词已经在组里看得见。标题就是「关键词：打车」，来源以「沉淀」标签写在同一行、不再另起一句；当前分类写在「改绑分类」那一行，改绑与删除都只动这一个词。</div></figcaption></figure>
 
         <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:42</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -6142,7 +6415,23 @@ html,body{margin:0;padding:0;background:#F2EEE4}
   <div class="sec-h"><span class="no">22</span><h2>账本与切账本弹层</h2>
     <div class="meta">纸面瓦 · 默认那本换绿底<br>列表 / 弹窗 / 弹层同一种瓦</div></div>
   <p class="lead">账本图标与分类页一级卡片、切账本弹层、账单行走同一种<b>纸面瓦</b>：40dp、圆角 13、1dp 描边、墨色图形，深色下自动换成 <code>#1A2320</code>。
-    唯一的例外是默认账本——那枚瓦用品牌绿底反白，进列表第一眼就能认出身份（名字旁仍挂「默认」标签）。墨块底只留给选中态。</p>
+    唯一的例外是默认账本——那枚瓦用品牌绿底反白，进列表第一眼就能认出身份（名字旁仍挂「默认」标签）。墨块底只留给选中态。
+    换图标不跳页：图标行点开就在编辑弹窗里展开全量图标库，选完当场回填。</p>
+  <style>
+  .icgrp{display:flex;flex-wrap:wrap;gap:3px;margin-top:7px}
+  .icgrp a{font-size:7.5px;line-height:1;padding:3px 4px;border-radius:20px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink2);text-decoration:none}
+  .icgrp a.on{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:700}
+  .icx{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 3px;margin-top:7px;max-height:116px;overflow:hidden}
+  .icx .c{text-align:center}
+  .icx .c .t{width:26px;height:26px;margin:0 auto;border-radius:9px;background:var(--paper);border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--ink)}
+  .icx .c .t svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.7;fill:none}
+  .icx .c.on .t{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .icx .c .n{font-size:7px;line-height:1.2;color:var(--ink3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icx .c.on .n{color:var(--ink);font-weight:700}
+  .icfade{height:14px;margin-top:-14px;background:linear-gradient(rgba(246,243,235,0),var(--card));position:relative;pointer-events:none}
+  </style>
   <div class="grid q4">
 
     <figure class="pc"><div class="dev"><div class="scr">
@@ -6231,22 +6520,63 @@ html,body{margin:0;padding:0;background:#F2EEE4}
           <div><span class="l">笔数</span><div class="money"><span class="int">86</span></div></div></div>
       </div>
       <div class="scrim"></div>
-      <div class="modal" style="left:20px;right:20px;padding:16px 15px 14px">
-        <div class="row" style="gap:8px"><div style="font-family:var(--serif);font-size:14px;font-weight:600;flex:1">编辑账本</div>
-          <svg style="width:13px;height:13px;stroke:var(--ink3);stroke-width:1.8;fill:none"><use href="#i-close"/></svg></div>
-        <div class="inp" style="margin-top:12px"><span class="x">旅行账本</span></div>
+      <div class="sheet" style="z-index:3">
+        <div class="grab"></div>
+        <div style="font-family:var(--serif);font-size:14px;font-weight:600">编辑账本</div>
+        <div class="inp" style="height:33px;margin-top:10px"><span class="x">旅行账本</span></div>
         <div class="grp" style="padding:9px 10px;margin-top:9px;background:rgba(31,74,56,.05);border-color:rgba(31,74,56,.22)">
           <div class="row" style="gap:9px"><span class="tl p" style="width:34px;height:34px;border-radius:10px"><svg style="width:17px;height:17px"><use href="#i-plane"/></svg></span>
             <div style="flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700">图标</div>
-              <div style="font-size:8.5px;color:var(--ink3);margin-top:2px">旅行 · 出行</div></div>
-            <span style="width:30px;height:30px;border-radius:9px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center"><svg style="width:14px;height:14px;stroke:var(--brand);stroke-width:1.7;fill:none"><use href="#i-switch"/></svg></span></div>
+              <div style="font-size:8.5px;color:var(--ink3);margin-top:2px">机票 · 出行</div></div>
+            <span style="width:30px;height:30px;border-radius:9px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center"><svg style="width:14px;height:14px;stroke:var(--brand);stroke-width:1.7;fill:none"><use href="#i-chevd"/></svg></span></div>
         </div>
-        <div style="display:flex;align-items:center;padding:8px 0"><span style="flex:1;font-size:13.5px;color:var(--ink)">设为默认账本</span><span class="sw"></span></div>
-        <div class="btn gr" style="height:34px;margin-top:8px">保存</div>
+        <div style="display:flex;align-items:center;padding:9px 0 7px"><span style="flex:1;font-size:13.5px;color:var(--ink)">设为默认账本</span><span class="sw"></span></div>
+        <div class="btn gr" style="height:34px;margin-top:6px">保存</div>
       </div>
     </div></div>
-    <figcaption><div class="pn">LG-02</div><div class="ph">编辑账本 · 三样一起改</div>
-      <div class="pd">名称、图标、默认身份都在这一层改。图标行本身就是入口（右端 ⇄），走进全屏图标库；选完立刻回填，不点保存不写库。「设为默认账本」只在非默认、未结算的账本上出现——默认账本没有「取消默认」这条路，已结算的账本也不该再被推成默认。</div></figcaption></figure>
+    <figcaption><div class="pn">LG-02</div><div class="ph">编辑账本 · 底部弹层，三样一起改</div>
+      <div class="pd">新建与编辑都走底部弹层，和全站其他弹层同一种形态（§15）：顶部只有一条抓手，收起靠下滑或点遮罩。名称、图标、默认身份都在这一层改。图标行本身就是入口（右端 chevron），点开就在弹层内展开全量图标库（LG-02b）；选完立刻回填，不点保存不写库。「设为默认账本」只在非默认、未结算的账本上出现——默认账本没有「取消默认」这条路，已结算的账本也不该再被推成默认。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:46</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-menu"/></svg></span><span class="tt">旅行账本</span><span class="sp"></span><span class="iB"><svg><use href="#i-chart"/></svg></span></div>
+        <div class="sum"><div><span class="l">本月支出</span><div class="money"><span class="cur">¥</span><span class="int">4,920</span><span class="dec">.00</span></div></div>
+          <div><span class="l">笔数</span><div class="money"><span class="int">86</span></div></div></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet" style="z-index:3;padding-bottom:14px">
+        <div class="grab"></div>
+        <div style="font-family:var(--serif);font-size:14px;font-weight:600">编辑账本</div>
+        <div class="inp" style="height:32px;margin-top:8px"><span class="x">旅行账本</span></div>
+        <div class="grp" style="padding:9px 10px;margin-top:8px;background:rgba(31,74,56,.05);border-color:rgba(31,74,56,.22)">
+          <div class="row" style="gap:9px"><span class="tl p" style="width:34px;height:34px;border-radius:10px"><svg style="width:17px;height:17px"><use href="#i-plane"/></svg></span>
+            <div style="flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700">图标</div>
+              <div style="font-size:8.5px;color:var(--ink3);margin-top:2px">机票 · 出行</div></div>
+            <span style="width:30px;height:30px;border-radius:9px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center"><svg style="width:14px;height:14px;stroke:var(--brand);stroke-width:1.7;fill:none;transform:rotate(180deg)"><use href="#i-chevd"/></svg></span></div>
+          <div class="inp" style="height:28px;margin-top:8px;padding:0 9px"><svg style="width:12px;height:12px;stroke:var(--ink3);stroke-width:1.8;fill:none"><use href="#i-search"/></svg><span class="x mut" style="font-size:9.5px">搜索图标或分组</span></div>
+          <div class="icgrp">
+            <a>收入</a><a>理财</a><a>餐饮</a><a>日常</a><a>购物</a><a>服饰</a>
+            <a>美妆</a><a>居住</a><a class="on">出行</a><a>娱乐</a><a>运动</a><a>人情</a>
+          </div>
+          <div class="icx">
+            <div class="c"><div class="t"><svg><use href="#i-bus"/></svg></div><div class="n">公交</div></div>
+            <div class="c"><div class="t"><svg><use href="#i-metro"/></svg></div><div class="n">地铁</div></div>
+            <div class="c"><div class="t"><svg><use href="#i-taxi"/></svg></div><div class="n">打车</div></div>
+            <div class="c on"><div class="t"><svg><use href="#i-plane"/></svg></div><div class="n">机票</div></div>
+            <div class="c"><div class="t"><svg><use href="#i-car"/></svg></div><div class="n">自驾</div></div>
+            <div class="c"><div class="t"><svg><use href="#i-fuel"/></svg></div><div class="n">加油</div></div>
+            <div class="c"><div class="t"><svg><use href="#i-toll"/></svg></div><div class="n">过路费</div></div>
+            <div class="c"><div class="t"><svg><use href="#i-park"/></svg></div><div class="n">停车</div></div>
+          </div>
+          <div class="icfade"></div>
+        </div>
+        <div style="display:flex;align-items:center;padding:8px 0 6px"><span style="flex:1;font-size:13.5px;color:var(--ink)">设为默认账本</span><span class="sw"></span></div>
+        <div class="btn gr" style="height:34px;margin-top:2px">保存</div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">LG-02b</div><div class="ph">编辑账本 · 图标在弹层内就地展开</div>
+      <div class="pd">点图标行就地展开<b>全量</b>图标库：搜索、12 组筛选、136 枚都在弹层里，不再跳全屏页；选中的那枚是墨块底 + 名称加粗。网格给上限高度（约 240dp）并在内部滚动，弹层本身也不顶满全屏——上面始终留得下一截遮罩。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:47</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -6270,7 +6600,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <figcaption><div class="pn">LG-03</div><div class="ph">切账本 · 每本各自的图标</div>
       <div class="pd">每行读账本自己的 <code>icon_key</code>，四本账本四张脸；瓦片同为纸面底。点一行就切走并收起，没有确认按钮。列表只放还在用的账本——已结算的不出现，结算就是锁定，不能再往里记新账。</div></figcaption></figure>
 
-    <div class="card" style="flex:1 1 306px;width:306px;align-self:start">
+    <div class="card" style="flex:0 0 306px;width:306px;max-width:306px;align-self:start">
       <div class="shl" style="margin:0">LG-04 · 图标瓦与文案<span class="x"></span><span class="shlk">三处同一个底</span></div>
       <div class="row" style="gap:10px;margin-top:9px;align-items:center">
         <div style="text-align:center"><span class="tl p" style="width:40px;height:40px;border-radius:13px"><svg style="width:20px;height:20px"><use href="#i-wallet"/></svg></span><div style="font-size:8px;color:var(--brand);margin-top:4px">纸面瓦</div></div>
@@ -6279,7 +6609,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <table class="tbl" style="font-size:9px;margin-top:11px">
         <tr><th style="text-align:left;width:32%">位置</th><th style="text-align:left">用同一枚瓦</th></tr>
         <tr><td>我的账本卡片</td><td>40dp，瓦在名称左，读 <code>ledger.icon_key</code>；默认那枚换品牌绿底</td></tr>
-        <tr><td>编辑 / 新建弹窗</td><td>34dp 同款纸面瓦，进页面回填当前图标</td></tr>
+        <tr><td>编辑 / 新建弹层</td><td>34dp 同款纸面瓦；点图标行就地展开全量图标库（LG-02b），不跳页</td></tr>
         <tr><td>切账本弹层</td><td>34dp，每本各自那枚，不共用一个图形</td></tr>
       </table>
       <div class="shl" style="margin:14px 0 4px">删除空账本弹窗<span class="x"></span><span class="shlk">不提分类</span></div>
@@ -7242,7 +7572,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <div class="row" style="gap:8px;align-items:flex-start"><svg style="width:14px;height:14px;stroke:var(--brand);stroke-width:1.8;fill:none;flex:none;margin-top:1px"><use href="#i-info"/></svg>
       <span style="font-size:9.5px;color:var(--ink2);line-height:1.7"><b style="color:var(--ink)">这份文件是自包含的。</b>
       样式与图标都在同一份 HTML 里，改哪一屏就直接编辑对应的 <code>&lt;figure class="pc"&gt;</code>；新增屏请复用本页已有的组件类名，不要另起一套视觉。
-      这份文件是自包含的：29 节 / 127 屏，样式与图标都在这一份 HTML 里。</span></div>
+      当前共 29 节 / 137 屏。</span></div>
   </div>
 </section>
 
@@ -7280,10 +7610,11 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>X-04…X-07</td><td>小莉配置四屏</td><td>§11</td><td>ui/assistant/AssistantConfigScreen.kt · AssistantConfigViewModel.kt · domain/ai/AiProviderPresets.kt</td></tr>
       <tr><td>P18</td><td>月度分析报告</td><td>§11</td><td>ui/assistant/AssistantAnalysisViewModel.kt · ai_report 表</td></tr>
       <tr><td>P19</td><td>备份与同步、WebDAV 手动快照</td><td>§13</td><td>ui/backup/BackupScreen.kt · data/backup/BackupContainer.kt</td></tr>
-      <tr><td>P20 · P20b</td><td>设置与数据隐私</td><td>§13</td><td>ui/settings/SettingsScreen.kt · SettingsRows.kt · data/preferences/TallyPreferences.kt</td></tr>
+      <tr><td>P20 · P20b–P20e</td><td>设置、数据隐私与检查更新</td><td>§13</td><td>ui/settings/SettingsScreen.kt · SettingsRows.kt · data/preferences/TallyPreferences.kt</td></tr>
       <tr><td>P01</td><td>启动引导三条路</td><td>§10</td><td>ui/onboarding/OnboardingScreen.kt</td></tr>
+      <tr><td>G-01 · G-01b · G-02</td><td>首页一次性手势引导与「更多手势」半屏</td><td>§10</td><td>ui/home/HomeScreen.kt · data/preferences/TallyPreferences.kt</td></tr>
       <tr><td>D-01</td><td>深色主题</td><td>§14</td><td>ui/design/TallyColors.kt · isDark</td></tr>
-      <tr><td>KW-01 · KW-02</td><td>关键词规则页与就地新增</td><td>§16</td><td><code>ui/keyword/KeywordRuleScreen.kt · KeywordRuleViewModel.kt · data/ai/KeywordRuleRepository.kt</code></td></tr>
+      <tr><td>KW-01 · KW-01b · KW-02 · KW-03 · KW-04</td><td>关键词按分类成组 · 就地加词 · 组/词动作弹层</td><td>§16</td><td><code>ui/keyword/KeywordRuleScreen.kt · KeywordRuleViewModel.kt · data/ai/KeywordRuleRepository.kt</code></td></tr>
       <tr><td>LN-01</td><td>保存后的沉淀气泡</td><td>§16</td><td><code>data/ai/KeywordSediment.kt · ui/bill/BillViewModels.kt · ui/keyword/KeywordRuleScreen.kt</code></td></tr>
       <tr><td>TK-01</td><td>时刻选择器 · 录入粒度落到那一条</td><td>§16</td><td><code>ui/common/TallyDateTimePicker.kt · ui/bill/BillEntryScreen.kt</code></td></tr>
       <tr><td>RF-01</td><td>退款 · 关联原单与累计拦截</td><td>§16</td><td><code>ui/bill/BillRefundSheet.kt · data/repository/BillRepository.kt</code></td></tr>
@@ -7299,7 +7630,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>SF-02</td><td>结果上限 1000 笔与截断说明</td><td>§19</td><td><code>ui/search/SearchViewModel.kt · data/db/dao/BillDao.kt</code></td></tr>
       <tr><td>DR-01 · DR-02 · DR-03</td><td>日报表点开某天 · 末级明细 · 三层规范</td><td>§20</td><td><code>ui/stats/CategoryDrillSheet.kt · StatsScreen.kt</code></td></tr>
       <tr><td>IN-01 … IN-05</td><td>分期卡 · 明细 · 编辑 · 补记 · 槽位</td><td>§21</td><td><code>ui/installment/InstallmentScreen.kt · InstallmentFormScreen.kt · domain/schedule/InstallmentSchedule.kt</code></td></tr>
-      <tr><td>LG-01 · LG-02 · LG-03</td><td>我的账本 · 编辑 · 切账本弹层</td><td>§22</td><td><code>ui/ledger/LedgerScreen.kt · LedgerDialogs.kt · ui/common/CategoryPicker.kt</code></td></tr>
+      <tr><td>LG-01 · LG-02 · LG-02b · LG-03</td><td>我的账本 · 编辑 · 就地展开全量图标库 · 切账本弹层</td><td>§22</td><td><code>ui/ledger/LedgerScreen.kt · LedgerDialogs.kt · ui/common/CategoryPicker.kt</code></td></tr>
       <tr><td>LG-04</td><td>图标瓦与令牌</td><td>§22</td><td><code>ui/design/IconLibrary.kt · TallyColors.kt · TallyType.kt</code></td></tr>
       <tr><td>BU21-01 · 02 · 10 · 11</td><td>首页那条预算进度 · 超支转陶土 · 速览弹层</td><td>§23</td><td><code>ui/home/HomeScreen.kt · ui/design/BudgetComponents.kt</code></td></tr>
       <tr><td>BU21-03 · 06 · 07 · 08 · 13 · 14</td><td>预算总览 · 新建 · 保存拦截 · 历史</td><td>§23</td><td><code>ui/budget/BudgetScreen.kt · BudgetViewModel.kt · data/repository/BudgetRepository.kt</code></td></tr>
@@ -7317,7 +7648,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 </section>
 <footer class="sec" style="border-top:1.5px solid var(--ink);padding-top:22px;display:flex;gap:18px;flex-wrap:wrap;align-items:center">
   <div style="font-family:var(--serif);font-size:17px;font-weight:600">Tally 塔莉 · 界面设计图</div>
-  <div style="font-size:11px;color:var(--ink2)">基线 <b>当前主仓 HEAD</b>（<code>0.1.1-dev</code> 起的形态） · 29 节 / 127 屏 · Room 库 v1（无迁移链）<br>
+  <div style="font-size:11px;color:var(--ink2)">基线 <b>当前主仓 HEAD</b>（<code>0.1.3</code> 的形态） · 29 节 / 137 屏 · Room 库 v1（无迁移链）<br>
   屏号索引见 §29 · 规则与验收见 §15 与 §28</div>
   <div style="flex:1"></div>
   <div class="ia"><svg><use href="#i-ai"/></svg>小莉帮你管好每一笔收支</div>

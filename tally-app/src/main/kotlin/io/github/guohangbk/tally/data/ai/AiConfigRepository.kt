@@ -17,6 +17,7 @@ import io.github.guohangbk.tally.domain.ai.AiTarget
 import io.github.guohangbk.tally.domain.ai.toOutcome
 import io.github.guohangbk.tally.domain.model.AiStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -57,6 +58,15 @@ class AiConfigRepository(
     suspend fun current(): AiConfiguration? = dao.find()?.toDomain()
 
     suspend fun isEnabled(): Boolean = preferences.settings.first().assistantEnabled
+
+    /** 一次性读取「能不能用、为什么不能用」，给调用方做同步判断。 */
+    suspend fun availability(): AiAvailability = availabilityOf(dao.find()?.toDomain(), isEnabled())
+
+    /** 订阅式可用性：右臂三态与首页引导都读这一条，开关或配置一变就跟着走。 */
+    fun observeAvailability(): Flow<AiAvailability> =
+        combine(dao.observe(), preferences.settings) { config, settings ->
+            availabilityOf(config?.toDomain(), settings.assistantEnabled)
+        }
 
     suspend fun target(): AiTarget? {
         val config = dao.find() ?: return null
@@ -105,6 +115,8 @@ class AiConfigRepository(
             ),
         )
         preferences.setAssistantEnabled(true)
+        // 第一次真正配通：回首页说一次「小莉已经就绪」，之后不再提。
+        preferences.markAssistantReadyHint()
         return AiSaveOutcome.Saved(report, vision)
     }
 
@@ -172,6 +184,15 @@ private fun AiConfigEntity.toState(): AiState = AiState(
     status = status.toAiStatus(),
     consecutiveFailures = consecutiveFailures,
 )
+
+/** 开关与配置行的唯一合成口径：页面不自己拼「有没有 Key」「开没开」。 */
+private fun availabilityOf(config: AiConfiguration?, enabled: Boolean): AiAvailability =
+    AiAvailability(
+        status = config?.status ?: AiStatus.UNCONFIGURED,
+        enabled = enabled,
+        consecutiveFailures = config?.consecutiveFailures ?: 0,
+        visionCapable = config?.visionCapable ?: false,
+    )
 
 private fun AiConfigEntity.toDomain(): AiConfiguration = AiConfiguration(
     id = id,

@@ -26,9 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -94,6 +92,7 @@ import io.github.guohangbk.tally.ui.design.MarkerTone
 import io.github.guohangbk.tally.ui.design.MoneySign
 import io.github.guohangbk.tally.ui.design.MoneyText
 import io.github.guohangbk.tally.ui.design.TagTone
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
@@ -1811,9 +1810,8 @@ private fun StatsAnalysisSheet(
     val colors = tallyColors
     val cloud = state.availability?.usableQuietly == true
     val report = state.report
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(

@@ -19,9 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,9 +40,9 @@ import androidx.compose.foundation.layout.RowScope
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.ui.design.ButtonVariant
-import io.github.guohangbk.tally.ui.design.BottomSheetGrabber
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.TagTone
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyListRow
 import io.github.guohangbk.tally.ui.design.TallyTag
@@ -314,13 +312,11 @@ private fun BatchLedgerSheet(
     onPick: (String) -> Unit,
 ) {
     val colors = tallyColors
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
-            BottomSheetGrabber(modifier = Modifier.align(Alignment.CenterHorizontally))
             Spacer(Modifier.height(12.dp))
             Text("移到其他账本", style = TallyType.sectionTitle, color = colors.ink)
             if (generatedCount > 0) {

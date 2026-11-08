@@ -22,14 +22,28 @@ data class AiAvailability(
     val consecutiveFailures: Int,
     val visionCapable: Boolean,
 ) {
-    /** 入口显示条件：开关打开且配置有效。未配置时界面里不出现「小莉」文案。 */
+    /** 入口显示条件：开关打开且配置有效。管的是统计页与对话页里的 AI 触点；＋ 右臂另走 [entry]，常驻。 */
     val showsEntry: Boolean
         get() = enabled && status != AiStatus.UNCONFIGURED
 
     /** 已就绪与疑似异常都能用；已断开只做用户显式重试。 */
     val usableQuietly: Boolean
         get() = showsEntry && status != AiStatus.DISCONNECTED
+
+    /**
+     * ＋ 右臂的落点。右臂常驻：关闭时去设置里的开关区、开启但没配好去配置页，
+     * 只有真的可用才进对话——入口随状态消失，用户就没机会知道「右滑有小莉」这件事。
+     */
+    val entry: AssistantEntry
+        get() = when {
+            !enabled -> AssistantEntry.Settings
+            status == AiStatus.UNCONFIGURED -> AssistantEntry.Configure
+            else -> AssistantEntry.Chat
+        }
 }
+
+/** 右滑小莉的三种去向，导航与右臂文案共用。 */
+enum class AssistantEntry { Settings, Configure, Chat }
 
 sealed interface AiEnhancement {
     data class Applied(val completion: AiCompletion) : AiEnhancement
@@ -50,16 +64,7 @@ class AiGateway(
     private val client: AiClient,
     private val configs: AiConfigRepository,
 ) {
-    suspend fun availability(): AiAvailability {
-        val config = configs.current()
-        val enabled = configs.isEnabled()
-        return AiAvailability(
-            status = config?.status ?: AiStatus.UNCONFIGURED,
-            enabled = enabled,
-            consecutiveFailures = config?.consecutiveFailures ?: 0,
-            visionCapable = config?.visionCapable ?: false,
-        )
-    }
+    suspend fun availability(): AiAvailability = configs.availability()
 
     suspend fun enhance(request: AiRequest): AiEnhancement {
         val availability = availability()

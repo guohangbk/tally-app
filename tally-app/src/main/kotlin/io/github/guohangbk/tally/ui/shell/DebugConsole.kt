@@ -21,9 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +44,7 @@ import io.github.guohangbk.tally.data.speech.SpeechOutcome
 import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.tallyColors
@@ -117,9 +116,8 @@ fun DebugConsoleOverlay(modifier: Modifier = Modifier) {
     }
 
     if (open) {
-        ModalBottomSheet(
+        TallyBottomSheet(
             onDismissRequest = { open = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = colors.paper,
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp).padding(bottom = 18.dp)) {

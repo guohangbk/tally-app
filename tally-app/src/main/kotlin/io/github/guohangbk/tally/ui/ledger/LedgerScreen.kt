@@ -57,7 +57,6 @@ import java.util.Locale
 fun LedgerScreen(
     viewModel: LedgerViewModel,
     onBack: () -> Unit,
-    onPickLedgerIcon: () -> Unit,
     onOpenOverview: (String) -> Unit,
     onSettleLedger: (String) -> Unit,
 ) {
@@ -137,7 +136,7 @@ fun LedgerScreen(
         }
     }
 
-    LedgerDialogHost(state, viewModel, onPickLedgerIcon)
+    LedgerDialogHost(state, viewModel)
 }
 
 private class LedgerCardActions(

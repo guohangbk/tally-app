@@ -78,6 +78,18 @@ private const val PREVIEW_PERIODS = 3
 
 enum class EndMode { NEVER, ON_DATE, AFTER_COUNT }
 
+/**
+ * 「明细」弹层的整体状态：规则 + 已生成的期次。
+ *
+ * [loading] 期间不把空列表交给界面——否则弹层第一帧会先画一句「还没有生成过账单」，
+ * 查询回来再跳成几十行，就是那个看得见的闪。空态只代表「真的没有」，不代表「还没查」。
+ */
+data class RecurringDetailState(
+    val view: RecurringRuleView,
+    val periods: List<RecurringPeriodRow> = emptyList(),
+    val loading: Boolean = false,
+)
+
 class RecurringViewModel(private val graph: AppGraph) : ViewModel() {
     private val local = MutableStateFlow(RecurringUiState())
 
@@ -99,22 +111,23 @@ class RecurringViewModel(private val graph: AppGraph) : ViewModel() {
     /**
      * 「明细」弹层：当前看的是哪一条任务，以及它已经生成的那些期。
      * 打开时查一次即可——这一页的规则不会在自己脸上被改，改完关掉再开就是新的。
+     *
+     * 规则和数据放在同一个 StateFlow 里：先置 loading=true 再异步取，取回后一次性
+     * 换掉。界面据此在加载中只画骨架，不会把「空」误读成「没有账单」。
      */
-    private val detailTarget = MutableStateFlow<RecurringRuleView?>(null)
-    val detail: StateFlow<RecurringRuleView?> = detailTarget
-
-    private val detailRows = MutableStateFlow<List<RecurringPeriodRow>>(emptyList())
-    val periods: StateFlow<List<RecurringPeriodRow>> = detailRows
+    private val detailState = MutableStateFlow<RecurringDetailState?>(null)
+    val detail: StateFlow<RecurringDetailState?> = detailState
 
     fun openDetail(view: RecurringRuleView) {
-        detailTarget.value = view
-        detailRows.value = emptyList()
-        viewModelScope.launch { detailRows.value = graph.billRepository.recurringPeriods(view.rule.id) }
+        detailState.value = RecurringDetailState(view, loading = true)
+        viewModelScope.launch {
+            val rows = graph.billRepository.recurringPeriods(view.rule.id)
+            detailState.value = RecurringDetailState(view, periods = alignPeriods(rows, view.rule.executedPeriods))
+        }
     }
 
     fun closeDetail() {
-        detailTarget.value = null
-        detailRows.value = emptyList()
+        detailState.value = null
     }
 
     fun catchUpAll() = runAction { graph.automationService.executeAll().generated to "已补记" }
@@ -167,6 +180,28 @@ class RecurringViewModel(private val graph: AppGraph) : ViewModel() {
                 local.value = local.value.copy(busy = false, error = error.message ?: "操作没有完成")
             }
         }
+    }
+}
+
+/**
+ * 明细按排期期号对齐：删掉的那一期也占一行（灰着），后面的期号才不会凭空往前跳。
+ * 回收站里还留着的行有真实日期；回收站也清掉的期次只剩期号。
+ * 期号为 0 的老数据对不上编号，原样返回，不硬补。
+ */
+private fun alignPeriods(rows: List<RecurringPeriodRow>, executedPeriods: Int): List<RecurringPeriodRow> {
+    if (executedPeriods <= 0 || rows.any { it.index <= 0 }) return rows
+    val byIndex = rows.associateBy { it.index }
+    val top = maxOf(executedPeriods, rows.maxOfOrNull { it.index } ?: 0)
+    return (top downTo 1).map { index ->
+        byIndex[index] ?: RecurringPeriodRow(
+            billId = "",
+            index = index,
+            occurredAt = 0L,
+            amountMinor = 0L,
+            isIncome = false,
+            note = null,
+            deleted = true,
+        )
     }
 }
 

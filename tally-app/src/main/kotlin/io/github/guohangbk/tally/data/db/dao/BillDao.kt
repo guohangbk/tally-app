@@ -11,6 +11,7 @@ import io.github.guohangbk.tally.data.db.query.LedgerSpan
 import io.github.guohangbk.tally.data.db.query.LedgerStat
 import io.github.guohangbk.tally.data.db.query.PlanPeriodRow
 import io.github.guohangbk.tally.data.db.query.RecycleSummary
+import io.github.guohangbk.tally.data.db.query.RecurringPeriodRowTuple
 import io.github.guohangbk.tally.data.db.query.StatsBillRow
 import io.github.guohangbk.tally.domain.model.BillSummary
 import io.github.guohangbk.tally.domain.model.RefundEntry
@@ -495,12 +496,21 @@ interface BillDao {
     )
     suspend fun findByRecurringPeriod(ruleId: String, periodIndex: Int): BillEntity?
 
-    /** 某个周期任务已生成的全部账单：明细弹层按期次排着看。 */
+    /**
+     * 某个周期任务生成过的全部期：明细弹层用，**含回收站里的行**。
+     *
+     * 这一期被删掉后仍占着排期期号，明细要把缺号补成灰行，只看有效行会让期号凭空跳。
+     * 分类名不再随行取回——弹层顶部已经写了一行分类路径。
+     */
     @Query(
-        "SELECT * FROM bill WHERE recurrence_rule_id = :ruleId AND deleted_at IS NULL " +
-            "ORDER BY period_index ASC, occurred_at ASC",
+        """
+        SELECT b.id AS bill_id, b.period_index, b.occurred_at, b.amount_minor, b.type, b.deleted_at, b.note
+        FROM bill b
+        WHERE b.recurrence_rule_id = :ruleId
+        ORDER BY b.period_index DESC, b.occurred_at DESC
+        """
     )
-    suspend fun findByRecurringRule(ruleId: String): List<BillEntity>
+    suspend fun findByRecurringRule(ruleId: String): List<RecurringPeriodRowTuple>
 
     @Query(
         "SELECT * FROM bill WHERE installment_plan_id = :planId AND period_index = :periodIndex " +

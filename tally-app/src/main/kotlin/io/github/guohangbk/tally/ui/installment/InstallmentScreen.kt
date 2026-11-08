@@ -19,9 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +45,7 @@ import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.IconTile
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyCardAction
@@ -376,9 +375,8 @@ private fun InstallmentDetailSheet(
     val colors = tallyColors
     val plan = view.plan
     val settled = view.status != InstallmentStatus.ACTIVE
-    ModalBottomSheet(
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.paper,
     ) {
         Column(

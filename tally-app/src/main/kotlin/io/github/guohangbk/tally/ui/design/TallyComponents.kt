@@ -7,20 +7,27 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -679,6 +686,50 @@ fun BottomSheetGrabber(modifier: Modifier = Modifier) {
             .background(tallyColors.ink3.copy(alpha = 0.4f)),
     )
 }
+
+/**
+ * 全站唯一的底部弹层。
+ *
+ * 抓手只留 M3 默认那一条——以前各处既用默认 dragHandle、又在内容里画一根，
+ * 顶上就是两条横杠。内容自己负责限高和内部滚动（长列表不要顶满整屏）。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TallyBottomSheet(
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color = tallyColors.paper,
+    skipPartiallyExpanded: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = tallyColors
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded),
+        containerColor = containerColor,
+        shape = TallySheetShape,
+        scrimColor = colors.ink.copy(alpha = if (colors.isDark) 0.62f else 0.42f),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) { BottomSheetGrabber() }
+        },
+        content = content,
+    )
+}
+
+/**
+ * 弹层正文的限高：内容长度跟着数据走时用它，360dp 封顶并内部滚动。
+ * 数据一多就顶满整屏是以前的常见毛病，别在调用点再手写一遍。
+ */
+@Composable
+fun Modifier.sheetBody(): Modifier =
+    heightIn(max = 360.dp)
+        .verticalScroll(rememberScrollState())
 
 @Composable
 fun ColumnGap(height: Int) {

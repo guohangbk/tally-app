@@ -10,22 +10,25 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,6 +47,7 @@ import io.github.guohangbk.tally.ui.design.IconTone
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.MoneySign
 import io.github.guohangbk.tally.ui.design.MoneyText
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyCardAction
@@ -72,7 +76,6 @@ fun RecurringScreen(onBack: () -> Unit, onCreate: () -> Unit, onEdit: (String) -
     val viewModel = tallyViewModel { RecurringViewModel(graph) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val detail by viewModel.detail.collectAsStateWithLifecycle()
-    val periods by viewModel.periods.collectAsStateWithLifecycle()
     val colors = tallyColors
     var confirmAction by remember { mutableStateOf<ConfirmAction?>(null) }
 
@@ -191,12 +194,13 @@ fun RecurringScreen(onBack: () -> Unit, onCreate: () -> Unit, onEdit: (String) -
         }
     }
 
-    detail?.let { view ->
+    detail?.let { sheet ->
         RecurringDetailSheet(
-            view = view,
-            periods = periods,
+            view = sheet.view,
+            periods = sheet.periods,
+            loading = sheet.loading,
             onDismiss = viewModel::closeDetail,
-            onCatchUp = if (view.pendingCount > 0) ({ viewModel.catchUp(view.rule.id) }) else null,
+            onCatchUp = if (sheet.view.pendingCount > 0) ({ viewModel.catchUp(sheet.view.rule.id) }) else null,
         )
     }
 }
@@ -377,25 +381,38 @@ private fun RecurringCard(
 }
 
 /**
- * 明细弹层：这一条任务已经生成的每一期——期次、日期、分类与备注、金额，末尾一行合计。
- * 「已生成 N 期」与期限都在这张弹层里说清楚，卡面不再堆这些数。
+ * 明细弹层：这一条任务生成过的每一期——期次、日期、备注与金额，末尾一行合计。
+ * 已删掉的期次也占一行（灰着），期号才不会凭空跳；「已生成 N 期」与期限都在这张弹层里说清楚。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecurringDetailSheet(
     view: RecurringRuleView,
     periods: List<RecurringPeriodRow>,
+    loading: Boolean,
     onDismiss: () -> Unit,
     onCatchUp: (() -> Unit)?,
 ) {
     val colors = tallyColors
     val rule = view.rule
-    ModalBottomSheet(
+    val listScroll = rememberScrollState()
+    // 底部淡出只在「下面还有内容」时出现；滑到底就收掉，不挡住合计行。
+    val showBottomFade by remember {
+        derivedStateOf { listScroll.value < listScroll.maxValue }
+    }
+    TallyBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.card,
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 20.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                // 故意不取行高的整数倍：内容再多也只到这一屏，最后一行会被裁掉半截，
+                // 配合下面的渐隐，一眼就知道还能往下滑。
+                .heightIn(max = 520.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconTile(iconKey = view.categoryIcon ?: "repeat", label = rule.name, size = 34.dp, corner = 10.dp)
                 Spacer(Modifier.width(9.dp))
@@ -409,11 +426,12 @@ private fun RecurringDetailSheet(
                         maxLines = 1,
                     )
                 }
+                // 删掉的期次也占行，所以「已生成」是排期里的期号上限，不再按存活行数算。
                 Text(
-                    text = "已生成 ${periods.size} 期",
+                    text = if (loading) "读取中…" else "已生成 ${maxOf(rule.executedPeriods, periods.size)} 期",
                     fontSize = 11.sp, lineHeight = 13.8.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.ink2,
+                    color = if (loading) colors.ink3 else colors.ink2,
                 )
                 Spacer(Modifier.width(8.dp))
                 InlineIcon(
@@ -432,61 +450,120 @@ private fun RecurringDetailSheet(
                 if (view.pendingCount > 0) TallyTag(text = "待补 ${view.pendingCount} 笔", tone = TagTone.GOLD)
             }
             Spacer(Modifier.height(4.dp))
-            Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                if (periods.isEmpty()) {
-                    Text(
+            Box(modifier = Modifier.weight(1f, fill = false)) {
+                Column(modifier = Modifier.fillMaxWidth().verticalScroll(listScroll)) {
+                when {
+                    // 加载中只画一行灰字，绝不把「空」误显示成「还没有生成过账单」
+                    loading -> Text(
+                        text = "正在读取已生成的账单…",
+                        style = TallyType.helper,
+                        color = colors.ink3,
+                        modifier = Modifier.padding(vertical = 14.dp),
+                    )
+
+                    // 删掉的期次已经补成灰行；这里真的就是「一期都没生成过」。
+                    periods.isEmpty() -> Text(
                         text = "还没有生成过账单",
                         style = TallyType.helper,
                         color = colors.ink3,
                         modifier = Modifier.padding(vertical = 14.dp),
                     )
-                }
-                periods.forEachIndexed { position, row ->
-                    if (position > 0) {
+
+                    else -> {
+                        val hasDeleted = periods.any { it.deleted }
+                        periods.forEachIndexed { position, row ->
+                            if (position > 0) {
+                                Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line.copy(alpha = 0.5f)))
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    // 删掉的那一期只说明「这期曾经在、现在不在」，不该和真账抢注意力。
+                                    .alpha(if (row.deleted) 0.55f else 1f)
+                                    .padding(vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "第 ${if (row.index > 0) row.index else position + 1} 期",
+                                    fontSize = 11.5.sp, lineHeight = 14.4.sp,
+                                    color = colors.ink3,
+                                    modifier = Modifier.width(54.dp),
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        // 回收站也清掉的期次没有日期可写，直接用「已删除」占住这一行。
+                                        text = if (row.occurredAt > 0) formatPeriodDate(row.occurredAt) else "已删除",
+                                        fontSize = 13.sp, lineHeight = 16.3.sp,
+                                        color = if (row.deleted) colors.ink2 else colors.ink,
+                                        maxLines = 1,
+                                    )
+                                    // 分类在弹层顶部已经写过一次，这里只留这一期自己的备注。
+                                    val subtitle = when {
+                                        row.deleted && row.billId.isNotEmpty() -> "可在回收站找回"
+                                        row.deleted -> null
+                                        else -> row.note
+                                    }
+                                    if (subtitle != null) {
+                                        Text(
+                                            text = subtitle,
+                                            fontSize = 11.sp,
+                                            lineHeight = 15.sp,
+                                            color = colors.ink3,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                                when {
+                                    !row.deleted -> MoneyText(
+                                        amountMinor = row.amountMinor,
+                                        sign = MoneySign.NONE,
+                                        style = TallyType.moneyList,
+                                        color = if (row.isIncome) colors.income else colors.expense,
+                                        showCurrency = false,
+                                    )
+                                    // 有日期的灰行右侧标状态；没日期的灰行主行已经写了「已删除」。
+                                    row.occurredAt > 0 -> Text(
+                                        text = "已删除",
+                                        fontSize = 11.sp, lineHeight = 14.sp,
+                                        color = colors.ink3,
+                                    )
+                                    else -> Unit
+                                }
+                            }
+                        }
+                        // 合计只在「真的有账单」时出现，加载中不画；删掉的期次不算进金额。
                         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line.copy(alpha = 0.5f)))
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "第 ${if (row.index > 0) row.index else position + 1} 期",
-                            fontSize = 11.5.sp, lineHeight = 14.4.sp,
-                            color = colors.ink3,
-                            modifier = Modifier.width(54.dp),
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(formatPeriodDate(row.occurredAt), fontSize = 13.sp, lineHeight = 16.3.sp, color = colors.ink, maxLines = 1)
+                        Spacer(Modifier.height(9.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = row.categoryName + (row.note?.let { " · $it" } ?: ""),
-                                fontSize = 11.sp,
-                                lineHeight = 15.sp,
-                                color = colors.ink3,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                                text = if (hasDeleted) "合计（现存）" else "合计",
+                                fontSize = 11.5.sp, lineHeight = 14.4.sp, color = colors.ink3,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = formatAmount(periods.filterNot { it.deleted }.sumOf { it.amountMinor }),
+                                style = TallyType.moneyList,
+                                color = colors.ink,
                             )
                         }
-                        MoneyText(
-                            amountMinor = row.amountMinor,
-                            sign = MoneySign.NONE,
-                            style = TallyType.moneyList,
-                            color = if (row.isIncome) colors.income else colors.expense,
-                            showCurrency = false,
-                        )
                     }
                 }
-                if (periods.isNotEmpty()) {
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line.copy(alpha = 0.5f)))
-                    Spacer(Modifier.height(9.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("合计", fontSize = 11.5.sp, lineHeight = 14.4.sp, color = colors.ink3)
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            text = formatAmount(periods.sumOf { it.amountMinor }),
-                            style = TallyType.moneyList,
-                            color = colors.ink,
-                        )
-                    }
+                }
+                if (showBottomFade && !loading && periods.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    0.35f to colors.card.copy(alpha = 0.72f),
+                                    1f to colors.card,
+                                ),
+                            ),
+                    )
                 }
             }
             if (onCatchUp != null) {

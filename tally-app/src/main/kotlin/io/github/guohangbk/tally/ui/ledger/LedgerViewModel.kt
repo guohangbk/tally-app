@@ -36,8 +36,6 @@ data class LedgerUiState(
     val settings: TallySettings = TallySettings.DEFAULT,
     val dialog: LedgerDialog? = null,
     val error: String? = null,
-    /** 账本图标库页带回来的键：新建弹层里显示，保存时一起落库。 */
-    val pendingIcon: String? = null,
 ) {
     val active: List<LedgerListItem> get() = items.filter { !it.ledger.isArchived }
     val archived: List<LedgerListItem> get() = items.filter { it.ledger.isArchived }
@@ -49,7 +47,6 @@ data class LedgerUiState(
 class LedgerViewModel(private val graph: AppGraph) : ViewModel() {
     private val dialogState = MutableStateFlow<LedgerDialog?>(null)
     private val errorState = MutableStateFlow<String?>(null)
-    private val pendingIconState = MutableStateFlow<String?>(null)
 
     /** 仓储的 combine 块内同步读取聚合查询，Room 禁止主线程访问，整条上游必须在 IO 上跑。 */
     private val ledgerItems = graph.ledgerRepository.items.flowOn(Dispatchers.IO)
@@ -60,8 +57,7 @@ class LedgerViewModel(private val graph: AppGraph) : ViewModel() {
         },
         dialogState,
         errorState,
-        pendingIconState,
-    ) { (items, totalBillCount, settings), dialog, error, pendingIcon ->
+    ) { (items, totalBillCount, settings), dialog, error ->
         LedgerUiState(
             loaded = true,
             items = items,
@@ -69,7 +65,6 @@ class LedgerViewModel(private val graph: AppGraph) : ViewModel() {
             settings = settings,
             dialog = dialog,
             error = error,
-            pendingIcon = pendingIcon,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LedgerUiState())
 
@@ -79,20 +74,12 @@ class LedgerViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun openDialog(kind: LedgerDialogKind, ledgerId: String? = null) {
         errorState.value = null
-        // 上一轮从图标库带回来的键不能被下一次弹窗继承。
-        pendingIconState.value = null
         dialogState.value = LedgerDialog(kind, ledgerId)
-    }
-
-    /** 图标库页保存后把键交回新建弹层；null 表示用户没选就退回来了。 */
-    fun setPendingIcon(iconKey: String?) {
-        pendingIconState.value = iconKey
     }
 
     fun dismissDialog() {
         dialogState.value = null
         errorState.value = null
-        pendingIconState.value = null
     }
 
     fun dismissError() {
