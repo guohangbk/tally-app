@@ -31,6 +31,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
         /** 秒开模式：打开应用跳过首页，直接落在记账页。 */
         val QUICK_OPEN_ENABLED = booleanPreferencesKey("quick_open_enabled")
         val REIMBURSE_ENABLED = booleanPreferencesKey("reimburse_enabled")
+    /** 排除（不计入收支与预算）：记账页那枚 chip 的常驻开关。 */
+    val EXCLUDE_ENABLED = booleanPreferencesKey("exclude_enabled")
         val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val SHOW_CURRENCY_SYMBOL = booleanPreferencesKey("show_currency_symbol")
@@ -77,6 +79,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
             billImageEnabled = prefs[Keys.BILL_IMAGE_ENABLED] ?: false,
             quickOpenEnabled = prefs[Keys.QUICK_OPEN_ENABLED] ?: false,
             reimburseEnabled = prefs[Keys.REIMBURSE_ENABLED] ?: false,
+            // 默认开：这枚 chip 一直是常驻的，加开关只是给个关掉的口子，不改变已有行为。
+            excludeEnabled = prefs[Keys.EXCLUDE_ENABLED] ?: true,
             assistantEnabled = prefs[Keys.ASSISTANT_ENABLED] ?: false,
             themeMode = prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
@@ -117,6 +121,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
     suspend fun setQuickOpenEnabled(enabled: Boolean) = put(Keys.QUICK_OPEN_ENABLED, enabled)
 
     suspend fun setReimburseEnabled(enabled: Boolean) = put(Keys.REIMBURSE_ENABLED, enabled)
+
+    suspend fun setExcludeEnabled(enabled: Boolean) = put(Keys.EXCLUDE_ENABLED, enabled)
 
     suspend fun setAssistantEnabled(enabled: Boolean) = put(Keys.ASSISTANT_ENABLED, enabled)
 
@@ -288,6 +294,12 @@ data class TallySettings(
     /** 秒开模式：开启后打开应用直接进记账页，返回落在首页。 */
     val quickOpenEnabled: Boolean,
     val reimburseEnabled: Boolean,
+    /**
+     * 排除：记账页要不要常驻「排除」这枚 chip。
+     * 点开它表示这一笔不计入收支统计、也不进预算口径（`excluded_from_stats`），
+     * 默认开 —— 加这个开关之前它一直是常驻的。
+     */
+    val excludeEnabled: Boolean = true,
     val assistantEnabled: Boolean,
     val themeMode: ThemeMode,
     val showCurrencySymbol: Boolean,
@@ -323,6 +335,7 @@ data class TallySettings(
             billImageEnabled = false,
             quickOpenEnabled = false,
             reimburseEnabled = false,
+            excludeEnabled = true,
             assistantEnabled = false,
             themeMode = ThemeMode.SYSTEM,
             showCurrencySymbol = true,

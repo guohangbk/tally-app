@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.guohangbk.tally.data.preferences.ThemeMode
 import io.github.guohangbk.tally.di.rememberAppGraph
-import io.github.guohangbk.tally.domain.model.TimePrecision
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.TagTone
@@ -108,6 +107,8 @@ fun SettingsScreen(
     onOpenKeywordRules: () -> Unit,
     /** 回收站：删除找回从气泡搬到页面，所以入口跟数据放在一起。 */
     onOpenRecycle: () -> Unit,
+    /** 记账键盘：记账页备注下面那排 chip 的开关（图片 / 账单时间 / 排除），以后加「标签」也归它。 */
+    onOpenBillKeypad: () -> Unit,
     /** 提醒与通知独立一页（T-01）：这一页只管开关与时刻，声音与打扰等级归系统渠道。 */
     onOpenNotifications: () -> Unit,
     /** 使用指南：把「怎么操作」和「按什么口径算」收在同一页，统计页右上角不再挂口径入口。 */
@@ -191,37 +192,15 @@ fun SettingsScreen(
                     },
                 )
                 SettingsDivider()
-                SettingsSwitchRow(
-                    checked = settings.billImageEnabled,
-                    onCheckedChange = viewModel::setBillImageEnabled,
-                    label = "账单图片",
-                    description = if (settings.billImageEnabled) {
-                        "已开启 · 记账页常驻图片入口"
-                    } else {
-                        "已关闭 · 记账页不显示图片入口"
-                    },
-                )
-                SettingsDivider()
-                SettingsSwitchRow(
-                    checked = settings.reimburseEnabled,
-                    onCheckedChange = viewModel::setReimburseEnabled,
-                    label = "报销",
-                    description = if (settings.reimburseEnabled) {
-                        "已开启 · 记账页与详情出现报销状态"
-                    } else {
-                        "已关闭 · 记账不出现报销字段"
-                    },
-                )
-                SettingsDivider()
-                SettingsChoiceRow(
-                    label = "账单时间精度",
-                    description = "切换「到时和分」，可保存账单的具体时间",
-                    options = listOf(
-                        TimePrecision.DATE to "精确到日",
-                        TimePrecision.DATETIME to "到时和分",
-                    ),
-                    selected = settings.timePrecision,
-                    onSelect = viewModel::setTimePrecision,
+                // 记账页备注下面那排 chip 的开关都收进这一页（图片 / 账单时间 / 报销 / 排除），
+                // 以后加「标签」也放那儿，主页面不再一条一条铺开。
+                SettingsNavRow(
+                    title = "记账键盘",
+                    // 不再把四个开关的名字铺在这里：点进去就是那四个，重复一遍只是把副标题撑成两行。
+                    // 留一句说清「控的是哪一排」，也顺带和 4×4 金额键盘区分开。
+                    subtitle = "备注下面那排按钮的开关",
+                    iconKey = "switch",
+                    onClick = onOpenBillKeypad,
                 )
                 SettingsDivider()
                 // 发薪日不是 1 号时，首页与统计的「本月」必须一起挪，否则两边对不上。
@@ -440,7 +419,7 @@ private fun SettingsDialogHost(
     if (state.dialog == SettingsDialogKind.RESET_PREFERENCES) {
         TallyConfirmDialog(
             title = "恢复默认偏好？",
-            message = "账单图片、报销、主题、显示与时间精度会回到出厂默认，小莉保持关闭。账单、账本、分类和图片附件都不受影响。",
+            message = "记账键盘（图片 / 账单时间 / 报销 / 排除）、主题与显示会回到出厂默认，小莉保持关闭。账单、账本、分类和图片附件都不受影响。",
             confirmLabel = "恢复默认",
             dismissLabel = "取消",
             destructive = true,

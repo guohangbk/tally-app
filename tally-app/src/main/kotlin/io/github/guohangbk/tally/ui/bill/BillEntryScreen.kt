@@ -48,7 +48,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -272,13 +271,7 @@ fun BillEntryScreen(
                                 },
                                 onClick = { showDatePicker = true },
                             )
-                            EntryChip(
-                                label = "报销",
-                                state = if (state.reimbursed != ReimburseStatus.NONE) ChipState.ON else ChipState.OFF,
-                                toggle = true,
-                                enabled = !state.isIncome,
-                                onClick = { viewModel.setReimbursed(state.reimbursed == ReimburseStatus.NONE) },
-                            )
+                            // 图片挪到日期后面，报销挨着排除：两个「标记类」chip 排在一起，扫一眼就是一列开关。
                             if (settings.billImageEnabled) {
                                 EntryChip(
                                     label = "图片",
@@ -289,14 +282,27 @@ fun BillEntryScreen(
                                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                                         )
                                     },
+                                    // 点它会打开图库，没法「再点一下取消」：用右上角的叉收回还没保存的这一张。
+                                    onClear = if (state.imageUri != null) ({ viewModel.setImage(null) }) else null,
                                 )
                             }
-                            EntryChip(
-                                label = "排除",
-                                state = if (state.excludedFromStats) ChipState.MUTED else ChipState.OFF,
-                                toggle = true,
-                                onClick = { viewModel.setExcluded(!state.excludedFromStats) },
-                            )
+                            // 报销 / 排除不再挂拨钮：点亮即开、再点即关，和图片同一个样式。
+                            // 报销另有总开关（设置 → 记账偏好）：关掉时这枚 chip 与抽屉里那个入口一起消失。
+                            if (settings.reimburseEnabled) {
+                                EntryChip(
+                                    label = "报销",
+                                    state = if (state.reimbursed != ReimburseStatus.NONE) ChipState.ON else ChipState.OFF,
+                                    enabled = !state.isIncome,
+                                    onClick = { viewModel.setReimbursed(state.reimbursed == ReimburseStatus.NONE) },
+                                )
+                            }
+                            if (settings.excludeEnabled) {
+                                EntryChip(
+                                    label = "排除",
+                                    state = if (state.excludedFromStats) ChipState.ON else ChipState.OFF,
+                                    onClick = { viewModel.setExcluded(!state.excludedFromStats) },
+                                )
+                            }
                         }
                         TallyKeypad(
                             onKey = viewModel::pressKey,
@@ -664,90 +670,6 @@ private fun formatExpression(raw: String): String {
     }
     flush()
     return out.toString().trimEnd()
-}
-
-/** dock 第二行：日期 / 报销 / 图片 / 排除，26dp 高的胶囊，开关是 20×12 的迷你拨钮（.chips）。 */
-private enum class ChipState { OFF, ON, MUTED }
-
-@Composable
-private fun EntryChip(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    state: ChipState = ChipState.OFF,
-    toggle: Boolean = false,
-    count: Int = 0,
-    enabled: Boolean = true,
-) {
-    val colors = tallyColors
-    val shape = RoundedCornerShape(13.dp)
-    val foreground = when (state) {
-        ChipState.OFF -> colors.ink2
-        ChipState.ON -> colors.brand
-        // 排除是「不计入」的中性状态：沿用墨色，不引入蓝灰这一支，免得像另一套系统。
-        ChipState.MUTED -> colors.ink
-    }
-    val background = when (state) {
-        ChipState.OFF -> colors.card
-        ChipState.ON -> colors.brandSurface
-        ChipState.MUTED -> colors.ink.copy(alpha = 0.10f)
-    }
-    val borderColor = when (state) {
-        ChipState.OFF -> colors.line
-        ChipState.ON -> colors.brand.copy(alpha = 0.30f)
-        ChipState.MUTED -> colors.ink.copy(alpha = 0.22f)
-    }
-    val alpha = if (enabled) 1f else colors.disabledAlpha
-    Row(
-        modifier = modifier
-            .height(26.dp)
-            .clip(shape)
-            // copy(alpha=) 会覆盖底色自带的透明度，这里要乘上去：排除的 10% 墨底才不会被压成实心。
-            .background(background.copy(alpha = background.alpha * alpha))
-            .border(1.dp, borderColor.copy(alpha = borderColor.alpha * alpha), shape)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = label,
-            fontSize = 11.5.sp, lineHeight = 14.4.sp,
-            fontWeight = if (state == ChipState.OFF) FontWeight.Normal else FontWeight.Bold,
-            color = foreground.copy(alpha = foreground.alpha * alpha),
-            maxLines = 1,
-        )
-        if (count > 0) {
-            Text(
-                text = count.toString(),
-                fontSize = 10.sp, lineHeight = 12.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = foreground.copy(alpha = 0.75f * alpha),
-                maxLines = 1,
-            )
-        }
-        if (toggle) MiniToggle(on = state != ChipState.OFF, active = foreground.copy(alpha = alpha))
-    }
-}
-
-@Composable
-private fun MiniToggle(on: Boolean, active: Color) {
-    val colors = tallyColors
-    Box(
-        modifier = Modifier
-            .size(width = 20.dp, height = 12.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(if (on) active else colors.ink3.copy(alpha = 0.4f)),
-    ) {
-        Box(
-            modifier = Modifier
-                .align(if (on) Alignment.CenterEnd else Alignment.CenterStart)
-                .padding(horizontal = 2.dp)
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(Color.White),
-        )
-    }
 }
 
 /** 「已存 ¥…」气泡浮在 dock 上方，不占位、不常驻（P03·③）。 */

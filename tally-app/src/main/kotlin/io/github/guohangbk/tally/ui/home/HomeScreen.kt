@@ -423,6 +423,7 @@ fun TallyHomeScreen(
                 ledgerBillCount = state.ledgerBillCount,
                 categoryBadge = state.categoryBadge,
                 ledgerCount = state.ledgers.size,
+                showReimburse = state.settings.reimburseEnabled,
                 onDismiss = { scope.launch { drawerState.close() } },
                 onNavigate = { route ->
                     // 抽屉里只剩二级页：记账类入口走 ＋ 那条链路，不再从抽屉发路由。

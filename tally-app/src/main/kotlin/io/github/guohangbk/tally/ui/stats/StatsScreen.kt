@@ -1281,7 +1281,9 @@ private fun RankingSection(
                         text = "${snapshot.summary.excludedCount} 笔 ¥${formatAmount(snapshot.summary.excludedMinor, grouping)}",
                     )
                 }
-                if (expense && snapshot.summary.pendingReimburseCount > 0) {
+                // 这是进报销页的第三处入口：报销关掉时它也得跟着收，
+                // 否则抽屉里没了，统计页却还点得进去，开关就成了半拉子。
+                if (expense && state.settings.reimburseEnabled && snapshot.summary.pendingReimburseCount > 0) {
                     Spacer(Modifier.height(6.dp))
                     LegendLine(
                         badge = BillBadge("receipt", "未报销", MarkerTone.OUTLINE),
@@ -1294,7 +1296,8 @@ private fun RankingSection(
         }
     }
 
-    if (expense) {
+    // 报销关掉时这个口径开关也收掉：没有「未报销」这回事了，留着一个开关只是噪声。
+    if (expense && state.settings.reimburseEnabled) {
         Spacer(Modifier.height(12.dp))
         MarkerSwitch(
             label = "支出视图剔除未报销",

@@ -1097,11 +1097,18 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 .chips a.on .dot2{background:var(--brand)} .chips a.on .dot2::after{left:10px}
 .chips a.onx .dot2{background:var(--slate)} .chips a.onx .dot2::after{left:10px}
 .chips a .cnt{font-size:8.5px;opacity:.75}
+/* dock chip 的点亮态：实心墨绿 + 骨白字。0.1.5 起不再是 8% 淡底——那种淡底跟卡片白几乎分不出。 */
+.chips a.fill{background:var(--brand);border-color:var(--brand);color:var(--paper);font-weight:700}
+/* 图片 chip 右上角的移除叉：只在「本次选了、还没保存」的那张上出现 */
+.chips a.clrhost{position:relative;overflow:visible}
+.chips a .clr{position:absolute;right:-5px;top:-5px;width:13px;height:13px;border-radius:50%;
+  background:var(--ink);color:var(--paper);font-size:9px;line-height:13px;text-align:center;font-weight:700}
 .dev.dk .dock{border-color:rgba(233,229,218,.14)}
 .dev.dk .ntline .amt.n{color:#6F7C77}
 .dev.dk .chips a{background:#1A2320;border-color:rgba(233,229,218,.12);color:#C9CFCB}
 .dev.dk .chips a.on{background:rgba(126,203,169,.14);border-color:rgba(126,203,169,.4);color:#7ECBA9}
 .dev.dk .chips a.onx{background:rgba(147,160,154,.14);border-color:rgba(147,160,154,.36);color:#93A09A}
+.dev.dk .chips a.fill{background:#7ECBA9;border-color:#7ECBA9;color:#131A17}
 
 /* ---------- v1.6 statistics page ---------- */
 .tbar{display:flex;align-items:center;gap:5px;margin-top:3px}
@@ -2641,7 +2648,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="dock">
           <div class="ntline"><div class="nt"><svg><use href="#i-note"/></svg><span class="mut">备注</span></div><div class="amt n"><span class="cur">¥</span>0<span class="dec">.00</span></div></div>
-          <div class="chips"><a>今天</a><a>报销<span class="dot2"></span></a><a>图片</a><a>排除<span class="dot2"></span></a></div>
+          <div class="chips"><a>今天</a><a>图片</a><a>报销</a><a>排除</a></div>
           <div class="kp4">
             <a>1</a><a>2</a><a>3</a><a class="fn del">⌫</a>
             <a>4</a><a>5</a><a>6</a><a class="fn op">−</a>
@@ -2672,7 +2679,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
               <div class="amt"><span class="cur">¥</span>30<span class="dec">.00</span></div>
             </div>
           </div>
-          <div class="chips"><a>10-14</a><a class="on">报销<span class="dot2"></span></a><a>图片</a><a>排除<span class="dot2"></span></a></div>
+          <div class="chips"><a>10-14</a><a>图片</a><a class="fill">报销</a><a>排除</a></div>
           <div class="kp4">
             <a>1</a><a>2</a><a>3</a><a class="fn del">⌫</a>
             <a>4</a><a>5</a><a>6</a><a class="fn op">−</a>
@@ -2697,7 +2704,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="dock">
           <div class="ntline"><div class="nt"><svg style="stroke:var(--gold)"><use href="#i-note"/></svg><span class="tx">楼下咖啡店</span><span class="caret"></span><span class="cnt">5/60</span></div><div class="amt"><span class="cur">¥</span>18<span class="dec">.00</span></div></div>
-          <div class="chips"><a>10-14 12:26</a><a class="on">报销<span class="dot2"></span></a><a>图片</a><a>排除<span class="dot2"></span></a></div>
+          <div class="chips"><a>10-14 12:26</a><a>图片</a><a class="fill">报销</a><a>排除</a></div>
           <div class="kp4">
             <a>1</a><a>2</a><a>3</a><a class="fn del">⌫</a>
             <a>4</a><a>5</a><a>6</a><a class="fn op">−</a>
@@ -2757,7 +2764,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="dock">
           <div class="ntline"><div class="nt"><svg style="stroke:var(--gold)"><use href="#i-note"/></svg><span class="tx">海底捞，跟老张和小李一起，锅底点的番茄…</span><span class="caret"></span><span class="cnt">62/200</span></div><div class="amt"><span class="cur">¥</span>198<span class="dec">.00</span></div></div>
-          <div class="chips"><a>10-14 12:26</a><a class="on">报销<span class="dot2"></span></a><a>图片</a><a>排除<span class="dot2"></span></a></div>
+          <div class="chips"><a>10-14 12:26</a><a>图片</a><a class="fill">报销</a><a>排除</a></div>
           <div class="kbar"><div class="num"><a>7</a><a>8</a><a>9</a><a>4</a><a>5</a><a>6</a><a>1</a><a>2</a><a>3</a><a class="gh">.</a><a>0</a><a class="gh">⌫</a></div><div class="save"><a class="rp">放弃</a><a class="sv">保存</a></div></div>
         </div>
       </div>
@@ -4997,7 +5004,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="dock">
           <div class="ntline"><div class="nt"><svg style="stroke:var(--gold)"><use href="#i-note"/></svg><span class="tx">中午跟老张吃了顿海底捞，我请的客</span><span class="cnt">16/60</span></div><div class="amt"><span class="cur">¥</span>398<span class="dec">.00</span></div></div>
-          <div class="chips"><a>今天</a><a>报销<span class="dot2"></span></a><a>图片</a><a>排除<span class="dot2"></span></a></div>
+          <div class="chips"><a>今天</a><a>图片</a><a>报销</a><a>排除</a></div>
           <div class="kbar"><div class="num"><a>7</a><a>8</a><a>9</a><a>4</a><a>5</a><a>6</a><a>1</a><a>2</a><a>3</a><a class="gh">.</a><a>0</a><a class="gh">⌫</a></div><div class="save"><a class="rp">再记</a><a class="sv">保存</a></div></div>
         </div>
       </div>
@@ -5378,6 +5385,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
   <p class="lead">备份页只解决一件事：<b>换机之后哪些东西会回来、哪些不会</b>。图片默认不进包，这条必须在导出前就说，而不是恢复后才发现。
     设置页新增「记账偏好」分组——再记的行为（分类是否记忆、备注是否保留）是可配置的，不该由设计稿替用户决定。
     数据与隐私页把本地承诺写成四条可核对的陈述，并把清除做成两次确认。
+    记账页备注下面那排 chip 的开关收进独立的「记账键盘」子页，页顶用同一枚 chip 摆一排示例、拨开关当场变。
     版本行右侧放一个「检查更新」软按钮：只在用户主动点时才查一次 GitHub Release，发现新版用弹窗问去不去下载，
     已是最新或网络失败都只吐一句人话，不做后台轮询、不静默下载。</p>
   <div class="grid q4">
@@ -5419,13 +5427,12 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:51</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.5</span></div>
         <div class="grpt">记账偏好</div>
         <div class="grp" style="padding:0 12px">
           <div class="set"><div><div class="t">秒开模式</div><div class="s">默认关闭 · 开启后打开应用直接进记账页</div></div><span class="sw"></span></div>
-          <div class="set"><div><div class="t">账单图片</div><div class="s">默认关闭 · 记账页不显示图片入口</div></div><span class="sw"></span></div>
-          <div class="set"><div><div class="t">报销</div><div class="s">关闭后记账不出现报销相关字段</div></div><span class="sw"></span></div>
-          <div class="set"><div><div class="t">账单时间精度</div><div class="s">决定账单分组与统计的粒度</div></div><span class="sub" style="margin-left:auto"><a class="on">精确到日</a><a>到时和分</a></span></div>
+          <div class="set"><div><div class="t">记账键盘</div><div class="s">备注下面那排按钮的开关</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><div><div class="t">每月起始日</div><div class="s">1 号 · 可选 1–28</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
         </div>
         <div class="grpt">小莉（AI）</div>
         <div class="grp" style="padding:0 12px">
@@ -5449,14 +5456,38 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="grpt">关于</div>
         <div class="grp" style="padding:0 12px">
-          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.5 (105) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
           <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
       </div>
     </div></div>
     <figcaption><div class="pn">P20</div><div class="ph">设置</div>
-      <div class="pd">五组到底：记账偏好、小莉（AI）、外观、数据、关于。每个开关把默认值与影响面写在行副标题里，不另加解释段落；没有的功能不给灰按钮。「秒开模式」把打开应用的落点从首页换成记账页——冷启动与从后台回到停在首页的 App 都算，停在别的页不打断——返回或保存后落在首页。「恢复默认」单独一组，只回偏好，不动账单。</div></figcaption></figure>
+      <div class="pd">五组到底：记账偏好、小莉（AI）、外观、数据、关于。记账页备注下面那排 chip 的开关都收进了「记账键盘」子页，主页面只留一个入口。每个开关把默认值与影响面写在行副标题里，不另加解释段落；没有的功能不给灰按钮。「秒开模式」把打开应用的落点从首页换成记账页——冷启动与从后台回到停在首页的 App 都算，停在别的页不打断——返回或保存后落在首页。「恢复默认」单独一组，只回偏好，不动账单。</div></figcaption></figure>
+
+    <figure class="pc"><div class="dev"><div class="scr">
+      <div class="notch"></div><div class="sb"><span>9:51</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
+      <div class="body">
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">记账键盘</span><span class="sp"></span></div>
+        <div style="font-size:9.5px;color:var(--ink3);padding:2px 1px 8px">记账界面备注下方显示的按钮</div>
+        <div class="card" style="padding:11px 12px">
+          <div class="chips" style="margin:0"><a>今天 22:14</a><a class="clrhost">图片<span class="clr">×</span></a><a>排除</a></div>
+          <div style="font-size:8.5px;color:var(--ink3);line-height:1.65;margin-top:8px">示例用的是记账页同一枚 chip：拨下面的开关，这一行当场跟着变。</div>
+        </div>
+        <div class="grpt">按钮</div>
+        <div class="grp" style="padding:0 12px">
+          <div class="set"><div><div class="t">账单图片</div><div class="s">开启后，记账时可以为这一笔加一张图片</div></div><span class="sw on"></span></div>
+          <div class="set"><div><div class="t">账单时间</div><div class="s">开启后，记账可以精确到具体时间</div></div><span class="sw on"></span></div>
+          <div class="set"><div><div class="t">报销</div><div class="s">开启后，抽屉与记账页都出现报销</div></div><span class="sw"></span></div>
+          <div class="set"><div><div class="t">排除</div><div class="s">开启后，可把某笔标为不计入，不进收支统计与预算</div></div><span class="sw on"></span></div>
+        </div>
+        <div style="font-size:8.5px;color:var(--ink3);line-height:1.7;margin-top:10px">
+          <span class="dot" style="display:inline-block;margin-right:5px;vertical-align:0"></span>报销关掉时：抽屉入口、记账页那枚 chip、统计页两处标记一起收<br>
+          <span class="dot" style="display:inline-block;margin-right:5px;vertical-align:0"></span>「标签」以后也归这一页</div>
+      </div>
+    </div></div>
+    <figcaption><div class="pn">P20f</div><div class="ph">记账键盘</div>
+      <div class="pd">记账页备注下面那排 chip 的开关都收在这一页：账单图片、账单时间、报销、排除。页顶摆一排同一枚 chip 做示例，拨开关当场看出那一行会变成什么样——示例与真身共用一份画法，改一边另一边不会漂。截图里图片 chip 右上角那枚叉只在「本次选了、还没保存」的那张上出现：点它会打开图库，没法再点一下取消，所以删除只能放右上角。报销是一个开关管四处：抽屉入口、记账页 chip、统计页「未报销 N 笔」与「支出视图剔除未报销」。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:52</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -5471,7 +5502,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="grpt">关于</div>
         <div class="grp" style="padding:0 12px">
-          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.5 (105) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
           <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
@@ -5482,7 +5513,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <div class="scrim"></div>
       <div class="modal" style="left:16px;right:16px;padding:16px 15px 13px">
         <div style="font-family:var(--serif);font-size:14px;font-weight:600">恢复默认偏好？</div>
-        <div style="font-size:10px;color:var(--ink2);line-height:1.7;margin-top:6px">账单图片、报销、主题、显示与时间精度会回到出厂默认，小莉保持关闭。账单、账本、分类和图片附件都不受影响。</div>
+        <div style="font-size:10px;color:var(--ink2);line-height:1.7;margin-top:6px">记账键盘（图片 / 账单时间 / 报销 / 排除）、主题与显示会回到出厂默认，小莉保持关闭。账单、账本、分类和图片附件都不受影响。</div>
         <div class="row" style="gap:7px;margin-top:13px"><span class="btn gh" style="flex:1;height:34px">取消</span><span class="btn pri" style="flex:1;height:34px">恢复默认</span></div>
       </div>
     </div></div>
@@ -5492,7 +5523,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:53</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.5</span></div>
         <div class="grp mt0" style="opacity:.3">
           <div class="set"><div><div class="t">备份与同步</div><div class="s">.tally 加密备份、恢复与 WebDAV 手动快照</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
         </div>
@@ -5502,7 +5533,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="grpt">关于</div>
         <div class="grp" style="padding:0 12px">
-          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.5 (105) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
           <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
@@ -5512,8 +5543,8 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       </div>
       <div class="scrim"></div>
       <div class="modal" style="left:16px;right:16px;padding:16px 15px 13px">
-        <div style="font-family:var(--serif);font-size:14px;font-weight:600">发现新版本 0.1.4</div>
-        <div style="font-size:10px;color:var(--ink2);line-height:1.7;margin-top:6px">当前 0.1.3。升级不会影响账单和分类，去 GitHub 看看这次改了什么？</div>
+        <div style="font-family:var(--serif);font-size:14px;font-weight:600">发现新版本 0.1.6</div>
+        <div style="font-size:10px;color:var(--ink2);line-height:1.7;margin-top:6px">当前 0.1.5。升级不会影响账单和分类，去 GitHub 看看这次改了什么？</div>
         <div class="row" style="gap:7px;margin-top:13px"><span class="btn gh" style="flex:1;height:34px">稍后</span><span class="btn gr" style="flex:1;height:34px">去下载</span></div>
       </div>
     </div></div>
@@ -5523,7 +5554,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:54</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.5</span></div>
         <div class="grp mt0" style="opacity:.3">
           <div class="set"><div><div class="t">备份与同步</div><div class="s">.tally 加密备份、恢复与 WebDAV 手动快照</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
         </div>
@@ -5533,7 +5564,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="grpt">关于</div>
         <div class="grp" style="padding:0 12px">
-          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.5 (105) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
           <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
@@ -5541,7 +5572,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
           <div class="row" style="gap:6px;align-items:flex-start"><svg style="width:13px;height:13px;stroke:var(--brand);stroke-width:1.8;fill:none;flex:none;margin-top:1px"><use href="#i-shield"/></svg>
             <span style="font-size:9.5px;color:var(--ink2);line-height:1.6">隐私说明：账单、分类、图片与偏好都存在本地。小莉关闭时不会向任何服务发送数据；开启后发送哪些内容由您配置，密钥不进备份包。</span></div></div>
       </div>
-      <div class="toast g" style="bottom:20px;z-index:5"><svg><use href="#i-check"/></svg><span>已经是最新版本 0.1.3，安心用。</span></div>
+      <div class="toast g" style="bottom:20px;z-index:5"><svg><use href="#i-check"/></svg><span>已经是最新版本 0.1.5，安心用。</span></div>
     </div></div>
     <figcaption><div class="pn">P20d</div><div class="ph">检查更新 · 已是最新</div>
       <div class="pd">底部气泡，2.5 秒自动收起；不建通知、不写日志、不改任何状态。</div></figcaption></figure>
@@ -5549,7 +5580,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:55</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.3</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">设置</span><span class="sp"></span><span class="tag" style="font-size:8.5px">0.1.5</span></div>
         <div class="grp mt0" style="opacity:.3">
           <div class="set"><div><div class="t">备份与同步</div><div class="s">.tally 加密备份、恢复与 WebDAV 手动快照</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
         </div>
@@ -5559,7 +5590,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="grpt">关于</div>
         <div class="grp" style="padding:0 12px">
-          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.3 (103) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
+          <div class="set"><div class="x"><div class="t">版本</div><div class="s">0.1.5 (105) · 从 APK 读，不硬编码</div></div><span class="btn gh" style="height:24px;border-radius:8px;font-size:9px;padding:0 8px;gap:4px;background:var(--brand-soft);border-color:transparent;color:var(--brand)"><svg style="width:10px;height:10px;stroke:var(--brand)"><use href="#i-refresh"/></svg>检查更新</span></div>
           <div class="set"><div><div class="t">项目主页</div><div class="s">github.com/guohangbk/tally-app · 用浏览器打开</div></div><span class="ar"><svg><use href="#i-chev"/></svg></span></div>
           <div class="set"><div><div class="t">开源许可</div><div class="s">图标库、OCR 库等依赖清单 · 随依赖交付批次补充</div></div><span class="ar"><span class="tag" style="font-size:8.5px">需确认</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
@@ -5802,7 +5833,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="dock">
           <div class="ntline"><div class="nt"><svg><use href="#i-note"/></svg><span class="tx">打车去公司</span><span class="caret"></span></div><div class="amt"><span class="cur">¥</span>23<span class="dec">.00</span></div></div>
-          <div class="chips"><a>今天 08:12</a><a>报销<span class="dot2"></span></a><a>图片</a><a>排除<span class="dot2"></span></a></div>
+          <div class="chips"><a>今天 08:12</a><a>图片</a><a>报销</a><a>排除</a></div>
           <div class="kp4">
             <a>1</a><a>2</a><a>3</a><a class="fn del">⌫</a>
             <a>4</a><a>5</a><a>6</a><a class="fn op">−</a>
@@ -5825,7 +5856,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="dock">
           <div class="ntline"><div class="nt"><svg><use href="#i-note"/></svg><span class="tx">冰美式</span></div><div class="amt"><span class="cur">¥</span>18<span class="dec">.00</span></div></div>
-          <div class="chips"><a class="on">今天 14:20</a><a>报销<span class="dot2"></span></a><a>图片</a></div>
+          <div class="chips"><a class="on">今天 14:20</a><a>图片</a><a>报销</a></div>
           <div class="kp4" style="opacity:.4">
             <a>1</a><a>2</a><a>3</a><a class="fn del">⌫</a>
             <a>4</a><a>5</a><a>6</a><a class="fn op">−</a>
@@ -5871,7 +5902,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         </div>
         <div class="dock">
           <div class="ntline"><div class="nt"><svg><use href="#i-note"/></svg><span class="tx">退货 · 天猫</span></div><div class="amt" style="color:var(--brand)"><span class="cur">¥</span>60<span class="dec">.00</span></div></div>
-          <div class="chips"><a>今天</a><a class="on">退款<span class="dot2"></span></a><a>图片</a></div>
+          <div class="chips"><a>今天</a><a>图片</a><a class="fill">退款</a></div>
           <div class="kp4" style="opacity:.4">
             <a>1</a><a>2</a><a>3</a><a class="fn del">⌫</a>
             <a>4</a><a>5</a><a>6</a><a class="fn op">−</a>
@@ -7585,7 +7616,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <table class="tbl" style="font-size:9.5px;white-space:normal">
       <tr><th style="text-align:left;width:15%">屏号</th><th style="text-align:left;width:27%">这一屏</th><th style="text-align:left;width:5%">章节</th><th style="text-align:left">实现位置</th></tr>
       <tr><td>N-01 · N-03 · N-04</td><td>＋ 短按与长按三臂、命中圈</td><td>§03</td><td>ui/shell/TallyShell.kt · TallyRecordFab</td></tr>
-      <tr><td>N-05</td><td>抽屉（管理 5 + 系统 1）</td><td>§03</td><td>ui/shell/TallyShell.kt · TallyDrawer</td></tr>
+      <tr><td>N-05</td><td>抽屉（管理 6 + 系统 1；关掉报销少一项）</td><td>§03</td><td>ui/shell/TallyShell.kt · TallyDrawer</td></tr>
       <tr><td>P02·①…④</td><td>首页账单流、选择态、批量、撤销</td><td>§05</td><td>ui/home/HomeScreen.kt · ui/common/BillBatchViewModel.kt · SelectionBars.kt</td></tr>
       <tr><td>K-01…K-03</td><td>记账页空态 / 算式态 / 编辑态</td><td>§04</td><td>ui/bill/BillEntryScreen.kt · AmountKeypad</td></tr>
       <tr><td>P04·④…⑥</td><td>账单卡片、跳记账页、删除确认</td><td>§04</td><td>ui/bill/BillDetailScreen.kt · BillDetailSheet</td></tr>
@@ -7611,6 +7642,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>P18</td><td>月度分析报告</td><td>§11</td><td>ui/assistant/AssistantAnalysisViewModel.kt · ai_report 表</td></tr>
       <tr><td>P19</td><td>备份与同步、WebDAV 手动快照</td><td>§13</td><td>ui/backup/BackupScreen.kt · data/backup/BackupContainer.kt</td></tr>
       <tr><td>P20 · P20b–P20e</td><td>设置、数据隐私与检查更新</td><td>§13</td><td>ui/settings/SettingsScreen.kt · SettingsRows.kt · data/preferences/TallyPreferences.kt</td></tr>
+      <tr><td>P20f</td><td>记账键盘：备注下面那排 chip 的开关 + dock 示例</td><td>§13</td><td><code>ui/settings/BillKeypadSettingsScreen.kt · ui/bill/EntryChip.kt</code></td></tr>
       <tr><td>P01</td><td>启动引导三条路</td><td>§10</td><td>ui/onboarding/OnboardingScreen.kt</td></tr>
       <tr><td>G-01 · G-01b · G-02</td><td>首页一次性手势引导与「更多手势」半屏</td><td>§10</td><td>ui/home/HomeScreen.kt · data/preferences/TallyPreferences.kt</td></tr>
       <tr><td>D-01</td><td>深色主题</td><td>§14</td><td>ui/design/TallyColors.kt · isDark</td></tr>
@@ -7648,7 +7680,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 </section>
 <footer class="sec" style="border-top:1.5px solid var(--ink);padding-top:22px;display:flex;gap:18px;flex-wrap:wrap;align-items:center">
   <div style="font-family:var(--serif);font-size:17px;font-weight:600">Tally 塔莉 · 界面设计图</div>
-  <div style="font-size:11px;color:var(--ink2)">基线 <b>当前主仓 HEAD</b>（<code>0.1.3</code> 的形态） · 29 节 / 137 屏 · Room 库 v1（无迁移链）<br>
+  <div style="font-size:11px;color:var(--ink2)">基线 <b>当前主仓 HEAD</b>（<code>0.1.5</code> 的形态） · 29 节 / 138 屏 · Room 库 v1（无迁移链）<br>
   屏号索引见 §29 · 规则与验收见 §15 与 §28</div>
   <div style="flex:1"></div>
   <div class="ia"><svg><use href="#i-ai"/></svg>小莉帮你管好每一笔收支</div>

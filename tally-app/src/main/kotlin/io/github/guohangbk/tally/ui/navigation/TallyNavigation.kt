@@ -80,6 +80,7 @@ import io.github.guohangbk.tally.ui.recurring.RecurringScreen
 import io.github.guohangbk.tally.ui.reimbursement.ReimbursementScreen
 import io.github.guohangbk.tally.ui.recycle.RecycleBinScreen
 import io.github.guohangbk.tally.ui.search.SearchScreen
+import io.github.guohangbk.tally.ui.settings.BillKeypadSettingsScreen
 import io.github.guohangbk.tally.ui.settings.GuideScreen
 import io.github.guohangbk.tally.ui.settings.LicenseScreen
 import io.github.guohangbk.tally.ui.settings.NotificationSettingsScreen
@@ -97,6 +98,8 @@ object Routes {
     const val SETTINGS = "settings"
     /** 提醒与通知独立一页（T-01）：四类开关与时刻都在这，设置主页只留一个入口。 */
     const val NOTIFICATIONS = "settings/notifications"
+    /** 记账键盘（设置 → 记账偏好）：记账页备注下面那一排 chip 的开关，以后加「标签」也归它。 */
+    const val BILL_KEYPAD = "settings/keypad"
     const val KEYWORD_RULES = "keyword-rules"
     const val RECYCLE = "recycle"
     const val LEDGERS = "ledgers"
@@ -371,7 +374,16 @@ private fun TallyAppShell(
                             },
                         )
                     }
-                    composable(Routes.HOME) {
+                    composable(
+                        Routes.HOME,
+                        // 只在「从记账页回首页」时改走淡入，其余推入照旧：见 homeEnter。
+                        enterTransition = homeEnter,
+                        // 这一行不能省：composable() 的 popEnterTransition 默认**等于** enterTransition，
+                        // 不写的话返回首页也会走 homeEnter——它不是从记账页来的，于是套上推入那套
+                        // 「从右轻推一下」，从设置页返回时首页会跟着滑（2026-11-09 走查）。
+                        // 返回一律纯淡入，和别处的 popEnter 一致。
+                        popEnterTransition = popEnter,
+                    ) {
                         TallyHomeScreen(
                             currentRoute = currentRoute,
                             onOpenLedgers = { navController.navigate(Routes.LEDGERS) },
@@ -533,6 +545,7 @@ private fun TallyAppShell(
                             onOpenBackup = { navController.navigate(Routes.BACKUP) },
                             onOpenAssistantConfig = { navController.navigate(Routes.ASSISTANT_CONFIG) },
                             onOpenKeywordRules = { navController.navigate(Routes.KEYWORD_RULES) },
+                        onOpenBillKeypad = { navController.navigate(Routes.BILL_KEYPAD) },
                             onOpenRecycle = { navController.navigate(Routes.RECYCLE) },
                             onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                             onOpenGuide = { navController.navigate(Routes.GUIDE) },
@@ -541,6 +554,9 @@ private fun TallyAppShell(
                     }
                     composable(Routes.NOTIFICATIONS) {
                         NotificationSettingsScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(Routes.BILL_KEYPAD) {
+                        BillKeypadSettingsScreen(onBack = { navController.popBackStack() })
                     }
                     composable(Routes.KEYWORD_RULES) {
                         io.github.guohangbk.tally.ui.keyword.KeywordRuleScreen(onBack = { navController.popBackStack() })
@@ -551,7 +567,8 @@ private fun TallyAppShell(
                     composable(
                         Routes.BILL_NEW,
                         enterTransition = sheetEnter,
-                        exitTransition = sheetExit,
+                        // 秒开模式下回首页是 navigate 语义，默认只会淡出：见 billExit。
+                        exitTransition = billExit,
                         popEnterTransition = sheetPopEnter,
                         popExitTransition = sheetPopExit,
                     ) { entry ->
@@ -755,6 +772,22 @@ private val sheetPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() 
 private val sheetPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
     fadeOut(tween(160)) +
         slideOutVertically(tween(200, easing = FastOutSlowInEasing)) { it / 16 }
+}
+
+/**
+ * 秒开模式把记账页当栈根（见 [startDestination]），退出它走的是 [goHome] 里的
+ * navigate + popUpTo(graph) —— 在导航看来这是一次「推入」，于是给首页套上 [pushEnter]：
+ * 首页从右边轻推约 1/12 屏。正常流程里返回是 popBackStack，首页只淡入，
+ * 于是同一个动作在两条路径上不一样，秒开那条看着就是闪一下。
+ *
+ * 这里把「从记账页回首页」按返回的观感补齐：首页只淡入，记账页对称下滑。
+ * 只在推入那一侧判断 —— 弹出那一侧本来就是淡入 / 下滑，两套都命中同一观感，不会闪。
+ */
+private val homeEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    if (initialState.destination.route == Routes.BILL_NEW) popEnter.invoke(this) else pushEnter.invoke(this)
+}
+private val billExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    if (targetState.destination.route == Routes.HOME) sheetPopExit.invoke(this) else sheetExit.invoke(this)
 }
 
 private fun String?.toBillType(): BillType? = when (this) {
