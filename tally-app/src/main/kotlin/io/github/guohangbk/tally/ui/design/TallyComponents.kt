@@ -395,9 +395,11 @@ fun TallyLabeledSwitch(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 13.5.sp, lineHeight = 16.9.sp, color = colors.ink)
+            // 标题与说明一律走 token：同一个设置页里，开关行的字原来比导航行小一号、也细一档
+            // （硬编码 13.5sp/Normal 对 listTitle 的 15sp/Medium），两行并排就能看出不齐（2026-11-09 走查）。
+            Text(label, style = TallyType.listTitle, color = colors.ink)
             if (description != null) {
-                Text(description, fontSize = 11.sp, lineHeight = 13.8.sp, color = colors.ink3)
+                Text(description, style = TallyType.helper, color = colors.ink3)
             }
         }
         TallySwitch(

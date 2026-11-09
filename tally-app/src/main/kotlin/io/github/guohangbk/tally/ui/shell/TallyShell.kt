@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -735,6 +736,8 @@ fun TallyDrawer(
     ledgerBillCount: Int,
     categoryBadge: String?,
     ledgerCount: Int,
+    /** 报销开关（设置 → 记账偏好）：关掉时抽屉里不留这个入口，和记账页那枚 chip 一起消失。 */
+    showReimburse: Boolean,
     onDismiss: () -> Unit,
     onNavigate: (String) -> Unit,
 ) {
@@ -787,41 +790,47 @@ fun TallyDrawer(
                         haptics.tap()
                         onNavigate("ledgers")
                     }
-                    .padding(start = 10.dp, end = 8.dp, top = 9.dp, bottom = 9.dp),
+                    // 与下面的入口行统一：点击区给到 54dp，别只有薄薄一条。
+                    .heightIn(min = 54.dp)
+                    .padding(start = 11.dp, end = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(9.dp),
             ) {
                 InlineIcon(
                     iconKey = ledgerIconKey ?: "ledger",
                     contentDescription = null,
-                    size = 17.dp,
+                    size = 19.dp,
                     tint = colors.brand,
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = ledgerName,
-                        fontSize = 13.5.sp,
-                        lineHeight = 17.sp,
+                        fontSize = 14.5.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.ink,
                         maxLines = 1,
                     )
                     Text(
                         text = if (ledgerBillCount > 0) "$ledgerBillCount 笔账单" else "还没有账单",
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
+                        fontSize = 11.5.sp,
+                        lineHeight = 14.5.sp,
                         color = colors.ink3,
                         maxLines = 1,
                     )
                 }
-                Text("切换", fontSize = 11.5.sp, lineHeight = 14.4.sp, color = colors.brand)
-                InlineIcon(iconKey = "chevron", contentDescription = "我的账本", size = 12.dp, tint = colors.brand)
+                Text("切换", fontSize = 12.sp, lineHeight = 15.sp, color = colors.brand)
+                InlineIcon(iconKey = "chevron", contentDescription = "我的账本", size = 13.dp, tint = colors.brand)
             }
             DrawerGroup("管理")
             DrawerEntry("ledger", "我的账本", "ledgers", onNavigate, trailing = "$ledgerCount")
             DrawerEntry("tag", "分类管理", "categories", onNavigate, trailing = categoryBadge)
             DrawerEntry("coin", "预算管理", "budget", onNavigate)
-            DrawerEntry("receipt", "报销管理", "reimbursement", onNavigate)
+            // 报销关掉就连入口一起收：它和记账页那枚 chip 共用一个开关，
+            // 不能出现「抽屉里还进得去、记账页却没有这回事」。
+            if (showReimburse) {
+                DrawerEntry("receipt", "报销管理", "reimbursement", onNavigate)
+            }
             DrawerEntry("repeat", "周期记账", "recurring", onNavigate)
             DrawerEntry("slice", "分期管理", "installments", onNavigate)
             DrawerGroup("系统")
@@ -830,17 +839,26 @@ fun TallyDrawer(
     }
 }
 
+/**
+ * 分组标题。原来 10.5sp，大屏上小得几乎读不出层级（2026-11-09 走查），提到 12sp，
+ * 上下留白一并给足，跟放大的入口行成一套。
+ */
 @Composable
 private fun DrawerGroup(label: String) {
     Text(
         text = label,
         style = TallyType.eyebrow,
-        fontSize = 10.5.sp, lineHeight = 13.1.sp,
+        fontSize = 12.sp, lineHeight = 15.sp,
         color = tallyColors.ink3,
-        modifier = Modifier.padding(top = 13.dp, bottom = 3.dp, start = 2.dp),
+        modifier = Modifier.padding(top = 14.dp, bottom = 6.dp, start = 2.dp),
     )
 }
 
+/**
+ * 抽屉入口行。点击区抬到 48dp：原来是 8dp 上下内边距配 16.9sp 行高，整行只有 33dp 高，
+ * 指头常落在两行之间（2026-11-09 走查）。高度用 min height 撑，不靠再加内边距，
+ * 图标、标题、右侧数字同步放大一档，整行才不会显得下重上轻。
+ */
 @Composable
 private fun DrawerEntry(
     iconKey: String,
@@ -854,24 +872,25 @@ private fun DrawerEntry(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(9.dp))
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(11.dp))
             .clickable(enabled = route != null) {
                 haptics.tap()
                 route?.let(onNavigate)
             }
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        InlineIcon(iconKey = iconKey, contentDescription = label, size = 14.dp, tint = if (route == null) colors.ink3 else colors.ink2)
+        InlineIcon(iconKey = iconKey, contentDescription = label, size = 17.dp, tint = if (route == null) colors.ink3 else colors.ink2)
         Text(
             text = label,
-            fontSize = 13.5.sp, lineHeight = 16.9.sp,
+            fontSize = 14.5.sp, lineHeight = 18.sp,
             color = if (route == null) colors.ink3 else colors.ink,
             modifier = Modifier.weight(1f),
             maxLines = 1,
         )
-        if (trailing != null) Text(trailing, fontSize = 11.5.sp, lineHeight = 14.4.sp, color = colors.ink3, maxLines = 1)
+        if (trailing != null) Text(trailing, fontSize = 12.sp, lineHeight = 15.sp, color = colors.ink3, maxLines = 1)
     }
 }
 
