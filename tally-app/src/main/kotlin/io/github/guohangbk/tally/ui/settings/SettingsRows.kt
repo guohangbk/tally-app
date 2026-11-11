@@ -79,13 +79,31 @@ internal fun SettingsSwitchRow(
     label: String,
     description: String?,
     gold: Boolean = false,
+    descriptionAction: (@Composable () -> Unit)? = null,
 ) {
     TallyLabeledSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
         label = label,
         description = description,
+        descriptionAction = descriptionAction,
         gold = gold,
+    )
+}
+
+/** 说明行末尾的文字链：品牌色、不加底色，别做成第二个按钮把一行说明挤成两行。 */
+@Composable
+internal fun SettingsInlineLink(text: String, onClick: () -> Unit) {
+    val colors = tallyColors
+    Text(
+        text = text,
+        style = TallyType.helper.copy(fontWeight = FontWeight.Medium),
+        color = colors.brand,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 3.dp, vertical = 2.dp),
     )
 }
 

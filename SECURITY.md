@@ -75,7 +75,7 @@ tally.keyPassword=<你的别名口令>
 1. 打开 <https://github.com/guohangbk/tally-app/security/advisories/new>
    （路径：仓库 → **Security** → **Advisories** → **Report a vulnerability**）
 2. 在里面写清楚：影响哪个版本、怎么复现、你判断的严重程度
-3. 附件可以直接贴「设置 → 数据 → 导出诊断包」的产物——那份 txt 不含账单金额、备注、分类名、账本名与图片，也不含 API Key 与网关地址，所以它是安全的
+3. 附件可以直接贴「设置 → 关于 → 导出诊断包」的产物——那份 txt 不含账单金额、备注、分类名、账本名与图片，也不含 API Key 与网关地址，所以它是安全的
 
 仓库的 Issues 是开着的，但那是给普通缺陷和需求用的。**安全问题请走私密通道**：修好之前放在公开 issue 里，等于把还在用的版本摆在台面上。
 

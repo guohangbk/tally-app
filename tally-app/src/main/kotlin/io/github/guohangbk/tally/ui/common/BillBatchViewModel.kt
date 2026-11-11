@@ -2,6 +2,7 @@ package io.github.guohangbk.tally.ui.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.guohangbk.tally.data.db.dao.TagUsageRow
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
 import io.github.guohangbk.tally.di.AppGraph
@@ -26,6 +27,12 @@ data class BatchState(
     val showDatePicker: Boolean = false,
     val showNoteEditor: Boolean = false,
     val showLedgerPicker: Boolean = false,
+    val showTagPicker: Boolean = false,
+    /** 可选的标签与勾选状态。批量是「整批对齐」：勾上就挂到每一笔，取消就从每一笔解绑。 */
+    val tagChoices: List<TagUsageRow> = emptyList(),
+    val tagSelection: Set<String> = emptySet(),
+    val tagBaseline: Set<String> = emptySet(),
+    val tagError: String? = null,
     val busy: Boolean = false,
     val progress: String? = null,
     val notice: String? = null,
@@ -139,6 +146,91 @@ class BillBatchViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun closeLedgerPicker() {
         mutable.value = mutable.value.copy(showLedgerPicker = false)
+    }
+
+    /**
+     * 批量补标的预选取「交集」：只有这一批账单都挂着的标签才默认勾上，
+     * 取消勾选即从每一笔解绑；新勾的挂到每一笔。
+     */
+    fun openTagPicker() {
+        val current = mutable.value
+        if (current.selected.isEmpty()) return
+        val ids = current.selected.map { it.bill.id }
+        viewModelScope.launch {
+            val active = graph.tagRepository.observeActive().first()
+            val common = graph.tagRepository.commonTags(ids)
+            // 归档标签不再出现在可选项里，但如果这一批都挂着它，也要能在这里摘掉。
+            val archivedSelected = graph.tagRepository.observeAll().first()
+                .filter { it.id in common && active.none { row -> row.id == it.id } }
+                .map { TagUsageRow(it.id, it.name, it.sortOrder, it.archivedAt, 0, null) }
+            mutable.value = mutable.value.copy(
+                tagChoices = active + archivedSelected,
+                tagSelection = common,
+                tagBaseline = common,
+                tagError = null,
+                showTagPicker = true,
+            )
+        }
+    }
+
+    fun closeTagPicker() {
+        mutable.value = mutable.value.copy(showTagPicker = false, tagError = null)
+    }
+
+    fun toggleTag(tagId: String) {
+        val current = mutable.value
+        val next = if (tagId in current.tagSelection) current.tagSelection - tagId else current.tagSelection + tagId
+        mutable.value = current.copy(tagSelection = next, tagError = null)
+    }
+
+    /** 批量新建：建完直接勾上，随这次「打标签」一起挂到整批。 */
+    fun createTag(rawName: String) {
+        viewModelScope.launch {
+            try {
+                val tag = graph.tagRepository.create(rawName)
+                val row = TagUsageRow(
+                    id = tag.id,
+                    name = tag.name,
+                    sortOrder = tag.sortOrder,
+                    archivedAt = tag.archivedAt,
+                    billCount = 0,
+                    lastUsedAt = null,
+                )
+                val current = mutable.value
+                mutable.value = current.copy(
+                    tagChoices = (current.tagChoices + row).distinctBy { it.id },
+                    tagSelection = current.tagSelection + row.id,
+                    tagError = null,
+                )
+            } catch (error: IllegalArgumentException) {
+                mutable.value = mutable.value.copy(tagError = error.message)
+            } catch (error: Exception) {
+                mutable.value = mutable.value.copy(tagError = error.message ?: "标签没有建成")
+            }
+        }
+    }
+
+    /** 只写差量：新勾的挂上、取消勾的解绑；两样都没有就什么都不做。 */
+    fun applyTags() {
+        val current = mutable.value
+        val add = current.tagSelection - current.tagBaseline
+        val remove = current.tagBaseline - current.tagSelection
+        mutable.value = current.copy(showTagPicker = false)
+        if (add.isEmpty() && remove.isEmpty()) return
+        runBatch(
+            label = "打标签",
+            suffix = buildString {
+                if (add.isNotEmpty()) append("挂 ${add.size} 枚")
+                if (remove.isNotEmpty()) {
+                    if (isNotEmpty()) append(" · ")
+                    append("摘 ${remove.size} 枚")
+                }
+            },
+        ) { billIds ->
+            if (add.isNotEmpty()) graph.tagRepository.attachToBills(billIds, add.toList())
+            if (remove.isNotEmpty()) graph.tagRepository.detachFromBills(billIds, remove.toList())
+            billIds.size
+        }
     }
 
     fun delete() = runBatch("删除") { ids -> graph.billRepository.softDeleteIds(ids) }

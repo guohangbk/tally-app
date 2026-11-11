@@ -34,10 +34,13 @@ import io.github.guohangbk.tally.ui.shell.TallyTopBar
  * 页顶先摆一排**同一个** EntryChip 做示例（只是不响应点击），拨完开关当场能看出
  * 那一行会变成什么样——示例与真身共用一份画法，改了一边另一边不会漂。
  *
- * 「标签」以后也归这一页：它同样是备注下面的一枚 chip。
+ * 「标签」同样归这一页：它也是备注下面的一枚 chip。
  */
 @Composable
-fun BillKeypadSettingsScreen(onBack: () -> Unit) {
+fun BillKeypadSettingsScreen(
+    onBack: () -> Unit,
+    onManageTags: () -> Unit,
+) {
     val graph = rememberAppGraph()
     val colors = tallyColors
     val viewModel = tallyViewModel(key = "bill-keypad-settings") { SettingsViewModel(graph) }
@@ -91,6 +94,9 @@ fun BillKeypadSettingsScreen(onBack: () -> Unit) {
                     if (settings.excludeEnabled) {
                         EntryChip(label = "排除", onClick = {}, interactive = false)
                     }
+                    if (settings.tagEnabled) {
+                        EntryChip(label = "标签", onClick = {}, interactive = false)
+                    }
                 }
             }
 
@@ -99,7 +105,7 @@ fun BillKeypadSettingsScreen(onBack: () -> Unit) {
                     checked = settings.billImageEnabled,
                     onCheckedChange = viewModel::setBillImageEnabled,
                     label = "账单图片",
-                    description = "开启后，记账时可以为这一笔加一张图片",
+                    description = "记账时可以为这一笔加一张图片",
                 )
                 SettingsDivider()
                 SettingsSwitchRow(
@@ -108,21 +114,32 @@ fun BillKeypadSettingsScreen(onBack: () -> Unit) {
                         viewModel.setTimePrecision(if (on) TimePrecision.DATETIME else TimePrecision.DATE)
                     },
                     label = "账单时间",
-                    description = "开启后，记账可以精确到具体时间",
+                    description = "记账可以精确到具体时间",
                 )
                 SettingsDivider()
                 SettingsSwitchRow(
                     checked = settings.reimburseEnabled,
                     onCheckedChange = viewModel::setReimburseEnabled,
                     label = "报销",
-                    description = "开启后，抽屉与记账页都出现报销",
+                    description = "抽屉与记账页都出现报销",
                 )
                 SettingsDivider()
                 SettingsSwitchRow(
                     checked = settings.excludeEnabled,
                     onCheckedChange = viewModel::setExcludeEnabled,
                     label = "排除",
-                    description = "开启后，可把某笔标为不计入，不进收支统计与预算",
+                    description = "可把某笔标为不计入，不进收支统计与预算",
+                )
+                SettingsDivider()
+                SettingsSwitchRow(
+                    checked = settings.tagEnabled,
+                    onCheckedChange = viewModel::setTagEnabled,
+                    label = "标签",
+                    description = "把账目归到标签，按标签统计",
+                    // 开关只管记账页那枚 chip；管理标签不跟着开关走，入口就挂在说明末尾。
+                    descriptionAction = {
+                        SettingsInlineLink("管理标签 ›", onManageTags)
+                    },
                 )
             }
 

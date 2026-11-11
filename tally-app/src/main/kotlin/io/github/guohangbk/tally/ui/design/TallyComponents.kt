@@ -384,6 +384,8 @@ fun TallyLabeledSwitch(
     label: String,
     modifier: Modifier = Modifier,
     description: String? = null,
+    /** 说明行末尾的附加操作（如「管理标签 ›」）：跟说明同排，别再为它单起一行导航。 */
+    descriptionAction: (@Composable () -> Unit)? = null,
     gold: Boolean = false,
     enabled: Boolean = true,
 ) {
@@ -398,8 +400,24 @@ fun TallyLabeledSwitch(
             // 标题与说明一律走 token：同一个设置页里，开关行的字原来比导航行小一号、也细一档
             // （硬编码 13.5sp/Normal 对 listTitle 的 15sp/Medium），两行并排就能看出不齐（2026-11-09 走查）。
             Text(label, style = TallyType.listTitle, color = colors.ink)
-            if (description != null) {
-                Text(description, style = TallyType.helper, color = colors.ink3)
+            if (description != null || descriptionAction != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (description != null) {
+                        Text(
+                            text = description,
+                            style = TallyType.helper,
+                            color = colors.ink3,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    descriptionAction?.invoke()
+                }
             }
         }
         TallySwitch(

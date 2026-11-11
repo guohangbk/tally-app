@@ -105,9 +105,11 @@ fun SettingsScreen(
     /** 「小莉配置」的去向：独立配置页，不是小莉对话页。这一条不给默认值，接错就编译不过。 */
     onOpenAssistantConfig: () -> Unit,
     onOpenKeywordRules: () -> Unit,
+    /** 标签管理：全局跨账本的胶囊墙，与关键词规则同在「归类」组。 */
+    onOpenTags: () -> Unit,
     /** 回收站：删除找回从气泡搬到页面，所以入口跟数据放在一起。 */
     onOpenRecycle: () -> Unit,
-    /** 记账键盘：记账页备注下面那排 chip 的开关（图片 / 账单时间 / 排除），以后加「标签」也归它。 */
+    /** 记账键盘：记账页备注下面那排 chip 的开关（图片 / 账单时间 / 报销 / 排除 / 标签）。 */
     onOpenBillKeypad: () -> Unit,
     /** 提醒与通知独立一页（T-01）：这一页只管开关与时刻，声音与打扰等级归系统渠道。 */
     onOpenNotifications: () -> Unit,
@@ -192,8 +194,8 @@ fun SettingsScreen(
                     },
                 )
                 SettingsDivider()
-                // 记账页备注下面那排 chip 的开关都收进这一页（图片 / 账单时间 / 报销 / 排除），
-                // 以后加「标签」也放那儿，主页面不再一条一条铺开。
+                // 记账页备注下面那排 chip 的开关都收进这一页（图片 / 账单时间 / 报销 / 排除 / 标签），
+                // 主页面不再一条一条铺开。
                 SettingsNavRow(
                     title = "记账键盘",
                     // 不再把四个开关的名字铺在这里：点进去就是那四个，重复一遍只是把副标题撑成两行。
@@ -209,6 +211,26 @@ fun SettingsScreen(
                     subtitle = "${state.monthStartDay} 号 · 可选 1–28",
                     iconKey = "cal",
                     onClick = { monthStartPicker = true },
+                )
+            }
+
+            // 标签与关键词规则都是「账目怎么归类」的配置：低频、不挂某一本账，
+            // 所以不跟导入导出混在「数据」里，单独一小段。
+            SettingsSection(title = "归类") {
+                // 标签是全局的，不挂在某一本账下面；入口放这里，不占抽屉「管理」那一排高频对象。
+                SettingsNavRow(
+                    title = "标签",
+                    subtitle = "跨账本通用 · 点胶囊出操作，长按拖动排序",
+                    iconKey = "tag",
+                    onClick = onOpenTags,
+                )
+                SettingsDivider()
+                // 关键词规则是语音与截图共用的那一张表，属于「怎么落成账单」而不是数据。
+                SettingsNavRow(
+                    title = "关键词规则",
+                    subtitle = "内置词只读 · 我的规则优先",
+                    iconKey = "search",
+                    onClick = onOpenKeywordRules,
                 )
             }
 
@@ -275,14 +297,6 @@ fun SettingsScreen(
 
             // 数据分组只留「这里才有」的东西：账本、分类、周期、分期在侧边栏「管理」组里已经有入口。
             SettingsSection(title = "数据") {
-                // 关键词规则是语音与截图共用的那一张表，属于数据而不是小莉配置。
-                SettingsNavRow(
-                    title = "关键词规则",
-                    subtitle = "内置词只读 · 我的规则优先",
-                    iconKey = "tag",
-                    onClick = onOpenKeywordRules,
-                )
-                SettingsDivider()
                 SettingsNavRow(
                     title = "导入账单",
                     subtitle = "模板 / 钱迹 / 支付宝 · 选文件后预览与对账",
@@ -292,7 +306,7 @@ fun SettingsScreen(
                 SettingsDivider()
                 SettingsNavRow(
                     title = "导出账单",
-                    subtitle = "13 列 CSV / XLSX · 可原样读回",
+                    subtitle = "14 列 CSV / XLSX · 可原样读回",
                     iconKey = "export",
                     onClick = onOpenExport,
                 )
@@ -309,14 +323,6 @@ fun SettingsScreen(
                     subtitle = "删掉的账单先留着 · 可恢复或彻底删除",
                     iconKey = "recycle",
                     onClick = onOpenRecycle,
-                )
-                SettingsDivider()
-                TallyListRow(
-                    title = "导出诊断包",
-                    subtitle = if (exporting) "正在生成…" else "版本 · 机型 · 日志尾巴 · 不含任何账单内容",
-                    iconKey = "note",
-                    iconSize = 30,
-                    onClick = ::exportDiagnostics,
                 )
             }
 
@@ -354,6 +360,15 @@ fun SettingsScreen(
                     subtitle = "怎么用、从哪儿进，以及每个数字按什么口径算",
                     iconKey = "book",
                     onClick = onOpenGuide,
+                )
+                SettingsDivider()
+                // 诊断包是给作者排障用的，跟版本、机型同一语境；它不是账单数据，不进「数据」组。
+                TallyListRow(
+                    title = "导出诊断包",
+                    subtitle = if (exporting) "正在生成…" else "版本 · 机型 · 日志尾巴 · 不含任何账单内容",
+                    iconKey = "note",
+                    iconSize = 30,
+                    onClick = ::exportDiagnostics,
                 )
                 SettingsDivider()
                 SettingsNavRow(
@@ -419,7 +434,7 @@ private fun SettingsDialogHost(
     if (state.dialog == SettingsDialogKind.RESET_PREFERENCES) {
         TallyConfirmDialog(
             title = "恢复默认偏好？",
-            message = "记账键盘（图片 / 账单时间 / 报销 / 排除）、主题与显示会回到出厂默认，小莉保持关闭。账单、账本、分类和图片附件都不受影响。",
+            message = "记账键盘（图片 / 账单时间 / 报销 / 排除 / 标签）、主题与显示会回到出厂默认，小莉保持关闭。账单、账本、分类和图片附件都不受影响。",
             confirmLabel = "恢复默认",
             dismissLabel = "取消",
             destructive = true,

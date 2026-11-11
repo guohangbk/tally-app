@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.attachment.AttachmentOutcome
+import io.github.guohangbk.tally.data.db.dao.TagUsageRow
 import io.github.guohangbk.tally.data.db.entity.BillEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.preferences.TallySettings
@@ -78,6 +79,12 @@ data class BillEntryUiState(
     val sedimentOffer: SedimentOffer? = null,
     /** 编辑态有没有真正动过内容；「放弃」只在动过时拦一道。 */
     val dirty: Boolean = false,
+    /** 这一笔挂着的标签：保存时整批写进 bill_tag，空列表就是一枚都不挂。 */
+    val selectedTags: List<TagUsageRow> = emptyList(),
+    /** 可供选择的标签（使用中，按手动顺序）。归档标签只留在已选的里，不能再选。 */
+    val tagChoices: List<TagUsageRow> = emptyList(),
+    /** 新建标签撞名之类的就地提示，显示在弹层里。 */
+    val tagError: String? = null,
 ) {
     val categoryL1: CategoryEntity? get() = categories.firstOrNull { it.id == categoryL1Id && it.parentId == null }
     val categoryChildren: List<CategoryEntity> get() = categories.filter { it.parentId == categoryL1Id }
@@ -160,6 +167,12 @@ class BillEntryViewModel(
                 categories = graph.cachedCategories[seedType].orEmpty(),
                 loaded = true,
             )
+        }
+        // 可选标签跟着词库走：别处新建/归档/改名后，这一页再打开弹层就是新的一份。
+        viewModelScope.launch(Dispatchers.IO) {
+            graph.tagRepository.observeActive().collect { rows ->
+                local.value = local.value.copy(tagChoices = rows)
+            }
         }
     }
 
@@ -282,6 +295,50 @@ class BillEntryViewModel(
         local.value = local.value.copy(excludedFromStats = value, dirty = true)
     }
 
+    /** 弹层里点一下即改草稿；保存时才落 bill_tag。 */
+    fun toggleTag(tagId: String) {
+        val current = local.value
+        val existing = current.selectedTags.firstOrNull { it.id == tagId }
+        val next = if (existing != null) {
+            current.selectedTags - existing
+        } else {
+            val choice = current.tagChoices.firstOrNull { it.id == tagId } ?: return
+            current.selectedTags + choice
+        }
+        local.value = current.copy(selectedTags = next, tagError = null, dirty = true)
+    }
+
+    /** 名称即全部，可带 emoji；撞名就地报，不静默复用已有标签。 */
+    fun createTag(rawName: String) {
+        viewModelScope.launch {
+            try {
+                val tag = graph.tagRepository.create(rawName)
+                val row = TagUsageRow(
+                    id = tag.id,
+                    name = tag.name,
+                    sortOrder = tag.sortOrder,
+                    archivedAt = tag.archivedAt,
+                    billCount = 0,
+                    lastUsedAt = null,
+                )
+                local.value = local.value.copy(
+                    selectedTags = local.value.selectedTags + row,
+                    tagChoices = (local.value.tagChoices + row).distinctBy { it.id },
+                    tagError = null,
+                    dirty = true,
+                )
+            } catch (error: IllegalArgumentException) {
+                local.value = local.value.copy(tagError = error.message)
+            } catch (error: Exception) {
+                local.value = local.value.copy(tagError = error.message ?: "标签没有建成")
+            }
+        }
+    }
+
+    fun clearTagError() {
+        local.value = local.value.copy(tagError = null)
+    }
+
     /** 撤销识别填充：只清机器填的三项，页面不关，用户接着手填（AC-V-5）。 */
     fun undoSource() {
         local.value = local.value.copy(
@@ -388,6 +445,7 @@ class BillEntryViewModel(
                         isRefund = current.isRefund,
                         refundOfBillId = current.refundOfBillId,
                         excludedFromStats = current.excludedFromStats,
+                        tagIds = current.selectedTags.map { it.id },
                     ),
                 )
                 val categoryPath = (current.categoryL1?.name ?: "") +
@@ -396,7 +454,7 @@ class BillEntryViewModel(
                 val imageFailure = current.imageUri?.let { attachImage(id, it) }
                 val sediment = offerSediment(current)
                 if (repeat) {
-                    // 再记：金额 / 备注 / 日期 / 图片复位，分类 / 类型 / 两个标记保留，页面停留（F1.5）。
+                    // 再记：金额 / 备注 / 日期 / 图片复位，分类 / 类型 / 两个标记 / 标签保留，页面停留（F1.5）。
                     // 退款关联不保留：原单已经退过一笔，再来一笔应当是用户重新选的。
                     graph.billRepository.rememberCategory(current.categoryL1Id, current.categoryL2Id)
                     local.value = local.value.copy(
@@ -484,6 +542,19 @@ class BillEntryViewModel(
             isRefund = bill.isRefund,
             refundOfBillId = bill.refundOfBillId,
             attachedCount = withContext(Dispatchers.IO) { graph.attachmentStore.countForBill(bill.id) },
+            // 这一笔挂了哪些标签要带进来：编辑页取消一枚就是解绑，不能看起来是空着。
+            selectedTags = withContext(Dispatchers.IO) {
+                graph.tagRepository.tagsForBill(bill.id).map {
+                    TagUsageRow(
+                        id = it.id,
+                        name = it.name,
+                        sortOrder = it.sortOrder,
+                        archivedAt = it.archivedAt,
+                        billCount = 0,
+                        lastUsedAt = null,
+                    )
+                }
+            },
             dirty = false,
         )
     }

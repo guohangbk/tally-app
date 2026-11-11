@@ -3,6 +3,7 @@ package io.github.guohangbk.tally.data.repository
 import io.github.guohangbk.tally.data.attachment.AttachmentStore
 import io.github.guohangbk.tally.data.db.dao.AttachmentDao
 import io.github.guohangbk.tally.data.db.dao.BillDao
+import io.github.guohangbk.tally.data.db.dao.TagDao
 import io.github.guohangbk.tally.domain.model.PurgePreview
 import io.github.guohangbk.tally.domain.model.PurgeResult
 import io.github.guohangbk.tally.domain.model.RecycleCleanupReport
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit
 class RecycleBinRepository(
     private val billDao: BillDao,
     private val attachmentDao: AttachmentDao,
+    private val tagDao: TagDao,
     private val store: AttachmentStore,
     private val settings: SettingRepository,
     private val zoneId: () -> ZoneId = ZoneId::systemDefault,
@@ -107,6 +109,8 @@ class RecycleBinRepository(
         val cleared = ids.filterNot { it in blocked.toSet() }
         if (cleared.isNotEmpty()) {
             attachmentDao.hardDeleteByBills(cleared)
+            // 账单行会被物理删掉，关联表必须跟着清；按 500 一批，避开 SQLite 的绑定上限。
+            cleared.chunked(500).forEach { chunk -> tagDao.clearForBills(chunk) }
             // 原单被彻底删除后，指向它的退款不能再留一个悬空 id：退回「未关联原单」，不冲抵任何分类。
             billDao.detachRefunds(cleared, now())
             billDao.hardDeleteByIds(cleared)

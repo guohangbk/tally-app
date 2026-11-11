@@ -25,6 +25,8 @@ data class ParsedBillRow(
     /** 钱迹「退款」与负数金额都落成「支出 + 退款标记」，不冲减总支出。 */
     val isRefund: Boolean = false,
     val attachmentRefs: List<String> = emptyList(),
+    /** 标签按名称进出：文件里只有名字，「、」分隔；导入时同名归到同一枚，缺的自动新建。 */
+    val tagNames: List<String> = emptyList(),
     val errors: List<String> = emptyList(),
 ) {
     val isValid: Boolean get() = errors.isEmpty()

@@ -109,6 +109,8 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun setExcludeEnabled(enabled: Boolean) = persist { graph.preferences.setExcludeEnabled(enabled) }
 
+    fun setTagEnabled(enabled: Boolean) = persist { graph.preferences.setTagEnabled(enabled) }
+
     fun setThemeMode(mode: ThemeMode) = persist { graph.preferences.setThemeMode(mode) }
 
     fun setTimePrecision(precision: TimePrecision) = persist { graph.preferences.setTimePrecision(precision) }
@@ -208,6 +210,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
             graph.preferences.setQuickOpenEnabled(TallySettings.DEFAULT.quickOpenEnabled)
             graph.preferences.setReimburseEnabled(TallySettings.DEFAULT.reimburseEnabled)
             graph.preferences.setExcludeEnabled(TallySettings.DEFAULT.excludeEnabled)
+            graph.preferences.setTagEnabled(TallySettings.DEFAULT.tagEnabled)
             graph.preferences.setThemeMode(TallySettings.DEFAULT.themeMode)
             graph.preferences.setShowCurrencySymbol(TallySettings.DEFAULT.showCurrencySymbol)
             graph.preferences.setShowThousandsSeparator(TallySettings.DEFAULT.showThousandsSeparator)

@@ -8,11 +8,14 @@ import io.github.guohangbk.tally.data.db.dao.ImportBillDao
 import io.github.guohangbk.tally.data.db.dao.BillDao
 import io.github.guohangbk.tally.data.db.dao.CategoryDao
 import io.github.guohangbk.tally.data.db.dao.LedgerDao
+import io.github.guohangbk.tally.data.db.dao.TagDao
 import io.github.guohangbk.tally.data.db.entity.AttachmentEntity
 import io.github.guohangbk.tally.data.db.entity.BillEntity
+import io.github.guohangbk.tally.data.db.entity.BillTagEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.db.entity.ImportBatchEntity
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
+import io.github.guohangbk.tally.data.db.entity.TagEntity
 import io.github.guohangbk.tally.data.preferences.TallyPreferences
 import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.model.BillType
@@ -44,6 +47,7 @@ class ImportService(
     private val ledgerDao: LedgerDao,
     private val categoryDao: CategoryDao,
     private val attachmentDao: AttachmentDao,
+    private val tagDao: TagDao,
     private val importBatchDao: ImportBatchDao,
     private val importBillDao: ImportBillDao,
     private val preferences: TallyPreferences,
@@ -133,6 +137,9 @@ class ImportService(
                 val written = mutableListOf<BillEntity>()
                 val planned = mutableListOf<ParsedBillRow>()
                 var skipped = 0
+                // 标签按名称匹配：先取一次现有标签，文件里出现新名字时才建，同名整份文件共用一枚。
+                val tagIdByName = tagDao.allOnce().associate { it.name to it.id }.toMutableMap()
+                var nextSortOrder = (tagDao.maxSortOrder() ?: 0.0) + 1.0
                 for (row in valid) {
                     val ledger = resolveLedger(row, targetLedger, deviceId, timestamp)
                     val (l1, l2) = resolveCategories(row, deviceId, timestamp)
@@ -174,6 +181,23 @@ class ImportService(
                         deviceId = deviceId,
                     )
                     billDao.upsert(bill)
+                    if (row.tagNames.isNotEmpty()) {
+                        val tagIds = row.tagNames.map { name ->
+                            tagIdByName.getOrPut(name) {
+                                val tag = TagEntity(
+                                    id = newId(),
+                                    name = name,
+                                    sortOrder = nextSortOrder++,
+                                    createdAt = timestamp,
+                                    updatedAt = timestamp,
+                                    deviceId = deviceId,
+                                )
+                                tagDao.upsert(tag)
+                                tag.id
+                            }
+                        }
+                        tagDao.attach(tagIds.distinct().map { BillTagEntity(billId = bill.id, tagId = it) })
+                    }
                     written += bill
                 }
                 resolveLinks(written)

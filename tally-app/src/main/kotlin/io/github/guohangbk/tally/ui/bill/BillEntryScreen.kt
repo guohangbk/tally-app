@@ -65,6 +65,8 @@ import io.github.guohangbk.tally.domain.model.ReimburseStatus
 import io.github.guohangbk.tally.domain.model.TimePrecision
 import io.github.guohangbk.tally.ui.common.CategoryPanel
 import io.github.guohangbk.tally.ui.common.LedgerPickerSheet
+import io.github.guohangbk.tally.ui.common.TagPickerSheet
+import io.github.guohangbk.tally.ui.common.TagPill
 import io.github.guohangbk.tally.ui.common.TallyDateTimePickerDialog
 import io.github.guohangbk.tally.ui.common.formatClock
 import io.github.guohangbk.tally.ui.common.millisToLocalDate
@@ -130,6 +132,7 @@ fun BillEntryScreen(
     val colors = tallyColors
     var showLedgerSheet by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTagSheet by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -248,6 +251,25 @@ fun BillEntryScreen(
                             expressionPending = state.expressionPending,
                             negative = (state.expressionResult ?: 0L) < 0L,
                         )
+                        // 已选标签单独一行、写全名并带 ✕：选中几枚是「这一笔属于哪件事」，
+                        // 比一枚亮着的「标签」chip 说得更清楚（TG-02）。取消到零枚整行消失。
+                        if (state.selectedTags.isNotEmpty()) {
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 1.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                state.selectedTags.forEach { tag ->
+                                    TagPill(
+                                        name = tag.name,
+                                        selected = true,
+                                        fontSize = 11.sp,
+                                        onRemove = { viewModel.toggleTag(tag.id) },
+                                    )
+                                }
+                                TagPill(name = "＋", fontSize = 11.sp, onClick = { showTagSheet = true })
+                            }
+                        }
                         // chip 行与数字键盘常驻：备注框在它们上面，系统按备注框的位置抬窗口，
                         // 收掉下面这两段只会让焦点框掉得更低，于是被抬得更高。
                         // 五枚 chip 在窄屏或长日期文案下会折成两行，用 FlowRow 兜住，避免被裁掉。
@@ -303,6 +325,16 @@ fun BillEntryScreen(
                                     onClick = { viewModel.setExcluded(!state.excludedFromStats) },
                                 )
                             }
+                            // 标签是第五枚开关：点开弹层点选，不挤 keypad，也不占主链路。
+                            // chip 上不写数量——选中几枚在上方那一行数得出来（TG-02）。
+                            // 开关归设置 → 记账键盘；关掉只是不在记账页露出，管理页与筛选照常。
+                            if (settings.tagEnabled) {
+                                EntryChip(
+                                    label = "标签",
+                                    state = if (state.selectedTags.isNotEmpty()) ChipState.ON else ChipState.OFF,
+                                    onClick = { showTagSheet = true },
+                                )
+                            }
                         }
                         TallyKeypad(
                             onKey = viewModel::pressKey,
@@ -349,6 +381,21 @@ fun BillEntryScreen(
                 onBack()
             },
             onDismiss = { confirmDiscard = false },
+        )
+    }
+
+    if (showTagSheet) {
+        TagPickerSheet(
+            // 归档标签也能出现在这里：编辑旧账单时要能把它取消掉，不然它再也摘不下来。
+            tags = (state.tagChoices + state.selectedTags).distinctBy { it.id }.sortedBy { it.sortOrder },
+            selectedIds = state.selectedTags.mapTo(HashSet()) { it.id },
+            onToggle = { viewModel.toggleTag(it.id) },
+            onCreate = viewModel::createTag,
+            error = state.tagError,
+            onDismiss = {
+                showTagSheet = false
+                viewModel.clearTagError()
+            },
         )
     }
 

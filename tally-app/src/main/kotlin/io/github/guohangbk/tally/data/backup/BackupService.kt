@@ -112,6 +112,9 @@ class BackupService(
             backupDao.insertAiMessageAttachments(snapshot.aiMessageAttachments)
             backupDao.insertAiReports(snapshot.aiReports)
             backupDao.insertKeywordRules(snapshot.keywordRules)
+            backupDao.insertTags(snapshot.tags)
+            // 关联必须落在账单之后：旧包里没有这两张表时，两行都是空表，账单照旧恢复。
+            backupDao.insertBillTags(snapshot.billTags)
             backupDao.insertAppSettings(snapshot.appSettings)
         }
 
@@ -129,6 +132,7 @@ class BackupService(
 
     /** 覆盖式恢复的清空顺序：先子表后主表，避免中途出现悬空引用。 */
     private suspend fun clearAll() {
+        backupDao.clearBillTags()
         backupDao.clearBills()
         backupDao.clearAttachments()
         backupDao.clearCategories()
@@ -142,6 +146,7 @@ class BackupService(
         backupDao.clearAiReports()
         backupDao.clearAiConfigs()
         backupDao.clearKeywordRules()
+        backupDao.clearTags()
         backupDao.clearAppSettings()
     }
 
@@ -159,6 +164,8 @@ class BackupService(
         aiMessageAttachments = backupDao.aiMessageAttachments(),
         aiReports = backupDao.aiReports(),
         keywordRules = backupDao.keywordRules(),
+        tags = backupDao.tags(),
+        billTags = backupDao.billTags(),
         appSettings = backupDao.appSettings(),
     )
 

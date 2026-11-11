@@ -38,6 +38,7 @@ import io.github.guohangbk.tally.data.repository.RecurringRepository
 import io.github.guohangbk.tally.data.repository.ReimbursementRepository
 import io.github.guohangbk.tally.data.repository.RecycleBinRepository
 import io.github.guohangbk.tally.data.repository.SettingRepository
+import io.github.guohangbk.tally.data.repository.TagRepository
 import io.github.guohangbk.tally.data.speech.SpeechPort
 import io.github.guohangbk.tally.data.speech.SystemSpeechPort
 import io.github.guohangbk.tally.data.update.UpdateChecker
@@ -82,6 +83,13 @@ class AppGraph(
         ledgerDao = database.ledgerDao(),
         categoryDao = database.categoryDao(),
         attachmentDao = database.attachmentDao(),
+        tagDao = database.tagDao(),
+        preferences = preferences,
+    )
+
+    val tagRepository: TagRepository = TagRepository(
+        database = database,
+        tagDao = database.tagDao(),
         preferences = preferences,
     )
 
@@ -98,6 +106,7 @@ class AppGraph(
         ledgerDao = database.ledgerDao(),
         categoryDao = database.categoryDao(),
         attachmentDao = database.attachmentDao(),
+        tagDao = database.tagDao(),
         preferences = preferences,
         importBatchDao = database.importBatchDao(),
         importBillDao = database.importBillDao(),
@@ -108,6 +117,7 @@ class AppGraph(
         ledgerDao = database.ledgerDao(),
         categoryDao = database.categoryDao(),
         attachmentDao = database.attachmentDao(),
+        tagDao = database.tagDao(),
     )
 
     val settingRepository: SettingRepository = SettingRepository(database.appSettingDao())
@@ -222,6 +232,7 @@ class AppGraph(
     val recycleBinRepository: RecycleBinRepository = RecycleBinRepository(
         billDao = database.billDao(),
         attachmentDao = database.attachmentDao(),
+        tagDao = database.tagDao(),
         store = attachmentStore,
         settings = settingRepository,
     )
@@ -422,9 +433,9 @@ class AppGraph(
                 }
             return Room.databaseBuilder(context, TallyDatabase::class.java, TallyDatabase.NAME)
                 // 刻意不配 `fallbackToDestructiveMigration`：打开会抛异常，而不是静默清库。
-                // version 一直是 1，改实体直接改 entity、不走迁移路径；Release 里 Room 打开仍会比对编译期
-                // identity hash 与库里 `room_master_table` 的值，对不上就抛 IllegalStateException——
-                // 正式设备的库要按备份包重建，覆盖安装救不了。
+                // 正式设备从 v0.1.5（库版本 1）覆盖升级靠 `MIGRATION_1_2`；库版本只在发版时抬，
+                // 每次抬版本都必须带一条能跑的净迁移，否则 Room 的 identity hash 校验会直接抛异常。
+                .addMigrations(TallyDatabase.MIGRATION_1_2)
                 .setJournalMode(androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 // 读取并行：Room 不显式配置时，会把「查询」和「事务」都压在同一个单线程 IO executor 上。
                 // 首页同时有本月 / 账本统计 / 分类树等多条 Flow，全在这一根线程上排队，一条慢就全慢。

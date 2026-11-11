@@ -94,6 +94,7 @@ object Diagnostics {
                 append("time_precision  = ").append(settings.timePrecision).append('\n')
                 append("reimburse       = ").append(settings.reimburseEnabled).append('\n')
                 append("bill_image      = ").append(settings.billImageEnabled).append('\n')
+                append("tag             = ").append(settings.tagEnabled).append('\n')
                 append("assistant       = ").append(settings.assistantEnabled).append('\n')
                 append("currency_symbol = ").append(settings.showCurrencySymbol).append('\n')
                 append("thousands_sep   = ").append(settings.showThousandsSeparator).append('\n')

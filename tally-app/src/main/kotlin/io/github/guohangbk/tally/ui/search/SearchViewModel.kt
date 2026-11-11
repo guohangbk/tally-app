@@ -24,12 +24,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** 筛选里的标签候选：使用中的全列；归档的只在「正被选中」时补进来，带着它进来也看得见、点得掉。 */
+data class TagFilterChoice(val id: String, val name: String, val archived: Boolean)
 
 data class SearchUiState(
     val filter: BillFilter = BillFilter(),
     val result: BillSearchResult = BillSearchResult(io.github.guohangbk.tally.domain.model.BillSummary(), emptyList()),
     val ledgers: List<LedgerEntity> = emptyList(),
+    /** 筛选可选的标签；归档且正被选中的排在最前，标「已归档」。 */
+    val tags: List<TagFilterChoice> = emptyList(),
     /** 分类筛选的名称（「零食 / 咖啡」），只有带着分类进来时才有值。 */
     val categoryLabel: String? = null,
     val loaded: Boolean = false,
@@ -40,6 +47,7 @@ class SearchViewModel(
     initialLedgerId: String? = null,
     initialCategoryL1Id: String? = null,
     initialCategoryL2Id: String? = null,
+    initialTagIds: List<String> = emptyList(),
 ) : ViewModel() {
     // 首页切到某个账本再进来搜索，默认就搜这个账本，而不是回到默认账本。
     // 从分类管理的「查看统计数据」进来时带着分类，进来就是一类账的清单。
@@ -48,11 +56,20 @@ class SearchViewModel(
             ledgerId = initialLedgerId,
             categoryL1Id = initialCategoryL1Id,
             categoryL2Id = initialCategoryL2Id,
+            tagIds = initialTagIds,
         ),
     )
 
     /** 分类名在建立这一页时取一次就够：这一页不改分类名，改完再进来是新的一次。 */
     private val categoryLabel = MutableStateFlow<String?>(null)
+
+    /**
+     * 从归档标签详情带进来的那枚只是**入场默认**，不是他挑的：一旦点了别的筛选 chip，
+     * 它就该退场——否则筛着筛着它一直亮着，看着像自己多选了一枚看不见来源的标签。
+     * 使用中的标签照常留在筛选里，只有归档的这种「只因为带着进来才出现」的才退。
+     */
+    private var seededArchivedTagIds: Set<String> = emptySet()
+    private var filterChanged = false
 
     init {
         if (initialCategoryL1Id != null || initialCategoryL2Id != null) {
@@ -60,6 +77,19 @@ class SearchViewModel(
                 val l1 = initialCategoryL1Id?.let { graph.categoryRepository.find(it)?.name }
                 val l2 = initialCategoryL2Id?.let { graph.categoryRepository.find(it)?.name }
                 categoryLabel.value = listOfNotNull(l1, l2).joinToString(" / ")
+            }
+        }
+        if (initialTagIds.isNotEmpty()) {
+            viewModelScope.launch {
+                val archived = withContext(Dispatchers.IO) {
+                    initialTagIds.filter { graph.tagRepository.find(it)?.archivedAt != null }
+                }.toSet()
+                // 查归档要过一趟数据库；这期间他已经点了别的 chip 就直接摘掉，不再当成默认项。
+                if (filterChanged) {
+                    filter.update { it.copy(tagIds = it.tagIds - archived) }
+                } else {
+                    seededArchivedTagIds = archived
+                }
             }
         }
     }
@@ -78,16 +108,33 @@ class SearchViewModel(
     private val ledgerChips = graph.ledgerRepository.active
         .map { ledgers -> ledgers.filterNot { it.isArchived } }
 
+    /**
+     * 筛选候选仍只列使用中的标签；但**正被选中的归档标签要补进来**——标签详情的
+     * 「查看全部」会把归档标签的 id 带进搜索，不补就出现「账单有、筛选里没有」。
+     * 首页搜索不会主动列出归档标签，所以这条规则不会把归档标签铺进日常筛选。
+     */
+    private val tagChoices = combine(
+        graph.tagRepository.observeActive(),
+        graph.tagRepository.observeArchived(),
+        filter.map { it.tagIds },
+    ) { active, archived, selectedIds ->
+        val picked = selectedIds.toSet()
+        archived.filter { it.id in picked }.map { TagFilterChoice(it.id, it.name, archived = true) } +
+            active.map { TagFilterChoice(it.id, it.name, archived = false) }
+    }
+
     val state: StateFlow<SearchUiState> = combine(
         filter,
         result,
         ledgerChips,
+        tagChoices,
         categoryLabel,
-    ) { currentFilter, currentResult, ledgers, label ->
+    ) { currentFilter, currentResult, ledgers, tags, label ->
         SearchUiState(
             filter = currentFilter,
             result = currentResult,
             ledgers = ledgers,
+            tags = tags,
             categoryLabel = label.takeIf { currentFilter.categoryL1Id != null || currentFilter.categoryL2Id != null },
             loaded = true,
         )
@@ -95,25 +142,32 @@ class SearchViewModel(
 
     fun setKeyword(value: String) = update { copy(keyword = value) }
 
-    fun setType(value: BillType?) = update { copy(type = value) }
+    fun setType(value: BillType?) = updateFromChip { copy(type = value) }
 
-    fun setLedger(value: String?) = update { copy(ledgerId = value) }
+    fun setLedger(value: String?) = updateFromChip { copy(ledgerId = value) }
 
-    fun setSource(value: BillSource?) = update { copy(source = value) }
+    fun setSource(value: BillSource?) = updateFromChip { copy(source = value) }
+
+    /** 多选＝含任一：再点一次摘掉那一枚，摘到零枚就是不限。 */
+    fun toggleTag(tagId: String) = updateFromChip {
+        copy(tagIds = if (tagId in tagIds) tagIds - tagId else tagIds + tagId)
+    }
+
+    fun clearTags() = updateFromChip { copy(tagIds = emptyList()) }
 
     /** 分类筛选只能带着进来或清掉：这一页没有分类选择器，要挑分类去分类管理。 */
-    fun clearCategory() = update { copy(categoryL1Id = null, categoryL2Id = null) }
+    fun clearCategory() = updateFromChip { copy(categoryL1Id = null, categoryL2Id = null) }
 
-    fun setAllTime() = update { copy(startAt = null, endAtExclusive = null) }
+    fun setAllTime() = updateFromChip { copy(startAt = null, endAtExclusive = null) }
 
     fun setThisMonth() {
         val start = monthStartOf()
-        update { copy(startAt = start, endAtExclusive = shiftMonthStart(start, 1)) }
+        updateFromChip { copy(startAt = start, endAtExclusive = shiftMonthStart(start, 1)) }
     }
 
     fun setLast30Days() {
         val end = System.currentTimeMillis() + 86_400_000L
-        update { copy(startAt = end - 30L * 86_400_000L, endAtExclusive = end) }
+        updateFromChip { copy(startAt = end - 30L * 86_400_000L, endAtExclusive = end) }
     }
 
     /** 时间筛选按钮要能显出当前选中项，否则「本月」按下去没有反馈。 */
@@ -144,11 +198,22 @@ class SearchViewModel(
     }
 
     fun clear() {
+        seededArchivedTagIds = emptySet()
         filter.value = BillFilter()
     }
 
     private fun update(block: BillFilter.() -> BillFilter) {
-        filter.value = filter.value.block()
+        filter.update { it.block() }
+    }
+
+    /** 点了某个筛选 chip：归档标签的入场默认项一起退场。 */
+    private fun updateFromChip(block: BillFilter.() -> BillFilter) {
+        val seeded = seededArchivedTagIds.also { seededArchivedTagIds = emptySet() }
+        filterChanged = true
+        filter.update { current ->
+            val next = current.block()
+            if (seeded.isEmpty()) next else next.copy(tagIds = next.tagIds - seeded)
+        }
     }
 
     private companion object {

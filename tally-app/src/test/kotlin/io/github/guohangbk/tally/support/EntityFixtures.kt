@@ -8,12 +8,14 @@ import io.github.guohangbk.tally.data.db.entity.AiReportEntity
 import io.github.guohangbk.tally.data.db.entity.AppSettingEntity
 import io.github.guohangbk.tally.data.db.entity.AttachmentEntity
 import io.github.guohangbk.tally.data.db.entity.BillEntity
+import io.github.guohangbk.tally.data.db.entity.BillTagEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.db.entity.ImportBatchEntity
 import io.github.guohangbk.tally.data.db.entity.InstallmentPlanEntity
 import io.github.guohangbk.tally.data.db.entity.KeywordRuleEntity
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
 import io.github.guohangbk.tally.data.db.entity.RecurringRuleEntity
+import io.github.guohangbk.tally.data.db.entity.TagEntity
 
 /**
  * 测试对象的唯一构造入口（Object Mother）。
@@ -121,6 +123,15 @@ object EntityFixtures {
         id = "kw-1", keyword = "火锅", categoryId = "cat-1", source = "LEARNED",
         priority = 9, createdAt = T0, updatedAt = T0 + 1, deletedAt = null,
         deviceId = DEVICE, version = 2,
+    )
+
+    fun tag(id: String = "tag-1") = TagEntity(
+        id = id, name = "✈️ 旅行", sortOrder = 2.5, archivedAt = T0 + 2,
+        createdAt = T0, updatedAt = T0 + 1, deletedAt = null, deviceId = DEVICE, version = 3,
+    )
+
+    fun billTag(billId: String = "bill-1", tagId: String = "tag-1") = BillTagEntity(
+        billId = billId, tagId = tagId,
     )
 
     fun appSetting() = AppSettingEntity(
