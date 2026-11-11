@@ -109,6 +109,7 @@ fun SelectionBar(
     count: Int,
     amountMinor: Long,
     hint: String?,
+    onTags: () -> Unit,
     onSelectCategory: () -> Unit,
     onReimburse: () -> Unit,
     onExclude: () -> Unit,
@@ -133,7 +134,9 @@ fun SelectionBar(
             BarAction("switch", "移至账本", enabled = moveEnabled, onClick = onMove)
         },
     ) {
-        BarAction("tag", "改分类", highlight = true, enabled = categoryEnabled, onClick = onSelectCategory)
+        // 批量补标排在第一位：记账时想不起来，月底一次补是标签真正被用起来的入口。
+        BarAction("tag", "打标签", onClick = onTags)
+        BarAction("select", "改分类", highlight = true, enabled = categoryEnabled, onClick = onSelectCategory)
         BarAction("receipt", "报销", onClick = onReimburse)
         BarAction("eyeoff", "不计入", onClick = onExclude)
         BarAction("trash", "删除", danger = true, onClick = onDelete)
@@ -186,6 +189,19 @@ internal fun RowScope.BarAction(
  */
 @Composable
 fun BillBatchOverlays(selection: BatchState, batch: BillBatchViewModel) {
+    if (selection.showTagPicker) {
+        TagPickerSheet(
+            tags = selection.tagChoices,
+            selectedIds = selection.tagSelection,
+            onToggle = { batch.toggleTag(it.id) },
+            onCreate = batch::createTag,
+            error = selection.tagError,
+            confirmLabel = "应用到 ${selection.selected.size} 笔",
+            onConfirm = batch::applyTags,
+            onDismiss = batch::closeTagPicker,
+        )
+    }
+
     if (selection.showCategoryPicker) {
         CategoryPickerSheet(
             categories = selection.categories,

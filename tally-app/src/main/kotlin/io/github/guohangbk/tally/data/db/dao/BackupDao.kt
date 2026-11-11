@@ -18,6 +18,8 @@ import io.github.guohangbk.tally.data.db.entity.InstallmentPlanEntity
 import io.github.guohangbk.tally.data.db.entity.KeywordRuleEntity
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
 import io.github.guohangbk.tally.data.db.entity.RecurringRuleEntity
+import io.github.guohangbk.tally.data.db.entity.BillTagEntity
+import io.github.guohangbk.tally.data.db.entity.TagEntity
 
 /**
  * 备份网关：整表快照与整表替换集中在这里。
@@ -66,6 +68,12 @@ interface BackupDao {
     @Query("SELECT * FROM keyword_rule ORDER BY created_at ASC")
     suspend fun keywordRules(): List<KeywordRuleEntity>
 
+    @Query("SELECT * FROM tag ORDER BY sort_order ASC, created_at ASC")
+    suspend fun tags(): List<TagEntity>
+
+    @Query("SELECT * FROM bill_tag")
+    suspend fun billTags(): List<BillTagEntity>
+
     @Query("SELECT * FROM app_setting ORDER BY setting_key ASC")
     suspend fun appSettings(): List<AppSettingEntity>
 
@@ -111,6 +119,12 @@ interface BackupDao {
     suspend fun insertKeywordRules(rows: List<KeywordRuleEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTags(rows: List<TagEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBillTags(rows: List<BillTagEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAppSettings(rows: List<AppSettingEntity>)
 
     // ---- 清空（覆盖式恢复）--------------------------------------------
@@ -153,6 +167,12 @@ interface BackupDao {
 
     @Query("DELETE FROM keyword_rule")
     suspend fun clearKeywordRules()
+
+    @Query("DELETE FROM bill_tag")
+    suspend fun clearBillTags()
+
+    @Query("DELETE FROM tag")
+    suspend fun clearTags()
 
     @Query("DELETE FROM app_setting")
     suspend fun clearAppSettings()

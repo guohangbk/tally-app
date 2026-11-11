@@ -587,6 +587,7 @@ fun TallyHomeScreen(
                     categoryBlockedReason = selection.categoryBlockedReason,
                     categoryEnabled = selection.categoryBlockedReason == null,
                     moveEnabled = selection.canMove,
+                    onTags = batch::openTagPicker,
                     onSelectCategory = batch::openCategoryPicker,
                     onReimburse = { batch.reimburse(selection.selected.none { it.bill.reimbursed == ReimburseStatus.PENDING.name }) },
                     onExclude = { batch.exclude(selection.selected.none { it.bill.excludedFromStats }) },

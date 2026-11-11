@@ -9,7 +9,7 @@ import io.github.guohangbk.tally.data.debug.DebugLog
 import java.io.File
 
 /**
- * Debug 构建专用：改了实体但 `version` 仍压在 1 时，让设备上的旧库自动对齐结构并保住数据。
+ * Debug 构建专用：改了实体但 `version` 没跟着抬时，让设备上的旧库自动对齐结构并保住数据。
  *
  * 为什么需要它：Room 每次打开库都拿编译期算出的 identity hash 与 `room_master_table` 里存的值比对，
  * 版本相同而 hash 不同就直接抛 `IllegalStateException`。开发期反复改 schema、又不想每次卸装清库，

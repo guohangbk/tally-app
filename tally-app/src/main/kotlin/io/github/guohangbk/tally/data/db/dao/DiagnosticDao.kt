@@ -33,6 +33,8 @@ interface DiagnosticDao {
         UNION ALL SELECT 'ai_message_attachment', COUNT(*) FROM ai_message_attachment
         UNION ALL SELECT 'ai_report', COUNT(*) FROM ai_report
         UNION ALL SELECT 'keyword_rule', COUNT(*) FROM keyword_rule
+        UNION ALL SELECT 'tag', COUNT(*) FROM tag
+        UNION ALL SELECT 'bill_tag', COUNT(*) FROM bill_tag
         UNION ALL SELECT 'app_setting', COUNT(*) FROM app_setting
         """,
     )

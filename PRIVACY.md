@@ -119,7 +119,7 @@ WebDAV 的口令走同一个保管箱（键名 `webdav_password`）；WebDAV 的
 
 ## 五、导出的 CSV / XLSX 是明文
 
-「设置 → 数据 → 导出账单」出的 CSV / XLSX **不加密**，金额、备注等 13 列原样在里面，同样落在 `Download/Tally/`。它生来就是给 Excel 和别的记账工具看的，所以没法加密。
+「设置 → 数据 → 导出账单」出的 CSV / XLSX **不加密**，金额、备注等 14 列原样在里面，同样落在 `Download/Tally/`。它生来就是给 Excel 和别的记账工具看的，所以没法加密。
 
 用完请自己删。分享长图那个「一键脱敏」选项是给截图场景用的，跟导出文件无关——导出的文件永远不脱敏。
 
@@ -127,7 +127,7 @@ WebDAV 的口令走同一个保管箱（键名 `webdav_password`）；WebDAV 的
 
 ## 六、诊断包不含账单内容
 
-「设置 → 数据 → 导出诊断包」写一份 `tally_diagnostics_<时间戳>.txt` 到 `Download/Tally/`，并直接顶起系统分享，方便你贴给作者排障。
+「设置 → 关于 → 导出诊断包」写一份 `tally_diagnostics_<时间戳>.txt` 到 `Download/Tally/`，并直接顶起系统分享，方便你贴给作者排障。
 
 它里面是：版本号与 versionCode、buildType、库结构与各种校验值（`user_version` / `identity_hash` / `journal_mode`）、数据库与 WAL 的字节数、剩余空间、机型与 ABI、Android 版本、时区语言、几个非敏感开关、各表**行数**、小莉的服务商与模型名（以及最近一次错误文本、连续失败次数）、应用内打点与崩溃留档、尽力而为的本进程 logcat。
 

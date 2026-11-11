@@ -86,6 +86,8 @@ import io.github.guohangbk.tally.ui.settings.LicenseScreen
 import io.github.guohangbk.tally.ui.settings.NotificationSettingsScreen
 import io.github.guohangbk.tally.ui.settings.SettingsScreen
 import io.github.guohangbk.tally.ui.stats.TallyStatsScreen
+import io.github.guohangbk.tally.ui.tag.TagDetailScreen
+import io.github.guohangbk.tally.ui.tag.TagsScreen
 
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -109,7 +111,11 @@ object Routes {
     const val SETTLE_POSTER = "ledger/settle/poster/{ledgerId}"
     const val CATEGORIES = "categories"
     const val BILL_NEW = "bill/new?l1={l1}&l2={l2}&type={type}&amount={amount}&note={note}&source={source}&sk={sk}&at={at}&kw={kw}"
-    const val SEARCH = "search?ledgerId={ledgerId}&categoryL1={categoryL1}&categoryL2={categoryL2}"
+    const val SEARCH = "search?ledgerId={ledgerId}&categoryL1={categoryL1}&categoryL2={categoryL2}&tags={tags}"
+    /** 标签管理：胶囊墙，点胶囊出操作单，长按胶囊就地拖动排序。 */
+    const val TAGS = "tags"
+    /** 标签详情：只读的一页看完，从管理页的「查看统计」进。 */
+    const val TAG_DETAIL = "tag/{tagId}"
     const val IMPORT = "import"
     const val EXPORT = "export"
     const val RECURRING = "recurring"
@@ -164,9 +170,20 @@ object Routes {
             "&bucket=${request.bucket?.name ?: ""}" +
             "&excludePending=${if (request.excludePendingReimburse) 1 else 0}"
 
-    /** 分类管理的「查看统计数据」带着分类进搜索，空串即该维度不限。 */
-    fun search(ledgerId: String?, categoryL1: String? = null, categoryL2: String? = null) =
-        "search?ledgerId=${ledgerId.orEmpty()}&categoryL1=${categoryL1.orEmpty()}&categoryL2=${categoryL2.orEmpty()}"
+    /**
+     * 分类管理的「查看统计数据」带着分类进搜索，空串即该维度不限；
+     * 标签详情底部的「查看全部 N 笔」再带上一串标签 id，多枚是「含任一」。
+     */
+    fun search(
+        ledgerId: String?,
+        categoryL1: String? = null,
+        categoryL2: String? = null,
+        tagIds: List<String> = emptyList(),
+    ) = "search?ledgerId=${ledgerId.orEmpty()}" +
+        "&categoryL1=${categoryL1.orEmpty()}&categoryL2=${categoryL2.orEmpty()}" +
+        "&tags=${tagIds.joinToString(",")}"
+
+    fun tagDetail(tagId: String) = "tag/$tagId"
 
     /** 统计页「问小莉」把这段结论带进对话页当上下文，不自动发送。 */
     fun assistantChat(prompt: String? = null) = "assistant/chat?prompt=" + android.net.Uri.encode(prompt.orEmpty())
@@ -545,7 +562,8 @@ private fun TallyAppShell(
                             onOpenBackup = { navController.navigate(Routes.BACKUP) },
                             onOpenAssistantConfig = { navController.navigate(Routes.ASSISTANT_CONFIG) },
                             onOpenKeywordRules = { navController.navigate(Routes.KEYWORD_RULES) },
-                        onOpenBillKeypad = { navController.navigate(Routes.BILL_KEYPAD) },
+                            onOpenTags = { navController.navigate(Routes.TAGS) },
+                            onOpenBillKeypad = { navController.navigate(Routes.BILL_KEYPAD) },
                             onOpenRecycle = { navController.navigate(Routes.RECYCLE) },
                             onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                             onOpenGuide = { navController.navigate(Routes.GUIDE) },
@@ -556,7 +574,10 @@ private fun TallyAppShell(
                         NotificationSettingsScreen(onBack = { navController.popBackStack() })
                     }
                     composable(Routes.BILL_KEYPAD) {
-                        BillKeypadSettingsScreen(onBack = { navController.popBackStack() })
+                        BillKeypadSettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onManageTags = { navController.navigate(Routes.TAGS) },
+                        )
                     }
                     composable(Routes.KEYWORD_RULES) {
                         io.github.guohangbk.tally.ui.keyword.KeywordRuleScreen(onBack = { navController.popBackStack() })
@@ -616,9 +637,27 @@ private fun TallyAppShell(
                             initialLedgerId = entry.arguments?.getString("ledgerId")?.ifEmpty { null },
                             initialCategoryL1Id = entry.arguments?.getString("categoryL1")?.ifEmpty { null },
                             initialCategoryL2Id = entry.arguments?.getString("categoryL2")?.ifEmpty { null },
+                            initialTagIds = entry.arguments?.getString("tags")
+                                ?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
                             onBack = { navController.popBackStack() },
                             onOpenBillEdit = { navController.navigate(Routes.billEdit(it)) },
                             onRepeatBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
+                        )
+                    }
+                    composable(Routes.TAGS) {
+                        TagsScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpenDetail = { tagId -> navController.navigate(Routes.tagDetail(tagId)) },
+                            onOpenBillKeypad = { navController.navigate(Routes.BILL_KEYPAD) },
+                        )
+                    }
+                    composable(Routes.TAG_DETAIL) { entry ->
+                        TagDetailScreen(
+                            tagId = entry.arguments?.getString("tagId").orEmpty(),
+                            onBack = { navController.popBackStack() },
+                            onOpenBills = { ledgerId, tagIds ->
+                                navController.navigate(Routes.search(ledgerId, tagIds = tagIds))
+                            },
                         )
                     }
                     composable(Routes.IMPORT) {

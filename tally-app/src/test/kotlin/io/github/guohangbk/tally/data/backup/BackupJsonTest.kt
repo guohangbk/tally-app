@@ -14,13 +14,13 @@ import kotlin.test.assertTrue
 
 /**
  * 备份主流程的回归网，正对四个既有坑：
- * - 坑 1「备份 codec 漏 installment_plan.note」→ 15 张表的往返契约 + 单独的字段断言；
+ * - 坑 1「备份 codec 漏 installment_plan.note」→ 16 张表的往返契约 + 单独的字段断言；
  * - 坑 3「删期次后已入账失真」→ 软删行必须原样跟着备份走（InstallmentPlanViewTest 管口径）；
  * - 坑 4「REPLACE 吞回收站行」→ 同上，回收站行丢不了才谈得上不被覆盖。
  */
 class BackupJsonTest {
 
-    /** 一张表四个契约，共 60 个动态用例；加表/加字段自动跟着扩。 */
+    /** 一张表四个契约，共 64 个动态用例；加表/加字段自动跟着扩。 */
     @TestFactory
     fun `每张表的编解码契约`(): List<DynamicTest> = BackupTableCases.all.flatMap { case ->
         listOf(
@@ -100,6 +100,15 @@ class BackupJsonTest {
         assertEquals("MANUAL", bill.source)
         assertEquals("CNY", bill.currency)
         assertEquals(1, bill.version)
+    }
+
+    @Test
+    fun `旧备份没有标签两节按空表恢复`() {
+        val old = JSONObject().put("formatVersion", 1)
+            .put("bills", org.json.JSONArray().put(JSONObject().put("id", "b1").put("amount_minor", 500)))
+        val snapshot = BackupJson.decode(old.toString())
+        assertTrue(snapshot.tags.isEmpty())
+        assertTrue(snapshot.billTags.isEmpty())
     }
 
     @Test

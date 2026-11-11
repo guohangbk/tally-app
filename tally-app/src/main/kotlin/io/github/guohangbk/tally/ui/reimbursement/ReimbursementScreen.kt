@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.ui.reimbursement
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -81,10 +82,13 @@ fun ReimbursementScreen(
     var showLedgerSheet by remember { mutableStateOf(false) }
     var detailBillId by remember { mutableStateOf<String?>(null) }
 
+    // 勾选态是页面内的一层：系统返回先退出勾选，顶栏返回也一样，不整页退出。
+    BackHandler(enabled = state.selectionMode) { viewModel.exitSelection() }
+
     Column(modifier = Modifier.fillMaxSize().background(colors.paper)) {
         TallyTopBar(
             title = "报销管理",
-            onBack = onBack,
+            onBack = if (state.selectionMode) viewModel::exitSelection else onBack,
             trailing = {
                 TallyTag(
                     text = "${state.ledgers.firstOrNull { it.ledger.id == state.ledgerId }?.ledger?.name ?: "全部账本"} ▾",

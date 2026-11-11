@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.ui.search
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -85,12 +86,15 @@ fun SearchScreen(
     initialLedgerId: String? = null,
     initialCategoryL1Id: String? = null,
     initialCategoryL2Id: String? = null,
+    initialTagIds: List<String> = emptyList(),
     onBack: () -> Unit,
     onOpenBillEdit: (String) -> Unit = {},
     onRepeatBill: (String?, String?, BillType?) -> Unit = { _, _, _ -> },
 ) {
     val graph = rememberAppGraph()
-    val viewModel = tallyViewModel { SearchViewModel(graph, initialLedgerId, initialCategoryL1Id, initialCategoryL2Id) }
+    val viewModel = tallyViewModel {
+        SearchViewModel(graph, initialLedgerId, initialCategoryL1Id, initialCategoryL2Id, initialTagIds)
+    }
     val batch = tallyViewModel(key = "search-batch") { BillBatchViewModel(graph) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selection by batch.state.collectAsStateWithLifecycle()
@@ -102,6 +106,9 @@ fun SearchScreen(
     var minText by remember { mutableStateOf("") }
     var maxText by remember { mutableStateOf("") }
     var filtersOpen by remember { mutableStateOf(false) }
+
+    // 勾选态是页面内的一层：系统返回 / 侧滑先退出勾选，不该把人直接甩回上一页。
+    BackHandler(enabled = selection.active) { batch.exitSelection() }
 
     Column(modifier = Modifier.fillMaxSize().background(colors.paper)) {
         if (selection.active) {
@@ -158,8 +165,11 @@ fun SearchScreen(
                     // 默认只摊开收支类型，其余六项收进「更多筛选」；收起时生效的条件原样写在开关下面，
                     // 藏在折叠里的条件会改合计，看不见比没有条件更危险。
                     val activeChips = activeFilterChips(viewModel, filter, state.categoryLabel)
-                    // 账本不写成 chip，但计数要算上它，否则收起时那枚「N 项」会少一条。
-                    val activeCount = activeChips.size + if (filter.ledgerId != null) 1 else 0
+                    // 账本与标签不写成 chip（标签在展开后的标签行里），但计数要算上它们，
+                    // 否则收起时那枚「N 项」会少一条，看着像没筛。
+                    val activeCount = activeChips.size +
+                        (if (filter.ledgerId != null) 1 else 0) +
+                        filter.tagIds.size
                     FilterToggle(filtersOpen, activeCount) { filtersOpen = !filtersOpen }
                     AnimatedVisibility(
                         visible = filtersOpen,
@@ -192,6 +202,25 @@ fun SearchScreen(
                                 FilterButton("全部", filter.ledgerId == null, { viewModel.setLedger(null) })
                                 state.ledgers.forEach { ledger ->
                                     FilterButton(ledger.name, filter.ledgerId == ledger.id, { viewModel.setLedger(ledger.id) })
+                                }
+                            }
+                            // 标签排在账本之后：先定范围（时间、账本），再切维度；多选是并集。
+                            if (state.tags.isNotEmpty()) {
+                                Spacer(Modifier.height(9.dp))
+                                FilterLabel("标签 · 多选＝含任一")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    FilterButton("全部", filter.tagIds.isEmpty(), viewModel::clearTags)
+                                    state.tags.forEach { tag ->
+                                        FilterButton(
+                                            // 归档标签只在被选中时出现在这里：标出来源，点一下即可摘掉。
+                                            label = if (tag.archived) "${tag.name} · 已归档" else tag.name,
+                                            selected = tag.id in filter.tagIds,
+                                            onClick = { viewModel.toggleTag(tag.id) },
+                                        )
+                                    }
                                 }
                             }
                             Spacer(Modifier.height(9.dp))
@@ -361,6 +390,7 @@ fun SearchScreen(
                 categoryBlockedReason = selection.categoryBlockedReason,
                 categoryEnabled = selection.categoryBlockedReason == null,
                 moveEnabled = selection.canMove,
+                onTags = batch::openTagPicker,
                 onSelectCategory = batch::openCategoryPicker,
                 onReimburse = { batch.reimburse(selection.selected.none { it.bill.reimbursed == ReimburseStatus.PENDING.name }) },
                 onExclude = { batch.exclude(selection.selected.none { it.bill.excludedFromStats }) },
@@ -433,7 +463,7 @@ private fun KeywordField(value: String, onValueChange: (String) -> Unit) {
         InlineIcon(iconKey = "search", contentDescription = null, size = 13.dp, tint = colors.ink3)
         Spacer(Modifier.width(7.dp))
         Box(modifier = Modifier.weight(1f)) {
-            if (value.isEmpty() && !focused) Text("搜索备注、分类…", style = TallyType.helper, color = colors.ink3)
+            if (value.isEmpty() && !focused) Text("搜索备注、分类或标签…", style = TallyType.helper, color = colors.ink3)
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -555,7 +585,10 @@ private fun AmountField(prefix: String, value: String, onValueChange: (String) -
 
 /**
  * 折叠起来的条件里，哪几条正生效——原样写成 chip，收起状态也能一眼看完。
- * 账本不进这里：它是跟着首页来的上下文，不是这一屏里挑的条件，只该在展开之后看得见。
+ *
+ * 账本与标签不进这里：账本是跟着首页来的上下文；标签有自己的行，写在折叠框下面
+ * 会像从别处漏出来的一枚，而且挑选/摘掉都得回展开态做。两者的生效条数由开关上的
+ * 「N 项」承担，收起时仍知道筛过东西。
  */
 private fun activeFilterChips(
     viewModel: SearchViewModel,

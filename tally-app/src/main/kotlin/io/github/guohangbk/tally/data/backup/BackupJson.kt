@@ -8,12 +8,14 @@ import io.github.guohangbk.tally.data.db.entity.AiReportEntity
 import io.github.guohangbk.tally.data.db.entity.AppSettingEntity
 import io.github.guohangbk.tally.data.db.entity.AttachmentEntity
 import io.github.guohangbk.tally.data.db.entity.BillEntity
+import io.github.guohangbk.tally.data.db.entity.BillTagEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.db.entity.ImportBatchEntity
 import io.github.guohangbk.tally.data.db.entity.InstallmentPlanEntity
 import io.github.guohangbk.tally.data.db.entity.KeywordRuleEntity
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
 import io.github.guohangbk.tally.data.db.entity.RecurringRuleEntity
+import io.github.guohangbk.tally.data.db.entity.TagEntity
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -32,6 +34,8 @@ data class BackupSnapshot(
     val aiMessageAttachments: List<AiMessageAttachmentEntity> = emptyList(),
     val aiReports: List<AiReportEntity> = emptyList(),
     val keywordRules: List<KeywordRuleEntity> = emptyList(),
+    val tags: List<TagEntity> = emptyList(),
+    val billTags: List<BillTagEntity> = emptyList(),
     val appSettings: List<AppSettingEntity> = emptyList(),
 ) {
     /** 给人看的「N 笔账单」= 未删行数：备份文件里仍带着软删行（回收站要跟着回来），
@@ -65,6 +69,8 @@ object BackupJson {
         root.put("aiMessageAttachments", JSONArray(snapshot.aiMessageAttachments.map(::aiMessageAttachment)))
         root.put("aiReports", JSONArray(snapshot.aiReports.map(::aiReport)))
         root.put("keywordRules", JSONArray(snapshot.keywordRules.map(::keywordRule)))
+        root.put("tags", JSONArray(snapshot.tags.map(::tag)))
+        root.put("billTags", JSONArray(snapshot.billTags.map(::billTag)))
         root.put("appSettings", JSONArray(snapshot.appSettings.map(::appSetting)))
         return root.toString()
     }
@@ -87,6 +93,9 @@ object BackupJson {
             aiMessageAttachments = rows(root, "aiMessageAttachments", ::aiMessageAttachmentFrom),
             aiReports = rows(root, "aiReports", ::aiReportFrom),
             keywordRules = rows(root, "keywordRules", ::keywordRuleFrom),
+            // 旧备份没有这两节，`rows` 取不到就返回空表——恢复出来就是「没有标签」，不是报错。
+            tags = rows(root, "tags", ::tagFrom),
+            billTags = rows(root, "billTags", ::billTagFrom),
             appSettings = rows(root, "appSettings", ::appSettingFrom),
         )
     }
@@ -235,6 +244,17 @@ object BackupJson {
         put("source", e.source); put("priority", e.priority)
         put("created_at", e.createdAt); put("updated_at", e.updatedAt); put("deleted_at", e.deletedAt)
         put("device_id", e.deviceId); put("version", e.version)
+    }
+
+    private fun tag(e: TagEntity) = JSONObject().apply {
+        put("id", e.id); put("name", e.name); put("sort_order", e.sortOrder)
+        put("archived_at", e.archivedAt)
+        put("created_at", e.createdAt); put("updated_at", e.updatedAt); put("deleted_at", e.deletedAt)
+        put("device_id", e.deviceId); put("version", e.version)
+    }
+
+    private fun billTag(e: BillTagEntity) = JSONObject().apply {
+        put("bill_id", e.billId); put("tag_id", e.tagId)
     }
 
     private fun appSetting(e: AppSettingEntity) = JSONObject().apply {
@@ -407,6 +427,19 @@ object BackupJson {
         createdAt = o.optLong("created_at"), updatedAt = o.optLong("updated_at"),
         deletedAt = o.nullableLong("deleted_at"), deviceId = o.optString("device_id"),
         version = o.optInt("version", 1),
+    )
+
+    private fun tagFrom(o: JSONObject) = TagEntity(
+        id = o.getString("id"), name = o.optString("name"),
+        sortOrder = o.optDouble("sort_order", 0.0),
+        archivedAt = o.nullableLong("archived_at"),
+        createdAt = o.optLong("created_at"), updatedAt = o.optLong("updated_at"),
+        deletedAt = o.nullableLong("deleted_at"), deviceId = o.optString("device_id"),
+        version = o.optInt("version", 1),
+    )
+
+    private fun billTagFrom(o: JSONObject) = BillTagEntity(
+        billId = o.getString("bill_id"), tagId = o.getString("tag_id"),
     )
 
     private fun appSettingFrom(o: JSONObject) = AppSettingEntity(

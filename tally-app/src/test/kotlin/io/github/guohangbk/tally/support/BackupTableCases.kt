@@ -29,7 +29,7 @@ data class TableCase<T : Any>(
     val supportsSoftDelete: Boolean get() = softDeleted(sample) !== sample
 }
 
-/** 15 张表的注册表。顺序与 BackupJson.encode 一致，便于逐项核对。 */
+/** 备份覆盖的 16 张表的注册表。顺序与 BackupJson.encode 一致，便于逐项核对。 */
 object BackupTableCases {
     val all: List<TableCase<*>> = listOf(
         TableCase(
@@ -124,6 +124,21 @@ object BackupTableCases {
             softDeleted = { it.copy(deletedAt = 1L) },
             place = { s, rows -> s.copy(keywordRules = rows) },
             pick = { it.keywordRules },
+        ),
+        TableCase(
+            name = "tag", jsonKey = "tags",
+            sample = EntityFixtures.tag(),
+            softDeleted = { it.copy(deletedAt = 1L) },
+            place = { s, rows -> s.copy(tags = rows) },
+            pick = { it.tags },
+        ),
+        TableCase(
+            // 关联行没有软删字段：标签或账单软删后这一行仍在，恢复后要能重新挂上。
+            name = "billTag", jsonKey = "billTags",
+            sample = EntityFixtures.billTag(),
+            softDeleted = { it },
+            place = { s, rows -> s.copy(billTags = rows) },
+            pick = { it.billTags },
         ),
         TableCase(
             name = "appSetting", jsonKey = "appSettings",

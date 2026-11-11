@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -123,10 +124,33 @@ fun BillRow(
             Spacer(Modifier.height(1.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 BillBadges(item = item)
+                // 行上最多两枚标签，第三枚起折成 ＋N（TG-06）：标签多了也不把这一行撑高。
+                // 名称由用户自己起，可能很长——给一枚封顶宽度，超出走省略号，不把备注与金额挤出去。
+                if (item.tags.isNotEmpty()) {
+                    val shown = item.tags.take(2)
+                    shown.forEach { name ->
+                        TagPill(
+                            name = name,
+                            modifier = Modifier.widthIn(max = 80.dp),
+                            fontSize = 9.sp,
+                            verticalPadding = 1.dp,
+                        )
+                    }
+                    if (item.tags.size > shown.size) {
+                        TagPill(name = "＋${item.tags.size - shown.size}", fontSize = 9.sp, verticalPadding = 1.dp)
+                    }
+                }
                 // 行上只留备注：时刻属于「这一笔是什么时候」的细节，点开弹层再看，列表不铺时间。
                 val note = bill.note?.takeIf { it.isNotBlank() }
                 if (note != null) {
-                    Text(note, fontSize = 11.sp, lineHeight = 13.sp, color = colors.ink3, maxLines = 1)
+                    Text(
+                        note,
+                        fontSize = 11.sp, lineHeight = 13.sp,
+                        color = colors.ink3,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                 }
             }
         }

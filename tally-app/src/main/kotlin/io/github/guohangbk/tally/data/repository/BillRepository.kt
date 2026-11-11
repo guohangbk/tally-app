@@ -4,7 +4,9 @@ import io.github.guohangbk.tally.data.db.dao.AttachmentDao
 import io.github.guohangbk.tally.data.db.dao.BillDao
 import io.github.guohangbk.tally.data.db.dao.CategoryDao
 import io.github.guohangbk.tally.data.db.dao.LedgerDao
+import io.github.guohangbk.tally.data.db.dao.TagDao
 import io.github.guohangbk.tally.data.db.entity.BillEntity
+import io.github.guohangbk.tally.data.db.entity.BillTagEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.db.query.BillListItemRow
 import io.github.guohangbk.tally.data.db.query.StatsBillRow
@@ -60,6 +62,9 @@ import java.util.UUID
  */
 private const val SEARCH_ROW_LIMIT = 1000
 
+/** `IN (:ids)` 一次最多绑多少：API 28 的 SQLite 上限是 999，留出余量。 */
+private const val TAG_QUERY_CHUNK = 500
+
 /** 概览页的统计：合计与一级分类排行。口径与统计页是同一套聚合函数，只是不再产出整份快照。 */
 data class OverviewStats(
     val expenseMinor: Long,
@@ -77,6 +82,7 @@ class BillRepository(
     private val ledgerDao: LedgerDao,
     private val categoryDao: CategoryDao,
     private val attachmentDao: AttachmentDao,
+    private val tagDao: TagDao,
     private val preferences: TallyPreferences,
     private val now: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
@@ -96,8 +102,12 @@ class BillRepository(
         }
 
     override fun observeMonth(ledgerId: String?, range: PeriodRange): Flow<BillMonthSnapshot> =
-        rangeRows(ledgerId, range.startAt, range.endAtExclusive).map { rows ->
-            val items = rows.map(::toItem)
+        // 行上的标签是二次查询补的：加上关联表的变更信号，打标 / 改名后列表才会重取一次。
+        combine(
+            rangeRows(ledgerId, range.startAt, range.endAtExclusive),
+            tagDao.observeLinkTick(),
+        ) { rows, _ ->
+            val items = withTags(rows.map(::toItem))
             BillMonthSnapshot(
                 monthStart = range.startAt,
                 summary = summary(items),
@@ -119,29 +129,37 @@ class BillRepository(
         val source = filter.source?.name
         val amountMin = filter.amountMinMinor
         val amountMax = filter.amountMaxMinor
+        // 标签多选是并集；Room 不认空列表的 IN，短路开关 tagFilter=0 时补一个永不命中的占位值。
+        val tagFilter = if (filter.tagIds.isEmpty()) 0 else 1
+        val tagIds = filter.tagIds.ifEmpty { listOf("") }
         val limit = SEARCH_ROW_LIMIT
 
         // 排序必须在 SQL 里选哪一条查询：列表只取回这一批，回到界面上排等于只在这批里排，
         // 「金额最高的那笔」会排错。
         val rows = when (filter.sort) {
             BillSort.TIME_DESC ->
-                billDao.observeSearchRowsNewest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, limit)
+                billDao.observeSearchRowsNewest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
 
             BillSort.TIME_ASC ->
-                billDao.observeSearchRowsOldest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, limit)
+                billDao.observeSearchRowsOldest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
 
             BillSort.AMOUNT_DESC ->
-                billDao.observeSearchRowsLargest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, limit)
+                billDao.observeSearchRowsLargest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
 
             BillSort.AMOUNT_ASC ->
-                billDao.observeSearchRowsSmallest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, limit)
+                billDao.observeSearchRowsSmallest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
         }
         val summary = billDao.observeSearchSummary(
             keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax,
+            tagFilter, tagIds,
         )
-        return combine(rows, summary) { list, aggregate ->
+        return combine(rows, summary, tagDao.observeLinkTick()) { list, aggregate, _ ->
             // 列表只取最近一批，汇总走 SQL：几千笔账不该在打开搜索时整表映射成对象再分组。
-            BillSearchResult(summary = aggregate, bills = list.map(::toItem), truncated = list.size >= limit)
+            BillSearchResult(
+                summary = aggregate,
+                bills = withTags(list.map(::toItem)),
+                truncated = list.size >= limit,
+            )
         }.flowOn(Dispatchers.Default)
     }
 
@@ -409,6 +427,15 @@ class BillRepository(
             )
         }
         billDao.upsert(entity)
+        // 只有明确带着 tagIds 的草稿才改关联：退款、AI、导入这些入口不传，
+        // 保存时不能顺手把用户挂好的标签清掉。空列表是「明确清空」。
+        draft.tagIds?.let { ids ->
+            tagDao.clearForBill(entity.id)
+            val distinct = ids.distinct()
+            if (distinct.isNotEmpty()) {
+                tagDao.attach(distinct.map { BillTagEntity(billId = entity.id, tagId = it) })
+            }
+        }
         return entity.id
     }
 
@@ -416,7 +443,7 @@ class BillRepository(
     suspend fun refundsOf(originId: String): List<RefundEntry> = billDao.refundsOf(originId)
 
     override suspend fun find(id: String): BillListItem? =
-        billDao.findRowById(id)?.let(::toItem)
+        billDao.findRowById(id)?.let { row -> withTags(listOf(toItem(row))).firstOrNull() }
 
     /** 截图记账的去重提示：同一订单号已存在时要说出来，不能静默跳过。 */
     suspend fun findByExternalId(externalId: String): BillListItem? =
@@ -576,6 +603,25 @@ class BillRepository(
     }
 
     private fun toItem(row: BillListItemRow): BillListItem = row.toListItem()
+
+    /**
+     * 给一批列表行补标签名。标签名不并进主查询：`GROUP_CONCAT` 在旧版 SQLite 上
+     * 不支持 `ORDER BY`，而且 Room 不会因为 `bill_tag` 变化就重新发主查询的 Flow，
+     * 所以由 `observeLinkTick()` 触发这第二条查询。
+     *
+     * 按 500 一批切：搜索一次最多取 1000 行，API 28 上 SQLite 的绑定上限是 999。
+     */
+    private suspend fun withTags(items: List<BillListItem>): List<BillListItem> {
+        if (items.isEmpty()) return items
+        val names = LinkedHashMap<String, MutableList<String>>()
+        items.map { it.bill.id }.chunked(TAG_QUERY_CHUNK).forEach { chunk ->
+            tagDao.namesForBills(chunk).forEach { row ->
+                names.getOrPut(row.billId) { mutableListOf() } += row.name
+            }
+        }
+        if (names.isEmpty()) return items
+        return items.map { item -> names[item.bill.id]?.let { item.copy(tags = it) } ?: item }
+    }
 
     /** 退款行判定：新数据靠原单指针，旧导入数据只写过 is_refund。 */
     private fun isRefundRow(bill: BillEntity): Boolean = bill.isRefund || bill.refundOfBillId != null

@@ -33,6 +33,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
         val REIMBURSE_ENABLED = booleanPreferencesKey("reimburse_enabled")
     /** 排除（不计入收支与预算）：记账页那枚 chip 的常驻开关。 */
     val EXCLUDE_ENABLED = booleanPreferencesKey("exclude_enabled")
+    /** 标签：记账页那枚 chip 的开关，归设置 → 记账键盘。 */
+    val TAG_ENABLED = booleanPreferencesKey("tag_enabled")
         val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val SHOW_CURRENCY_SYMBOL = booleanPreferencesKey("show_currency_symbol")
@@ -81,6 +83,7 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
             reimburseEnabled = prefs[Keys.REIMBURSE_ENABLED] ?: false,
             // 默认开：这枚 chip 一直是常驻的，加开关只是给个关掉的口子，不改变已有行为。
             excludeEnabled = prefs[Keys.EXCLUDE_ENABLED] ?: true,
+            tagEnabled = prefs[Keys.TAG_ENABLED] ?: true,
             assistantEnabled = prefs[Keys.ASSISTANT_ENABLED] ?: false,
             themeMode = prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
@@ -123,6 +126,8 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
     suspend fun setReimburseEnabled(enabled: Boolean) = put(Keys.REIMBURSE_ENABLED, enabled)
 
     suspend fun setExcludeEnabled(enabled: Boolean) = put(Keys.EXCLUDE_ENABLED, enabled)
+
+    suspend fun setTagEnabled(enabled: Boolean) = put(Keys.TAG_ENABLED, enabled)
 
     suspend fun setAssistantEnabled(enabled: Boolean) = put(Keys.ASSISTANT_ENABLED, enabled)
 
@@ -300,6 +305,8 @@ data class TallySettings(
      * 默认开 —— 加这个开关之前它一直是常驻的。
      */
     val excludeEnabled: Boolean = true,
+    /** 标签：记账页要不要出现「标签」chip；默认开，管理页、筛选与批量打标签不受它影响。 */
+    val tagEnabled: Boolean = true,
     val assistantEnabled: Boolean,
     val themeMode: ThemeMode,
     val showCurrencySymbol: Boolean,
@@ -336,6 +343,7 @@ data class TallySettings(
             quickOpenEnabled = false,
             reimburseEnabled = false,
             excludeEnabled = true,
+            tagEnabled = true,
             assistantEnabled = false,
             themeMode = ThemeMode.SYSTEM,
             showCurrencySymbol = true,

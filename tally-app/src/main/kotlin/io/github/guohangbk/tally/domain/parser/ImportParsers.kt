@@ -82,6 +82,9 @@ object ImportParsers {
         }
     }
 
+    private fun parseTagNames(raw: String?): List<String> =
+        raw.orEmpty().split("、", ";", "；", ",").map(String::trim).filter(String::isNotEmpty).distinct()
+
     private fun parseTally(rowNumber: Int, values: Map<String, String>): ParsedBillRow {
         val errors = mutableListOf<String>()
         val occurred = parseDate(values["时间"]).also { if (it == null) errors += "时间无效" }
@@ -108,6 +111,7 @@ object ImportParsers {
             source = BillSource.IMPORT,
             isRefund = signed.second,
             attachmentRefs = values["账单图片"].orEmpty().split(";", "；").map(String::trim).filter(String::isNotEmpty),
+            tagNames = parseTagNames(values["标签"]),
             errors = errors,
         )
     }
@@ -149,6 +153,7 @@ object ImportParsers {
             excludedFromStats = reimbursementRecord,
             isRefund = isRefund,
             attachmentRefs = values["账单图片"].orEmpty().split(";", "；").map(String::trim).filter(String::isNotEmpty),
+            tagNames = parseTagNames(values["标签"]),
             errors = errors,
         )
     }
@@ -172,6 +177,7 @@ object ImportParsers {
             note = values["备注"]?.trim()?.ifEmpty { null },
             source = BillSource.IMPORT,
             isRefund = signed.second,
+            tagNames = parseTagNames(values["标签"]),
             errors = errors,
         )
     }
@@ -215,8 +221,8 @@ object ImportParsers {
     private fun ignoredColumns(source: ImportSourceType, headers: List<String>): List<String> {
         val ignored = when (source) {
             ImportSourceType.TEMPLATE -> emptyList()
-            ImportSourceType.QIANJI -> listOf("账户1", "账户2", "手续费", "优惠券", "账单标记", "标签")
-            ImportSourceType.ALIPAY -> listOf("账户", "标签")
+            ImportSourceType.QIANJI -> listOf("账户1", "账户2", "手续费", "优惠券", "账单标记")
+            ImportSourceType.ALIPAY -> listOf("账户")
         }
         return ignored.filter(headers::contains)
     }

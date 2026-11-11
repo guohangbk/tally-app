@@ -112,6 +112,16 @@ jobs:
       - name: Gradle 依赖缓存
         uses: gradle/actions/setup-gradle@v4
 
+      # Room 导出 schema 是「读已有文件 → 结构相同就直接跳过，不同才原地重写」。
+      # tally-app/schemas/ 按设计不入库，CI 上这个目录为空时，debug / release
+      # 两个 KSP 任务会各自去创建并读同一个文件，偶尔读到写了一半的 JSON
+      # （JsonDecodingException: ... had 'EOF'）。先用发版冻结的快照预置好，
+      # Room 判定一致后只读不写，这条竞态就不会再触发。
+      - name: 预置 Room schema 快照
+        run: |
+          mkdir -p tally-app/schemas/io.github.guohangbk.tally.data.db.TallyDatabase
+          cp docs/release/db/*.json tally-app/schemas/io.github.guohangbk.tally.data.db.TallyDatabase/
+
       - name: 全量构建（lint + 单测 + APK）
         run: ./gradlew :tally-app:build --stacktrace
 
