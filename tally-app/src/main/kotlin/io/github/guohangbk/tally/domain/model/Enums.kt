@@ -48,14 +48,6 @@ enum class ImportBatchStatus {
     CANCELLED,
 }
 
-enum class RecurringFrequency {
-    DAILY,
-    WEEKLY,
-    MONTHLY,
-    LAST_DAY_OF_MONTH,
-    YEARLY,
-}
-
 enum class RecurringStatus {
     ACTIVE,
     PAUSED,

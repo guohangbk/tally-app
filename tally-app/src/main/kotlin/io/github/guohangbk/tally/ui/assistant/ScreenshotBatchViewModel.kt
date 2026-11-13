@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.ocr.OcrOutcome
 import io.github.guohangbk.tally.di.AppGraph
-import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.BillDraft
 import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.model.BillType
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** 一次批量识别里的一张图。[confidence] 只由「认出了几个字段」推出来，不引入任何猜测分数。 */
 data class ScannedBill(
@@ -238,6 +236,3 @@ class ScreenshotBatchViewModel(private val graph: AppGraph) : ViewModel() {
         const val MAX_IMAGES = 9
     }
 }
-
-/** 列表行副标题里的金额，与设计板同一套显示口径。 */
-internal fun scannedAmount(bill: ScannedBill): String = formatAmount(bill.amountMinor, grouping = false)

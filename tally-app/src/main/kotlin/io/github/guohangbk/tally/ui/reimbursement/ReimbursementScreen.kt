@@ -48,6 +48,7 @@ import io.github.guohangbk.tally.ui.design.BillBadges
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
@@ -136,7 +137,7 @@ fun ReimbursementScreen(
                 pendingCount = pending.size,
                 pendingMinor = state.pendingMinor,
                 doneMinor = state.doneMinor,
-                grouping = true,
+                grouping = LocalMoneyGrouping.current,
             )
 
             Spacer(Modifier.height(14.dp))
@@ -144,7 +145,7 @@ fun ReimbursementScreen(
                 ReimburseTab.PENDING -> PendingList(
                     items = pending,
                     selected = state.selected,
-                    grouping = true,
+                    grouping = LocalMoneyGrouping.current,
                     selectionMode = state.selectionMode,
                     onToggle = viewModel::toggle,
                     onSelectAll = viewModel::selectAllPending,
@@ -155,7 +156,7 @@ fun ReimbursementScreen(
 
                 ReimburseTab.DONE -> DoneList(
                     items = done,
-                    grouping = true,
+                    grouping = LocalMoneyGrouping.current,
                     onUndo = viewModel::undo,
                     onOpenBill = { id -> detailBillId = id },
                 )

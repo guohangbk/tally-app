@@ -36,7 +36,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- 截图记账入口之一：相册/文件里把支付截图「分享」过来。 -->
+            <!-- 系统分享入口：相册/微信里把支付截图「分享」到 Tally，直达小莉。 -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />

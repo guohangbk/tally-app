@@ -7,12 +7,10 @@ import io.github.guohangbk.tally.data.ocr.ScreenshotTextReader
 import io.github.guohangbk.tally.domain.ai.AiBillFields
 import io.github.guohangbk.tally.domain.ai.AiBillTool
 import io.github.guohangbk.tally.domain.ai.AiDraftSchema
-import io.github.guohangbk.tally.domain.ai.AiDraftVerdict
 import io.github.guohangbk.tally.domain.ai.AiPrompts
 import io.github.guohangbk.tally.domain.ai.AiRequest
 import io.github.guohangbk.tally.domain.ai.AiToolChoice
 import io.github.guohangbk.tally.domain.ai.AiTurn
-import io.github.guohangbk.tally.domain.model.DraftField
 import io.github.guohangbk.tally.domain.parser.QuickNoteCatalog
 import java.time.ZoneId
 

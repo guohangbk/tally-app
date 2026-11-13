@@ -43,9 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.guohangbk.tally.domain.Period
 import io.github.guohangbk.tally.domain.formatAmount
-import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.CategoryTotal
 import io.github.guohangbk.tally.ui.bill.BillDetailSheet
 import io.github.guohangbk.tally.ui.common.BillRow

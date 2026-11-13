@@ -1,7 +1,8 @@
 package io.github.guohangbk.tally.ui.shell
 
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -9,10 +10,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,7 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -37,15 +33,12 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
@@ -196,10 +189,23 @@ fun BoxScope.TallyRecordFab(
     xiaoliEntry: AssistantEntry = AssistantEntry.Settings,
     /** 首页一次性引导浮着时，＋ 外面走一圈圈扩散波纹，提示按住这里。 */
     guide: Boolean = false,
+    /**
+     * 这一轮语音已经开录：扇面的旋转与光环就地冻住。
+     *
+     * 手指还压在 ＋ 上，底部再转再闪，看起来像界面自己又动了一遍；
+     * 活的状态交给 ＋ 上方那枚浮标。
+     */
+    voiceActive: Boolean = false,
+    /** 手指是否还落在语音臂上；滑开就说明松手会丢掉这一句。 */
+    onVoiceArmed: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = tallyColors
     val haptics = rememberTallyHaptics()
+    // 语音收尾的专用出口：松手那一刻 dispatchTouchEvent 还压在 Compose 指针机制上，
+    // 此刻翻转录音状态会让命中路径在分发中途变形。把收尾排进主线程消息队列，等分发栈
+    // 完全退干净再动手；消息不受这个手势作用域的取消影响。
+    val finishVoiceLater = remember { Handler(Looper.getMainLooper()) }
     val shape = RoundedCornerShape(FabCorner)
     val gradient = if (colors.isDark) {
         listOf(colors.brand.copy(alpha = 0.92f), colors.brand, colors.brand.copy(alpha = 0.62f))
@@ -230,13 +236,19 @@ fun BoxScope.TallyRecordFab(
     // 起势的一刻 ＋ 回弹一下（0.84 → 1.06 → 1）并转成 ✕：这次按住已经不是「记一笔」了。
     val fabPop = remember { Animatable(1f) }
     val fabRotation by animateFloatAsState(
-        if (fan) 45f else 0f,
+        // 开录后转回正位：这时 ＋ 不再表示「关闭扇面」，而是一个正被按住的按钮。
+        if (fan && !voiceActive) 45f else 0f,
         // 减少动态时连旋转都直接到位，不抢那个 220ms。
         if (reduced) snap() else tween(FabPopMillis, easing = FabPopEasing),
         label = "fabRotation",
     )
-    LaunchedEffect(fan) {
-        if (!fan) {
+    val fabPress by animateFloatAsState(
+        if (voiceActive) 0.96f else 1f,
+        if (reduced) snap() else tween(160),
+        label = "fabPress",
+    )
+    LaunchedEffect(fan, voiceActive) {
+        if (!fan || voiceActive) {
             fabPop.snapTo(1f)
         } else if (!reduced) {
             fabPop.animateTo(
@@ -255,8 +267,8 @@ fun BoxScope.TallyRecordFab(
     val trailPhase = remember { mutableFloatStateOf(0f) }
     val ringPhase = remember { mutableFloatStateOf(0f) }
     val guidePhase = remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(fan, reduced) {
-        if (!fan || reduced) {
+    LaunchedEffect(fan, reduced, voiceActive) {
+        if (!fan || reduced || voiceActive) {
             trailPhase.floatValue = 0f
             ringPhase.floatValue = 0f
             return@LaunchedEffect
@@ -431,6 +443,14 @@ fun BoxScope.TallyRecordFab(
                                 if (next == TallyFanEvent.VoiceStart && !voiceStarted) {
                                     voiceStarted = true
                                     onFanEvent(TallyFanEvent.VoiceStart)
+                                    onVoiceArmed(true)
+                                } else if (voiceStarted && next != TallyFanEvent.VoiceStart) {
+                                    // 已经开录后滑离语音臂：松手就会丢掉这一句。
+                                    // 滑回 ＋ 原位置补一记轻响，跟「还没开始」区分开。
+                                    if (next == null && hit == TallyFanEvent.VoiceStart) haptics.tap()
+                                    onVoiceArmed(false)
+                                } else if (voiceStarted) {
+                                    onVoiceArmed(true)
                                 }
                                 hit = next
                                 armed = next
@@ -443,7 +463,7 @@ fun BoxScope.TallyRecordFab(
                         fan = false
                         armed = null
                         if (!released) {
-                            if (voiceStarted) onFanEvent(TallyFanEvent.VoiceCancel)
+                            if (voiceStarted) finishVoiceLater.post { onFanEvent(TallyFanEvent.VoiceCancel) }
                             return@awaitEachGesture
                         }
                         if (!opened) {
@@ -451,11 +471,11 @@ fun BoxScope.TallyRecordFab(
                             onClick()
                         } else {
                             if (voiceStarted && hit != TallyFanEvent.VoiceStart) {
-                                onFanEvent(TallyFanEvent.VoiceCancel)
+                                finishVoiceLater.post { onFanEvent(TallyFanEvent.VoiceCancel) }
                             }
                             if (hit != null) haptics.confirm()
                             when (hit) {
-                                TallyFanEvent.VoiceStart -> onFanEvent(TallyFanEvent.VoiceFinish)
+                                TallyFanEvent.VoiceStart -> finishVoiceLater.post { onFanEvent(TallyFanEvent.VoiceFinish) }
                                 TallyFanEvent.Screenshot -> onFanEvent(TallyFanEvent.Screenshot)
                                 // 新增一臂必须在这里也接一次：这个 when 有 else，漏分支不报错，
                                 // 只会让那条臂看起来完全没反应（右滑进小莉就是这么"失灵"的）。
@@ -474,13 +494,14 @@ fun BoxScope.TallyRecordFab(
                     .shadow(12.dp, shape, clip = false, ambientColor = colors.brand, spotColor = colors.brand)
                     .graphicsLayer {
                         rotationZ = fabRotation
-                        scaleX = fabPop.value
-                        scaleY = fabPop.value
+                        scaleX = fabPop.value * fabPress
+                        scaleY = fabPop.value * fabPress
                     }
                     // 光晕画在 clip 之前，否则那一圈外沿会被盒子切掉。
                     .drawBehind {
                         when {
-                            fan -> drawFanHalo(ringPhase.floatValue, reduced, colors.paper)
+                            // 开录后光环停转：手指还压着它，底部不该再自转。
+                            fan && !voiceActive -> drawFanHalo(ringPhase.floatValue, reduced, colors.paper)
                             guide -> drawGuideRings(guidePhase.floatValue, reduced, colors.paper)
                         }
                     }
@@ -981,5 +1002,4 @@ fun TallyIconAction(
         )
     }
 }
-
 

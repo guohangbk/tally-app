@@ -29,11 +29,6 @@ data class BackupResult(
     val estimatedImageBytes: Long = 0L,
 )
 
-data class BackupInspection(
-    val manifest: BackupManifest,
-    val fileName: String,
-)
-
 data class RestoreResult(
     val manifest: BackupManifest,
     val restoredBills: Int,

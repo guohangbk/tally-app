@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import io.github.guohangbk.tally.data.db.dao.AttachmentDao
 import io.github.guohangbk.tally.data.db.entity.AttachmentEntity
-import io.github.guohangbk.tally.data.image.PreparedImage
 import io.github.guohangbk.tally.data.image.TallyImages
 import io.github.guohangbk.tally.data.preferences.TallyPreferences
 import java.io.File

@@ -110,7 +110,6 @@ val TallyShapes = Shapes(
 
 val TallyPillShape = RoundedCornerShape(50)
 val TallySheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
-val TallyFabShape = RoundedCornerShape(15.dp)
 val TallyIconTileShape = RoundedCornerShape(9.dp)
 
 /** Level 1 卡片柔影、Level 2 弹层阴影，纸面本身无阴影。 */

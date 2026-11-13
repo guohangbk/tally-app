@@ -29,9 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.Hairline
-import io.github.guohangbk.tally.ui.design.IconTile
-import io.github.guohangbk.tally.ui.design.IconTone
-import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyLabeledSwitch
@@ -39,7 +36,6 @@ import io.github.guohangbk.tally.ui.design.TallyListRow
 import io.github.guohangbk.tally.ui.design.TallyRowChevron
 import io.github.guohangbk.tally.ui.design.TallySectionLabel
 import io.github.guohangbk.tally.ui.design.TallySegmented
-import io.github.guohangbk.tally.ui.design.TallyTag
 import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.tallyColors
 
@@ -165,31 +161,6 @@ internal fun SettingsInfoRow(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-    }
-}
-
-/** 软提示：不是失败，只是「开关没有按你期望生效」时的就地说明。 */
-@Composable
-internal fun SettingsNotice(
-    text: String,
-    onDismiss: () -> Unit,
-) {
-    val colors = tallyColors
-    TallyCard(borderColor = colors.brand.copy(alpha = 0.28f), contentPadding = 11.dp) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text, style = TallyType.helper, color = colors.ink2, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(9.dp))
-            TallyButton(
-                label = "知道了",
-                onClick = onDismiss,
-                variant = ButtonVariant.GHOST,
-                height = 28,
-                modifier = Modifier.width(66.dp),
-            )
-        }
     }
 }
 

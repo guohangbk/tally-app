@@ -86,6 +86,7 @@ import io.github.guohangbk.tally.ui.design.BudgetUsageRow
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.Marker
 import io.github.guohangbk.tally.ui.design.MarkerSwitch
 import io.github.guohangbk.tally.ui.design.MarkerTone
@@ -1415,7 +1416,7 @@ private fun RankRow(
                     style = TallyType.moneyList.copy(fontSize = 13.5.sp),
                     color = colors.ink2,
                     modifier = Modifier.width(64.dp),
-                    grouping = true,
+                    grouping = LocalMoneyGrouping.current,
                     showCurrency = false,
                     textAlign = TextAlign.End,
                 )

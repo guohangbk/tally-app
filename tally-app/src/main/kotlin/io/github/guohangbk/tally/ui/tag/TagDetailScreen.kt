@@ -51,6 +51,7 @@ import io.github.guohangbk.tally.ui.common.startOfDay
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.MoneySign
 import io.github.guohangbk.tally.ui.design.MoneyText
 import io.github.guohangbk.tally.ui.design.TallyBottomSheet
@@ -508,7 +509,7 @@ private fun MonthlyCard(year: Int, monthly: List<Long>) {
                     sign = MoneySign.NONE,
                     style = TallyType.moneyList.copy(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Normal),
                     color = colors.ink3,
-                    grouping = true,
+                    grouping = LocalMoneyGrouping.current,
                     showCurrency = true,
                 )
                 Spacer(Modifier.weight(1f))
@@ -567,7 +568,7 @@ private fun MonthlyCard(year: Int, monthly: List<Long>) {
                     sign = MoneySign.NONE,
                     style = TallyType.moneyList.copy(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Normal),
                     color = colors.ink3,
-                    grouping = true,
+                    grouping = LocalMoneyGrouping.current,
                     showCurrency = true,
                 )
                 Spacer(Modifier.weight(1f))
@@ -613,7 +614,7 @@ private fun CompositionCard(categories: List<io.github.guohangbk.tally.data.db.d
                 palette = palette,
                 totalLabel = "支出",
                 totalMinor = total,
-                grouping = true,
+                grouping = LocalMoneyGrouping.current,
                 selected = null,
                 onSelectSlice = {},
                 diameter = 96.dp,
@@ -642,7 +643,7 @@ private fun CompositionCard(categories: List<io.github.guohangbk.tally.data.db.d
                             sign = MoneySign.NONE,
                             style = TallyType.moneyList.copy(fontSize = 10.5.sp, lineHeight = 13.sp, fontWeight = FontWeight.Normal),
                             color = colors.ink2,
-                            grouping = true,
+                            grouping = LocalMoneyGrouping.current,
                             showCurrency = false,
                         )
                         Text(
@@ -694,7 +695,7 @@ private fun LedgerCard(
                         sign = MoneySign.NONE,
                         style = TallyType.moneyList.copy(fontSize = 13.sp, lineHeight = 16.sp),
                         color = colors.ink2,
-                        grouping = true,
+                        grouping = LocalMoneyGrouping.current,
                         showCurrency = false,
                     )
                 }

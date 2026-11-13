@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.attachment.AttachmentOutcome
 import io.github.guohangbk.tally.data.db.dao.TagUsageRow
-import io.github.guohangbk.tally.data.db.entity.BillEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.data.preferences.TallySettings
 import io.github.guohangbk.tally.data.repository.LedgerListItem

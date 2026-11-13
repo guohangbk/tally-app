@@ -282,13 +282,13 @@ class AppGraph(
     )
 
     /**
-     * 系统分享进来的截图。用一条流把「Activity 收到 intent」与「导航到截图草稿」解耦，
+     * 系统分享进来的截图。用一条流把「Activity 收到 intent」与「送进小莉」解耦，
      * Activity 不需要认识 NavController，冷启动与 singleTask 复用两条路径共用同一入口。
      */
-    val sharedScreenshot: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    val sharedImage: MutableStateFlow<Uri?> = MutableStateFlow(null)
 
     /**
-     * 通知点进来的去处（T-04）。与 [sharedScreenshot] 同一套解耦：
+     * 通知点进来的去处（T-04）。与 [sharedImage] 同一套解耦：
      * Activity 只写这一个值，谁在导航图就绪后消费由导航层决定，冷启动与已在前台都能走。
      */
     val pendingLink: MutableStateFlow<NotificationLink?> = MutableStateFlow(null)

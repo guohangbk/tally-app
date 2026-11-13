@@ -419,7 +419,222 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 .p2 .dev.dk .ro {background:#131A17}
 .p2 .dev.dk .tl.p {background:#1A2320;border-color:rgba(233,229,218,.14);color:#E9E5DA}
 .p2 .dev.dk .tl.k {background:#E9E5DA;color:#131A17;border-color:#E9E5DA}
-</style>
+    .vz-board * { box-sizing: border-box; margin: 0; padding: 0; }
+    .vz-board {
+      background: #E7E2D6;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      padding: 26px 24px 40px;
+      display: flex; flex-direction: column; gap: 18px; width: max-content;
+      color: var(--ink);
+    }
+
+    .vz-phone {
+      width: 390px; height: 844px; border-radius: 30px; overflow: hidden;
+      position: relative; background: var(--paper);
+      box-shadow: 0 10px 28px rgba(22,33,29,.16);
+      border: 1px solid rgba(22,33,29,.10);
+    }
+    .vz-page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+    /* ---------- 小莉页 ---------- */
+    .vz-bar {
+      height: 56px; display: flex; align-items: center; gap: 10px;
+      padding: 0 14px; border-bottom: 1px solid rgba(22,33,29,.10); background: var(--paper);
+    }
+    .vz-chev { width: 11px; height: 11px; border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); margin: 0 4px 0 2px; }
+    .vz-title { font-size: 17px; color: var(--ink); font-weight: 600; flex: 1; }
+    .vz-dots { font-size: 18px; color: var(--ink); letter-spacing: 1px; }
+
+    .vz-chat { flex: 1; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+    .vz-msg { max-width: 268px; font-size: 13.5px; line-height: 21px; padding: 8px 11px; }
+    .vz-msg.vz-me { align-self: flex-end; background: var(--ink); color: var(--paper); border-radius: 13px 13px 4px 13px; }
+    .vz-msg.vz-sys { align-self: flex-start; background: var(--card); border: 1px solid rgba(22,33,29,.10); border-radius: 13px 13px 13px 4px; color: var(--ink); }
+
+    .vz-inbar {
+      border-top: 1px solid rgba(22,33,29,.10); background: var(--paper);
+      padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .vz-round {
+      width: 40px; height: 40px; border-radius: 50%; flex: none;
+      border: 1px solid rgba(22,33,29,.10); background: var(--card);
+      display: flex; align-items: center; justify-content: center; color: var(--ink2);
+    }
+    .vz-field {
+      flex: 1; height: 40px; border-radius: 20px; border: 1px solid rgba(22,33,29,.10);
+      background: var(--card); display: flex; align-items: center; justify-content: center;
+      font-size: 13.5px; color: var(--ink2);
+    }
+
+    /* ---------- 小莉蒙层 ---------- */
+    .vz-scrim { position: absolute; inset: 0; background: rgba(22,33,29,.66); }
+    .vz-bubble {
+      position: absolute; left: 20px; right: 20px; top: 253px; min-height: 168px;
+      background: var(--card); border: 1px solid rgba(22,33,29,.10);
+      border-radius: 20px; padding: 18px 20px;
+      box-shadow: 0 12px 28px rgba(22,33,29,.18);
+    }
+    .vz-bubble.vz-armed { background: var(--exp-soft); border-color: rgba(191,78,59,.55); }
+    .vz-txt { font-size: 15.5px; line-height: 24px; color: var(--ink); }
+    .vz-bubble.vz-armed .vz-txt { color: var(--exp); }
+    .vz-quiet { color: var(--ink3); font-size: 15.5px; line-height: 24px; letter-spacing: 3px; }
+    .vz-bubble.vz-armed .vz-quiet { color: rgba(191,78,59,.70); }
+    .vz-caret { display: inline-block; width: 2px; height: 19px; background: var(--gold); vertical-align: -4px; margin-left: 1px; }
+
+    .vz-hint {
+      position: absolute; left: 0; right: 0; bottom: 194px; text-align: center;
+      font-size: 12.5px; line-height: 17px; color: rgba(246,243,235,.80);
+    }
+    .vz-hint.vz-red { color: #F1B4A6; }
+
+    /* 圆弧：rx 195 / ry 180 的半椭圆，实心 */
+    .vz-dome {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 180px;
+      background: var(--ink2);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 195px 195px 0 0 / 180px 180px 0 0;
+    }
+    .vz-dome.vz-armed { background: #72463D; }
+    .vz-micbox {
+      position: absolute; left: 0; right: 0; bottom: 34px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .vz-mic { width: 44px; height: 44px; color: rgba(246,243,235,.92); }
+    .vz-discard { font-size: 11.5px; line-height: 15px; color: rgba(246,243,235,.85); }
+
+    .vz-wave { display: flex; align-items: center; gap: 2.5px; }
+    .vz-wave i { display: block; width: 3px; border-radius: 3px; background: rgba(246,243,235,.90); }
+    .vz-wave.vz-gold i { background: var(--gold); }
+    .vz-wave.vz-red i { background: var(--exp); }
+
+    .vz-send {
+      position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%);
+      width: 96px; height: 96px; border-radius: 50%; background: var(--brand);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 26px rgba(0,0,0,.28);
+    }
+    .vz-check { width: 26px; height: 14px; border-left: 3px solid var(--paper); border-bottom: 3px solid var(--paper); transform: rotate(-45deg) translate(2px,-3px); }
+    .vz-cancel {
+      position: absolute; left: calc(50% - 104px); bottom: 56px; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--paper);
+    }
+    .vz-cancel svg { width: 22px; height: 22px; }
+    .vz-cancel span { font-size: 13px; line-height: 17px; }
+
+    /* ---------- 吐司 ---------- */
+    .vz-toast { position: absolute; left: 20px; right: 20px; bottom: 96px; display: flex; justify-content: center; }
+    .vz-toastbox {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid rgba(191,78,59,.34); border-radius: 13px;
+      padding: 10px 12px; font-size: 12.5px; line-height: 16px; color: var(--ink);
+      box-shadow: 0 8px 22px rgba(22,33,29,.18);
+    }
+    .vz-toastbox svg { width: 15px; height: 15px; color: var(--exp); flex: none; }
+
+    /* ---------- 首页 ---------- */
+    .vz-hbar { display: flex; align-items: center; gap: 14px; padding: 0 16px; height: 56px; }
+    .vz-hbar .vz-lead { color: var(--ink); }
+    .vz-hbar .vz-name { font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .vz-hbar .vz-name .vz-cd { width: 7px; height: 7px; border-right: 1.6px solid var(--ink2); border-bottom: 1.6px solid var(--ink2); transform: rotate(45deg) translate(-1px,-1px); }
+    .vz-hbar .vz-sp { flex: 1; }
+
+    .vz-sumwrap { padding: 10px 15px 0; }
+    .vz-sum {
+      border-radius: 16px; padding: 14px 4px 15px 4px; display: flex;
+      background:
+        radial-gradient(60% 48% at 88% 0%, rgba(232,197,122,.34), rgba(232,197,122,0) 70%),
+        radial-gradient(56% 48% at 4% 100%, rgba(246,243,235,.10), rgba(246,243,235,0) 70%),
+        var(--ink);
+    }
+    .vz-cell { flex: 1; padding: 0 12px; }
+    .vz-vline { width: 1px; align-self: stretch; background: rgba(246,243,235,.18); }
+    .vz-eyebrow { font-size: 11.5px; line-height: 14.4px; font-weight: 600; letter-spacing: .16em; color: rgba(246,243,235,.60); }
+    .vz-money { font-family: Georgia, "Songti SC", serif; font-size: 23px; line-height: 25px; color: var(--paper); margin-top: 6px; }
+    .vz-note { font-size: 11.5px; line-height: 14px; color: rgba(246,243,235,.55); margin-top: 5px; }
+
+    .vz-budget { display: flex; align-items: center; gap: 8px; padding: 10px 19px 0; }
+    .vz-track { flex: 1; height: 5px; border-radius: 3px; background: rgba(22,33,29,.10); overflow: hidden; }
+    .vz-track i { display: block; height: 5px; border-radius: 3px; background: var(--brand); }
+    .vz-btxt { font-size: 10px; line-height: 12.5px; color: var(--ink3); }
+
+    .vz-list { padding: 4px 15px 0; }
+    .vz-day { display: flex; align-items: center; gap: 7px; padding: 12px 0 5px; }
+    .vz-day b { font-size: 12px; line-height: 15px; font-weight: 700; color: var(--ink2); }
+    .vz-day .vz-rule { flex: 1; height: 1px; background: rgba(22,33,29,.055); }
+    .vz-day span { font-family: Georgia, "Songti SC", serif; font-size: 11.5px; line-height: 14.4px; color: var(--ink3); }
+    .vz-rowitem { display: flex; align-items: center; gap: 9px; padding: 7px 0; }
+    .vz-rowitem + .vz-rowitem { border-top: 1px solid rgba(22,33,29,.045); }
+    .vz-tile {
+      width: 30px; height: 30px; border-radius: 11px; flex: none;
+      background: var(--card); border: 1px solid rgba(22,33,29,.10);
+      display: flex; align-items: center; justify-content: center; color: var(--ink);
+    }
+    .vz-tile svg { width: 15px; height: 15px; }
+    .vz-rmain { flex: 1; min-width: 0; }
+    .vz-cat { font-size: 13.5px; line-height: 17px; font-weight: 600; }
+    .vz-sub { font-size: 11.5px; line-height: 14px; color: var(--ink3); margin-top: 1px; }
+    .vz-amt { font-family: Georgia, "Songti SC", serif; font-size: 15px; color: var(--ink); }
+    .vz-amt.vz-in { color: var(--brand); }
+
+    /* ---------- 扇面与 ＋ ---------- */
+    .vz-fscrim { position: absolute; inset: 0; background: rgba(22,33,29,.42); }
+    .vz-fab {
+      position: absolute; left: 167px; bottom: 13px; width: 56px; height: 56px;
+      border-radius: 20px; transform: scale(.96);
+      background: linear-gradient(160deg, #2C6149 0%, var(--brand) 55%, #17362A 100%);
+      box-shadow: 0 10px 22px rgba(22,33,29,.30);
+      display: flex; align-items: center; justify-content: center; color: var(--paper);
+    }
+    .vz-fab svg { width: 22px; height: 22px; }
+
+    .vz-arm-up { position: absolute; right: 169px; bottom: 133px; display: flex; align-items: center; gap: 8px; }
+    .vz-arm-side { position: absolute; bottom: 15px; display: flex; flex-direction: column; gap: 4px; }
+    .vz-arm-left { right: 287px; align-items: flex-end; }
+    .vz-arm-right { left: 287px; align-items: flex-start; }
+    .vz-ghost { opacity: .4; }
+    .vz-alabel { display: flex; flex-direction: column; align-items: flex-end; }
+    .vz-alabel.vz-center { align-items: center; }
+    .vz-alabel b { font-size: 12.5px; line-height: 15.6px; font-weight: 700; color: rgba(246,243,235,.94); white-space: nowrap; }
+    .vz-alabel i { font-style: normal; font-size: 10px; line-height: 12.5px; color: rgba(246,243,235,.62); white-space: nowrap; }
+    .vz-alabel.vz-hot b { color: var(--gold-hi); }
+    .vz-atile {
+      width: 52px; height: 52px; border-radius: 20px; flex: none;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--card); border: 1px solid rgba(22,33,29,.10); color: var(--ink);
+      box-shadow: 0 8px 18px rgba(22,33,29,.20);
+    }
+    .vz-atile svg { width: 22px; height: 22px; }
+    .vz-atile.vz-hot {
+      background: var(--brand); border-color: var(--brand); color: var(--paper);
+      transform: scale(1.14);
+    }
+
+    .vz-fanhint {
+      position: absolute; left: 0; right: 0; bottom: 199px; text-align: center;
+      font-size: 13px; line-height: 16px; font-weight: 600; letter-spacing: .06em;
+      color: rgba(246,243,235,.92);
+    }
+
+    /* ---------- 浮标 ---------- */
+    .vz-pill {
+      position: absolute; left: 50%; transform: translateX(-50%); bottom: 232px;
+      height: 40px; min-width: 106px; padding: 0 16px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: var(--card); border: 1px solid rgba(22,33,29,.10); border-radius: 20px;
+      box-shadow: 0 10px 22px rgba(22,33,29,.16);
+    }
+    .vz-pill .vz-clock { font-size: 12.5px; line-height: 16px; color: var(--ink2); }
+    .vz-pill .vz-clock.vz-red { color: var(--exp); }
+    .vz-pill.vz-armed { background: var(--exp-soft); border-color: rgba(191,78,59,.45); gap: 7px; }
+    .vz-pill.vz-armed .vz-undo { width: 15px; height: 15px; color: var(--exp); }
+    .vz-pill.vz-armed .vz-lbl { font-size: 12.5px; line-height: 16px; font-weight: 600; color: var(--exp); }
+    .vz-pill.vz-recog { gap: 8px; }
+    .vz-pill .vz-q { font-size: 14px; line-height: 16px; letter-spacing: 2px; color: var(--ink3); }
+    .vz-pill .vz-lbl2 { font-size: 12.5px; line-height: 16px; color: var(--ink2); }
+    .vz-wave.vz-small { gap: 2px; }
+    .vz-wave.vz-small i { width: 2px; }
+  /* ===== 语音小节（§30）：从 语音-小莉蒙层与首页浮标 设计稿并入，全部类名带 vz- 前缀，不越界影响板上其它小节 ===== */
+  .vz-board{background:transparent;padding:0;width:auto;display:block;color:var(--ink)}
+  .vz-board .vz-phone,.vz-board .vz-page{border-radius:0}</style>
 </head>
 <body>
 
@@ -2208,7 +2423,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <p class="slog2">Tally 塔莉是一台<b>只存在手机里的记账本</b>：记账、看统计、整理分类、导入导出、备份恢复都不依赖网络，
       也没有账号。小莉（AI）是<b>可选增强</b>——不开它，语音速记与截图记账照样在手机里跑完；
       开了它，机器也只负责把草稿摆好，<b>落库这一步永远留给人</b>。
-      这块板收录该版本的全部界面：设计语言、图标系统、导航与组件规格，以及三十节的逐屏样子。</p>
+      这块板收录该版本的全部界面：设计语言、图标系统、导航与组件规格，以及三十一节的逐屏样子。</p>
     <div class="facts">
       <div><b>30</b><span>节</span></div>
       <div><b>145</b><span>屏（含组件卡）</span></div>
@@ -4738,7 +4953,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="row" style="margin-top:auto;gap:7px;margin-bottom:8px"><span class="btn gh" style="flex:1;height:35px">换一张</span><span class="btn gd" style="flex:1.3;height:35px;opacity:.4"><svg><use href="#i-check"/></svg>确认入账</span></div>
       </div>
     </div></div>
-    <figcaption><div class="pn">P16</div><div class="ph">截图记账 · 低置信度拦截</div>
+    <figcaption><div class="pn">P16</div><div class="ph">截图记账 · 低置信度拦截（0.1.7 起下线独立页）</div>
       <div class="pd">端侧 OCR 先出金额、商户、日期与分类建议，字段全部可改；「保存到账单」复选框常驻且默认不勾选。置信度低的那行用陶土红标出并把候选摆好，人选完之前保存键保持禁用。</div></figcaption></figure>
 
     
@@ -7884,7 +8099,615 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 </section>
 
 <section class="sec">
-  <div class="sec-h"><span class="no">30</span><h2>屏号索引 · 与实现对照</h2>
+  <div class="sec-h"><span class="no">30</span><h2>语音 · 小莉蒙层与首页浮标</h2>
+    <div class="meta">小莉页按住说话 → 审核态 → 就地改后发送<br>首页长按 ＋ 进语音臂：扇面冻住 + ＋ 上方 232 的浮标</div></div>
+  <p class="lead">九屏按当前代码的尺寸出：390×844，1px ≈ 1dp，字号即 sp。蒙层压暗 0.66，气泡落在屏高 30%、最小 168，底部是实心圆弧 180；识别失败一律走贴底吐司 3 秒，只有权限 / 引擎问题才弹设置弹层，首页不再铺第二层蒙层。实现落点 <code>ui/design/VoiceOverlay.kt</code>、<code>ui/assistant/AssistantChatScreen.kt</code>、<code>ui/home/HomeScreen.kt</code> + <code>ui/shell/TallyShell.kt</code>、<code>data/speech/SystemSpeechPort.kt</code>。</p>
+  <div class="vz-board">
+    <div class="grid">
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-bar"><div class="vz-chev"></div><div class="vz-title">小莉</div><div class="vz-dots">⋯</div></div>
+        <div class="vz-chat">
+          <div class="vz-msg vz-me">这个月餐饮花了多少？</div>
+          <div class="vz-msg vz-sys">本月餐饮 ¥1,284 · 比上月少 12%，主要少在「外卖」。</div>
+          <div class="vz-msg vz-me">那这周呢</div>
+        </div>
+        <div class="vz-inbar">
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10M7 14h5"/></svg>
+          </div>
+          <div class="vz-field">按住 说话</div>
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="vz-scrim"></div>
+      <div class="vz-bubble"><div class="vz-txt">早餐花了 5 元</div></div>
+      <div class="vz-hint">松开转文字，上滑取消</div>
+      <div class="vz-dome">
+        <div class="vz-micbox">
+          <svg class="vz-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3"/>
+          </svg>
+          <div class="vz-wave">
+            <i style="height:4px"></i><i style="height:8px"></i><i style="height:13px"></i><i style="height:7px"></i>
+            <i style="height:16px"></i><i style="height:5px"></i><i style="height:11px"></i><i style="height:18px"></i>
+            <i style="height:6px"></i><i style="height:14px"></i><i style="height:8px"></i><i style="height:16px"></i>
+            <i style="height:5px"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-12</div><div class="ph">小莉 · 按住（已听到半截）</div><div class="pd">压暗 0.66；气泡在屏高 30%、最小 168；实心圆弧 180</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-bar"><div class="vz-chev"></div><div class="vz-title">小莉</div><div class="vz-dots">⋯</div></div>
+        <div class="vz-chat">
+          <div class="vz-msg vz-me">这个月餐饮花了多少？</div>
+          <div class="vz-msg vz-sys">本月餐饮 ¥1,284 · 比上月少 12%，主要少在「外卖」。</div>
+          <div class="vz-msg vz-me">那这周呢</div>
+        </div>
+        <div class="vz-inbar">
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10M7 14h5"/></svg>
+          </div>
+          <div class="vz-field">按住 说话</div>
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="vz-scrim"></div>
+      <div class="vz-bubble">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="vz-quiet">···</div>
+          <div class="vz-wave vz-gold" style="height:26px">
+            <i style="height:5px"></i><i style="height:10px"></i><i style="height:15px"></i><i style="height:8px"></i>
+            <i style="height:19px"></i><i style="height:6px"></i><i style="height:13px"></i><i style="height:22px"></i>
+            <i style="height:7px"></i><i style="height:16px"></i><i style="height:9px"></i><i style="height:19px"></i>
+            <i style="height:6px"></i>
+          </div>
+        </div>
+      </div>
+      <div class="vz-hint">松开转文字，上滑取消</div>
+      <div class="vz-dome">
+        <div class="vz-micbox">
+          <svg class="vz-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3"/>
+          </svg>
+          <div class="vz-wave">
+            <i style="height:5px"></i><i style="height:9px"></i><i style="height:14px"></i><i style="height:7px"></i>
+            <i style="height:17px"></i><i style="height:5px"></i><i style="height:12px"></i><i style="height:19px"></i>
+            <i style="height:6px"></i><i style="height:15px"></i><i style="height:8px"></i><i style="height:17px"></i>
+            <i style="height:5px"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-13</div><div class="ph">小莉 · 按住（还没说话）</div><div class="pd">气泡里先给「···」+ 一条声纹，不留空白</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-bar"><div class="vz-chev"></div><div class="vz-title">小莉</div><div class="vz-dots">⋯</div></div>
+        <div class="vz-chat">
+          <div class="vz-msg vz-me">这个月餐饮花了多少？</div>
+          <div class="vz-msg vz-sys">本月餐饮 ¥1,284 · 比上月少 12%，主要少在「外卖」。</div>
+          <div class="vz-msg vz-me">那这周呢</div>
+        </div>
+        <div class="vz-inbar">
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10M7 14h5"/></svg>
+          </div>
+          <div class="vz-field">按住 说话</div>
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="vz-scrim"></div>
+      <div class="vz-bubble vz-armed"><div class="vz-txt">早餐花了 5 元</div></div>
+      <div class="vz-hint vz-red">松开手指 · 取消这一次</div>
+      <div class="vz-dome vz-armed">
+        <div class="vz-micbox">
+          <svg class="vz-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3"/><path d="M8 21h8"/>
+          </svg>
+          <div class="vz-wave">
+            <i style="height:4px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i>
+            <i style="height:16px"></i><i style="height:5px"></i><i style="height:11px"></i><i style="height:18px"></i>
+            <i style="height:6px"></i><i style="height:14px"></i><i style="height:8px"></i><i style="height:15px"></i>
+            <i style="height:5px"></i>
+          </div>
+          <div class="vz-discard">松手丢弃</div>
+        </div>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-14</div><div class="ph">小莉 · 上滑取消</div><div class="pd">气泡、圆弧一起转红；提示换成「松手就丢」</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-bar"><div class="vz-chev"></div><div class="vz-title">小莉</div><div class="vz-dots">⋯</div></div>
+        <div class="vz-chat">
+          <div class="vz-msg vz-me">这个月餐饮花了多少？</div>
+          <div class="vz-msg vz-sys">本月餐饮 ¥1,284 · 比上月少 12%，主要少在「外卖」。</div>
+          <div class="vz-msg vz-me">那这周呢</div>
+        </div>
+        <div class="vz-inbar">
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10M7 14h5"/></svg>
+          </div>
+          <div class="vz-field">按住 说话</div>
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="vz-scrim"></div>
+      <div class="vz-bubble"><div class="vz-txt">早餐花了 5 元<span class="vz-caret"></span></div></div>
+      <div class="vz-dome">
+        <div class="vz-cancel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5 5 0 0 1 0 10h-2"/>
+          </svg>
+          <span>取消</span>
+        </div>
+        <div class="vz-send"><div class="vz-check"></div></div>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-15</div><div class="ph">小莉 · 松手（可编辑）</div><div class="pd">文字就地改；96 圆钮发送居中，取消在正左</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-bar"><div class="vz-chev"></div><div class="vz-title">小莉</div><div class="vz-dots">⋯</div></div>
+        <div class="vz-chat">
+          <div class="vz-msg vz-me">这个月餐饮花了多少？</div>
+          <div class="vz-msg vz-sys">本月餐饮 ¥1,284 · 比上月少 12%，主要少在「外卖」。</div>
+          <div class="vz-msg vz-me">那这周呢</div>
+        </div>
+        <div class="vz-inbar">
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10M7 14h5"/></svg>
+          </div>
+          <div class="vz-field">按住 说话</div>
+          <div class="vz-round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="vz-toast">
+        <div class="vz-toastbox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+            <path d="M12 4 2.8 20h18.4L12 4Z"/><path d="M12 10v4"/><path d="M12 17h.01"/>
+          </svg>
+          没有听清，请重试或输入文字
+        </div>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-16</div><div class="ph">小莉 · 没听清</div><div class="pd">蒙层撤掉，贴底吐司 3 秒自动收</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-hbar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          <div class="vz-name">日常账本 <span class="vz-cd"></span></div>
+          <div class="vz-sp"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m19 19-3.8-3.8"/></svg>
+        </div>
+        <div class="vz-sumwrap">
+          <div class="vz-sum">
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月支出</div>
+              <div class="vz-money">¥1,284.00</div>
+              <div class="vz-note">36 笔 · 日均 ¥21.4</div>
+            </div>
+            <div class="vz-vline"></div>
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月收入</div>
+              <div class="vz-money">¥8,600.00</div>
+              <div class="vz-note">结余 +¥7,316.00</div>
+            </div>
+          </div>
+        </div>
+        <div class="vz-budget">
+          <div class="vz-track"><i style="width:43%"></i></div>
+          <div class="vz-btxt">预算已用 43%</div>
+        </div>
+        <div class="vz-list">
+          <div class="vz-day"><b>今天 11月13日</b><div class="vz-rule"></div><span>－¥27.00</span></div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-1.6 1.6-2 4-2 6.5 0 1.9.8 3 2 3.4V21"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">三餐 / 早餐</div>
+              <div class="vz-sub">豆浆油条</div>
+            </div>
+            <div class="vz-amt">－¥5.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="13" rx="3"/><path d="M4 10h16M8 20l1.5-3M16 20l-1.5-3"/><circle cx="8" cy="13.5" r="1"/><circle cx="16" cy="13.5" r="1"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">交通 / 地铁</div>
+              <div class="vz-sub">上班</div>
+            </div>
+            <div class="vz-amt">－¥4.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h11a3 3 0 0 1 0 6H5z"/><path d="M5 8v9M8 8v0"/><path d="M19 6v10"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">餐饮 / 咖啡</div>
+              <div class="vz-sub">美式</div>
+            </div>
+            <div class="vz-amt">－¥18.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="vz-fscrim"></div>
+
+      <div class="vz-arm-up">
+        <div class="vz-alabel vz-hot">
+          <b>语音记账</b>
+          <i>松手即结束</i>
+        </div>
+        <div class="vz-atile vz-hot">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="vz-arm-side vz-arm-left vz-ghost">
+        <div class="vz-alabel vz-center">
+          <b>截图记账</b>
+          <i>← 左滑</i>
+        </div>
+        <div class="vz-atile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+        </div>
+      </div>
+
+      <div class="vz-arm-side vz-arm-right vz-ghost">
+        <div class="vz-alabel vz-center">
+          <b>问小莉</b>
+          <i>右滑 →</i>
+        </div>
+        <div class="vz-atile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+            <path d="M12 3c.6 4.4 2.6 6.4 7 7-4.4.6-6.4 2.6-7 7-.6-4.4-2.6-6.4-7-7 4.4-.6 6.4-2.6 7-7Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="vz-fanhint">正在收音 · 松手结束并识别</div>
+
+      <div class="vz-pill">
+        <div class="vz-wave vz-small vz-gold" style="height:18px">
+          <i style="height:3px"></i><i style="height:6px"></i><i style="height:10px"></i><i style="height:5px"></i>
+          <i style="height:13px"></i><i style="height:4px"></i><i style="height:9px"></i><i style="height:14px"></i>
+          <i style="height:5px"></i><i style="height:11px"></i><i style="height:6px"></i><i style="height:12px"></i>
+          <i style="height:4px"></i>
+        </div>
+        <div class="vz-clock">00:03</div>
+      </div>
+
+      <div class="vz-fab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-17</div><div class="ph">首页 · 按住进语音臂</div><div class="pd">扇面冻住不转不闪；浮标挂在 ＋ 上方 232，避开手指</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-hbar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          <div class="vz-name">日常账本 <span class="vz-cd"></span></div>
+          <div class="vz-sp"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m19 19-3.8-3.8"/></svg>
+        </div>
+        <div class="vz-sumwrap">
+          <div class="vz-sum">
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月支出</div>
+              <div class="vz-money">¥1,284.00</div>
+              <div class="vz-note">36 笔 · 日均 ¥21.4</div>
+            </div>
+            <div class="vz-vline"></div>
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月收入</div>
+              <div class="vz-money">¥8,600.00</div>
+              <div class="vz-note">结余 +¥7,316.00</div>
+            </div>
+          </div>
+        </div>
+        <div class="vz-budget">
+          <div class="vz-track"><i style="width:43%"></i></div>
+          <div class="vz-btxt">预算已用 43%</div>
+        </div>
+        <div class="vz-list">
+          <div class="vz-day"><b>今天 11月13日</b><div class="vz-rule"></div><span>－¥27.00</span></div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-1.6 1.6-2 4-2 6.5 0 1.9.8 3 2 3.4V21"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">三餐 / 早餐</div>
+              <div class="vz-sub">豆浆油条</div>
+            </div>
+            <div class="vz-amt">－¥5.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="13" rx="3"/><path d="M4 10h16M8 20l1.5-3M16 20l-1.5-3"/><circle cx="8" cy="13.5" r="1"/><circle cx="16" cy="13.5" r="1"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">交通 / 地铁</div>
+              <div class="vz-sub">上班</div>
+            </div>
+            <div class="vz-amt">－¥4.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h11a3 3 0 0 1 0 6H5z"/><path d="M5 8v9"/><path d="M19 6v10"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">餐饮 / 咖啡</div>
+              <div class="vz-sub">美式</div>
+            </div>
+            <div class="vz-amt">－¥18.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="vz-fscrim"></div>
+
+      <div class="vz-arm-up vz-ghost">
+        <div class="vz-alabel">
+          <b>语音记账</b>
+          <i>↑ 上滑</i>
+        </div>
+        <div class="vz-atile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="vz-arm-side vz-arm-left vz-ghost">
+        <div class="vz-alabel vz-center">
+          <b>截图记账</b>
+          <i>← 左滑</i>
+        </div>
+        <div class="vz-atile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+        </div>
+      </div>
+
+      <div class="vz-arm-side vz-arm-right vz-ghost">
+        <div class="vz-alabel vz-center">
+          <b>问小莉</b>
+          <i>右滑 →</i>
+        </div>
+        <div class="vz-atile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+            <path d="M12 3c.6 4.4 2.6 6.4 7 7-4.4.6-6.4 2.6-7 7-.6-4.4-2.6-6.4-7-7 4.4-.6 6.4-2.6 7-7Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="vz-fanhint">继续上滑、左滑或右滑 · 松手取消</div>
+
+      <div class="vz-pill vz-armed">
+        <svg class="vz-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5 5 0 0 1 0 10h-2"/>
+        </svg>
+        <div class="vz-lbl">松开取消</div>
+      </div>
+
+      <div class="vz-fab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-18</div><div class="ph">首页 · 滑回 ＋ 区</div><div class="pd">浮标转红：松手就丢；扇面提示同步改口</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-hbar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          <div class="vz-name">日常账本 <span class="vz-cd"></span></div>
+          <div class="vz-sp"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m19 19-3.8-3.8"/></svg>
+        </div>
+        <div class="vz-sumwrap">
+          <div class="vz-sum">
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月支出</div>
+              <div class="vz-money">¥1,284.00</div>
+              <div class="vz-note">36 笔 · 日均 ¥21.4</div>
+            </div>
+            <div class="vz-vline"></div>
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月收入</div>
+              <div class="vz-money">¥8,600.00</div>
+              <div class="vz-note">结余 +¥7,316.00</div>
+            </div>
+          </div>
+        </div>
+        <div class="vz-budget">
+          <div class="vz-track"><i style="width:43%"></i></div>
+          <div class="vz-btxt">预算已用 43%</div>
+        </div>
+        <div class="vz-list">
+          <div class="vz-day"><b>今天 11月13日</b><div class="vz-rule"></div><span>－¥27.00</span></div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-1.6 1.6-2 4-2 6.5 0 1.9.8 3 2 3.4V21"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">三餐 / 早餐</div>
+              <div class="vz-sub">豆浆油条</div>
+            </div>
+            <div class="vz-amt">－¥5.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="13" rx="3"/><path d="M4 10h16M8 20l1.5-3M16 20l-1.5-3"/><circle cx="8" cy="13.5" r="1"/><circle cx="16" cy="13.5" r="1"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">交通 / 地铁</div>
+              <div class="vz-sub">上班</div>
+            </div>
+            <div class="vz-amt">－¥4.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h11a3 3 0 0 1 0 6H5z"/><path d="M5 8v9"/><path d="M19 6v10"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">餐饮 / 咖啡</div>
+              <div class="vz-sub">美式</div>
+            </div>
+            <div class="vz-amt">－¥18.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="vz-fscrim"></div>
+
+      <div class="vz-arm-up">
+        <div class="vz-alabel vz-hot">
+          <b>语音记账</b>
+          <i>松手即结束</i>
+        </div>
+        <div class="vz-atile vz-hot">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="vz-arm-side vz-arm-left vz-ghost">
+        <div class="vz-alabel vz-center">
+          <b>截图记账</b>
+          <i>← 左滑</i>
+        </div>
+        <div class="vz-atile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15.5 16.5 11 6 21"/></svg>
+        </div>
+      </div>
+
+      <div class="vz-arm-side vz-arm-right vz-ghost">
+        <div class="vz-alabel vz-center">
+          <b>问小莉</b>
+          <i>右滑 →</i>
+        </div>
+        <div class="vz-atile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+            <path d="M12 3c.6 4.4 2.6 6.4 7 7-4.4.6-6.4 2.6-7 7-.6-4.4-2.6-6.4-7-7 4.4-.6 6.4-2.6 7-7Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="vz-fanhint">正在收音 · 松手结束并识别</div>
+
+      <div class="vz-pill">
+        <div class="vz-wave vz-small vz-red" style="height:18px">
+          <i style="height:3px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:5px"></i>
+          <i style="height:13px"></i><i style="height:4px"></i><i style="height:9px"></i><i style="height:14px"></i>
+          <i style="height:5px"></i><i style="height:11px"></i><i style="height:6px"></i><i style="height:12px"></i>
+          <i style="height:4px"></i>
+        </div>
+        <div class="vz-clock vz-red">00:16</div>
+      </div>
+
+      <div class="vz-fab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-19</div><div class="ph">首页 · 最后 5 秒</div><div class="pd">声纹与秒数转红：20 秒到点自动收尾</div></figcaption>
+    </figure>
+    <figure class="pc"><div class="vz-phone">
+      <div class="vz-page">
+        <div class="vz-hbar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          <div class="vz-name">日常账本 <span class="vz-cd"></span></div>
+          <div class="vz-sp"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m19 19-3.8-3.8"/></svg>
+        </div>
+        <div class="vz-sumwrap">
+          <div class="vz-sum">
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月支出</div>
+              <div class="vz-money">¥1,284.00</div>
+              <div class="vz-note">36 笔 · 日均 ¥21.4</div>
+            </div>
+            <div class="vz-vline"></div>
+            <div class="vz-cell">
+              <div class="vz-eyebrow">本月收入</div>
+              <div class="vz-money">¥8,600.00</div>
+              <div class="vz-note">结余 +¥7,316.00</div>
+            </div>
+          </div>
+        </div>
+        <div class="vz-budget">
+          <div class="vz-track"><i style="width:43%"></i></div>
+          <div class="vz-btxt">预算已用 43%</div>
+        </div>
+        <div class="vz-list">
+          <div class="vz-day"><b>今天 11月13日</b><div class="vz-rule"></div><span>－¥27.00</span></div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-1.6 1.6-2 4-2 6.5 0 1.9.8 3 2 3.4V21"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">三餐 / 早餐</div>
+              <div class="vz-sub">豆浆油条</div>
+            </div>
+            <div class="vz-amt">－¥5.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="13" rx="3"/><path d="M4 10h16M8 20l1.5-3M16 20l-1.5-3"/><circle cx="8" cy="13.5" r="1"/><circle cx="16" cy="13.5" r="1"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">交通 / 地铁</div>
+              <div class="vz-sub">上班</div>
+            </div>
+            <div class="vz-amt">－¥4.00</div>
+          </div>
+          <div class="vz-rowitem">
+            <div class="vz-tile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h11a3 3 0 0 1 0 6H5z"/><path d="M5 8v9"/><path d="M19 6v10"/></svg>
+            </div>
+            <div class="vz-rmain">
+              <div class="vz-cat">餐饮 / 咖啡</div>
+              <div class="vz-sub">美式</div>
+            </div>
+            <div class="vz-amt">－¥18.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="vz-pill vz-recog">
+        <div class="vz-q">···</div>
+        <div class="vz-lbl2">识别中</div>
+      </div>
+    </div>
+      <figcaption><div class="pn">V-20</div><div class="ph">首页 · 松手识别</div><div class="pd">扇面、压暗与 ＋ 都收起，浮标只剩「识别中」</div></figcaption>
+    </figure>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-h"><span class="no">31</span><h2>屏号索引 · 与实现对照</h2>
     <div class="meta">屏号回查代码<br>改哪一屏就编辑对应那一屏</div></div>
   <p class="lead">每屏对应 <code>tally-app/src/main/kotlin/io/github/guohangbk/tally/</code>（样式与布局在
     <code>tally-app/src/main/res/</code>）下的实现位置，改界面时按这张表找落点；「章节」那一列就是本页的节号。</p>
@@ -7908,9 +8731,10 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>P13 · P13b</td><td>分期进度、提前结清、单期账单</td><td>§09</td><td>ui/installment/InstallmentScreen.kt · InstallmentFormScreen.kt</td></tr>
       <tr><td>P14·①…③ · 口径</td><td>报销三段与标记体系</td><td>§07</td><td>ui/reimbursement/ReimbursementScreen.kt · ui/design/BillBadges.kt</td></tr>
       <tr><td>P15b</td><td>语音速记草稿</td><td>§11</td><td>ui/assistant/QuickNoteViewModel.kt · domain/parser/QuickNoteRules.kt</td></tr>
-      <tr><td>P16 · V-06 · V-07</td><td>截图记账、批量截图、识别失败出路</td><td>§11</td><td>ui/assistant/ScreenshotScreen.kt · ScreenshotBatchViewModel.kt · ScreenshotConfirmSheet.kt</td></tr>
+      <tr><td>V-06 · V-07</td><td>批量截图、识别失败出路（P16 那台独立页 0.1.7 起下线）</td><td>§11</td><td>ui/assistant/ScreenshotBatchViewModel.kt · ScreenshotConfirmSheet.kt · ui/home/HomeScreen.kt（＋ 左臂）</td></tr>
       <tr><td>V-04</td><td>语音识别结果落进记账页</td><td>§11</td><td>data/speech/SystemSpeechPort.kt · ui/bill/BillEntryScreen.kt</td></tr>
       <tr><td>V-08…V-11</td><td>对话输入条四态（点击录音）</td><td>§11</td><td>ui/assistant/AssistantChatScreen.kt · VoicePhase</td></tr>
+      <tr><td>V-12…V-20</td><td>小莉语音蒙层五态、贴底吐司与首页语音浮标四态</td><td>§30</td><td><code>ui/design/VoiceOverlay.kt · ui/assistant/AssistantChatScreen.kt · ui/home/HomeScreen.kt · ui/shell/TallyShell.kt · data/speech/SystemSpeechPort.kt</code></td></tr>
       <tr><td>P-01 · P-02</td><td>待发图片条与全屏预览</td><td>§11</td><td>ui/assistant/AssistantChatScreen.kt · PendingThumb</td></tr>
       <tr><td>B-01 · B-02</td><td>批量记账卡与部分成功</td><td>§11</td><td>ui/assistant/AssistantChatViewModel.kt · data/ai/AiBillDraftService.kt</td></tr>
       <tr><td>X-01 · X-02</td><td>小莉对话与带图带语音问答</td><td>§11</td><td>ui/assistant/AssistantChatScreen.kt · data/ai/AiConversationRepository.kt</td></tr>

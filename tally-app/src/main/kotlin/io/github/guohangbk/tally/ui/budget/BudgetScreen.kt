@@ -58,6 +58,7 @@ import io.github.guohangbk.tally.ui.design.BudgetCategoryRow
 import io.github.guohangbk.tally.ui.design.BudgetMoreButton
 import io.github.guohangbk.tally.ui.design.BudgetProgressBar
 import io.github.guohangbk.tally.ui.design.IconTile
+import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.KeypadRole
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
@@ -186,7 +187,7 @@ fun BudgetScreen(onBack: () -> Unit, onOpenHistory: () -> Unit) {
         TallyConfirmDialog(
             title = "删除这条预算？",
             message = "${if (target.isTotal) state.ledgerName else target.categoryName ?: "分类"} · " +
-                "${target.period.label} ${formatAmount(target.amountMinor, grouping = true)}。" +
+                "${target.period.label} ${formatAmount(target.amountMinor, grouping = LocalMoneyGrouping.current)}。" +
                 "账单不受影响，只是不再按这条预算提醒。",
             confirmLabel = "删除",
             destructive = true,

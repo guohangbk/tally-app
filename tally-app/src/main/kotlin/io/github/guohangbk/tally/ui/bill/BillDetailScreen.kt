@@ -36,7 +36,6 @@ import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.ReimburseStatus
 import io.github.guohangbk.tally.domain.model.TimePrecision
-import io.github.guohangbk.tally.ui.common.BillBatchViewModel
 import io.github.guohangbk.tally.ui.common.formatDate
 import io.github.guohangbk.tally.ui.common.formatDateTime
 import io.github.guohangbk.tally.ui.common.tallyViewModel

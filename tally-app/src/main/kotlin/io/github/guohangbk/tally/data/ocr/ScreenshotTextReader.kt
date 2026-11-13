@@ -56,7 +56,3 @@ class MlKitTextReader(context: Context) : ScreenshotTextReader {
         const val MAX_EDGE = 1600
     }
 }
-
-class FakeTextReader(private val outcome: OcrOutcome) : ScreenshotTextReader {
-    override suspend fun read(imageBytes: ByteArray): OcrOutcome = outcome
-}

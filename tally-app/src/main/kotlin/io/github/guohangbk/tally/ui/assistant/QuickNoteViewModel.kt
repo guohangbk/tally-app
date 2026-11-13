@@ -17,7 +17,6 @@ import io.github.guohangbk.tally.domain.parseAmount
 import io.github.guohangbk.tally.domain.parser.ParsedQuickNote
 import io.github.guohangbk.tally.domain.parser.QuickNoteCatalog
 import io.github.guohangbk.tally.domain.parser.QuickNoteParser
-import io.github.guohangbk.tally.ui.common.alignToPrecision
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +81,11 @@ const val VoiceMaxMillis = 20_000L
     val multiple: Boolean = false,
     val cancelled: Boolean = false,
     val failure: String? = null,
+    /**
+     * 失败只是「没听清」这一档：再来一次或改成打字就行，不必占一层弹层。
+     * 要给设置入口的（权限、引擎起不来）不看这个标记，页面照样弹层。
+     */
+    val heardNothing: Boolean = false,
     /** 本机引擎起不来，页面应改走系统语音输入界面。 */
     val needsSystemInput: Boolean = false,
 )
@@ -167,13 +171,17 @@ class QuickNoteViewModel(private val graph: AppGraph) : ViewModel() {
      * 首页 ＋ 上滑链路的一次收音。识别与规则抽取全部复用本页已有的那套管线，
      * 只是结果不再留在本页草稿卡上，而是交给记账页由人确认（V-04）。
      */
-    fun beginCapture(onLevel: (Float) -> Unit, onResult: (VoiceCapture) -> Unit) {
+    fun beginCapture(
+        onLevel: (Float) -> Unit,
+        onPartial: (String) -> Unit = {},
+        onResult: (VoiceCapture) -> Unit,
+    ) {
         if (state.value.listening) return
         capture = onResult
         state.update { it.copy(listening = true, heard = null, parsed = null, speechHint = null, error = null) }
         viewModelScope.launch {
             val outcome = try {
-                graph.speechPort.listen(onLevel)
+                graph.speechPort.listen(onLevel, onPartial)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (failure: Exception) {
@@ -189,7 +197,8 @@ class QuickNoteViewModel(private val graph: AppGraph) : ViewModel() {
                     callback?.invoke(captureOf(outcome.text))
                 }
 
-                is SpeechOutcome.NothingHeard -> callback?.invoke(VoiceCapture(heard = "", failure = outcome.reason))
+                is SpeechOutcome.NothingHeard ->
+                    callback?.invoke(VoiceCapture(heard = "", failure = outcome.reason, heardNothing = true))
                 is SpeechOutcome.Unavailable -> callback?.invoke(VoiceCapture(heard = "", failure = outcome.reason))
                 is SpeechOutcome.NeedsSystemInput ->
                     callback?.invoke(VoiceCapture(heard = "", failure = outcome.reason, needsSystemInput = true))
@@ -224,7 +233,7 @@ class QuickNoteViewModel(private val graph: AppGraph) : ViewModel() {
     fun acceptHeard(text: String, onResult: (VoiceCapture) -> Unit) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) {
-            onResult(VoiceCapture(heard = "", failure = "没有听清，请重试或输入文字"))
+            onResult(VoiceCapture(heard = "", failure = "没有听清，请重试或输入文字", heardNothing = true))
             return
         }
         state.update { it.copy(heard = trimmed) }

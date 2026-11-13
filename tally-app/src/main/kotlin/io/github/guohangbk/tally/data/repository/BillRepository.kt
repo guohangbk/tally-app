@@ -25,7 +25,6 @@ import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.BillMonthSnapshot
 import io.github.guohangbk.tally.domain.model.BillRepositoryContract
 import io.github.guohangbk.tally.domain.model.BillSearchResult
-import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.model.BillSummary
 import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.CategoryBills

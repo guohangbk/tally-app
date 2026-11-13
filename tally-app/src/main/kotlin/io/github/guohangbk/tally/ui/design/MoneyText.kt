@@ -2,7 +2,7 @@ package io.github.guohangbk.tally.ui.design
 
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -21,6 +21,9 @@ enum class MoneySign {
     INCOME,
 }
 
+/** 千分位开关由根节点按设置下发；非 MoneyText 的金额文案直接读它，避免各页各写一份。 */
+val LocalMoneyGrouping = staticCompositionLocalOf { true }
+
 /**
  * 金额显示：整数最大字号、小数降一级透明度；支出用陶土、收入用墨绿，
  * 同时用 － / ＋ 前缀冗余编码，不依赖颜色区分。金额始终以分存储，这里只做显示格式化。
@@ -32,7 +35,7 @@ fun MoneyText(
     style: TextStyle,
     color: Color,
     modifier: Modifier = Modifier,
-    grouping: Boolean = true,
+    grouping: Boolean = LocalMoneyGrouping.current,
     showCurrency: Boolean = true,
     currencySymbol: String = "¥",
     textAlign: TextAlign = TextAlign.Unspecified,
