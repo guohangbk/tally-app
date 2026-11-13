@@ -66,6 +66,7 @@ import io.github.guohangbk.tally.ui.common.formatDay
 import io.github.guohangbk.tally.ui.common.startOfDay
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
 import io.github.guohangbk.tally.ui.design.TallySegmented
@@ -74,7 +75,6 @@ import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.tallyColors
-import io.github.guohangbk.tally.ui.shell.TallyIconAction
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
 
 /**
@@ -319,7 +319,7 @@ fun SearchScreen(
                                 if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.045f)))
                                 BillRow(
                                     item = item,
-                                    grouping = true,
+                                    grouping = LocalMoneyGrouping.current,
                                     showCheckbox = selection.active,
                                     selected = item.bill.id in selectedIds,
                                     onClick = { if (selection.active) batch.toggle(item) else detailBillId = item.bill.id },
@@ -356,7 +356,7 @@ fun SearchScreen(
                         if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.045f)))
                         BillRow(
                             item = item,
-                            grouping = true,
+                            grouping = LocalMoneyGrouping.current,
                             showCheckbox = selection.active,
                             selected = item.bill.id in selectedIds,
                             onClick = { if (selection.active) batch.toggle(item) else detailBillId = item.bill.id },
@@ -479,7 +479,6 @@ private fun KeywordField(value: String, onValueChange: (String) -> Unit) {
         }
     }
 }
-
 
 @Composable
 private fun SummaryCell(value: String, label: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {

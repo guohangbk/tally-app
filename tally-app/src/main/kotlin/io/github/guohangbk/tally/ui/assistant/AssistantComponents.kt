@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -62,32 +60,6 @@ fun AiCard(
         borderColor = if (glow) colors.gold.copy(alpha = 0.34f) else colors.expense.copy(alpha = 0.3f),
         content = content,
     )
-}
-
-@Composable
-fun AiEyebrow(text: String, trailing: String? = null, gold: Boolean = true) {
-    val colors = tallyColors
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = text,
-            style = TallyType.eyebrow,
-            color = if (gold) colors.gold else colors.ink3,
-            fontWeight = FontWeight.SemiBold,
-        )
-        if (trailing != null) {
-            Text(
-                text = trailing,
-                style = TallyType.eyebrow,
-                color = colors.ink3,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
 }
 
 /** 三层呼吸同心环 + 茉莉花形：聆听中与分析载入中共用同一段动效语言。 */

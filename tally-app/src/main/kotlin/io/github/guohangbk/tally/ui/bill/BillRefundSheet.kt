@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.BillListItem
-import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.TimePrecision
 import io.github.guohangbk.tally.ui.common.TallyDateTimePickerDialog
 import io.github.guohangbk.tally.ui.common.TallyFormInput

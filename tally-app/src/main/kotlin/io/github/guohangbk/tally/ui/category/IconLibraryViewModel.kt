@@ -2,7 +2,6 @@ package io.github.guohangbk.tally.ui.category
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.model.CategoryType
 import io.github.guohangbk.tally.domain.model.TallyError
@@ -132,8 +131,6 @@ init {
             )
         }
     }
-
-
 
     fun selectIcon(meta: IconMeta) {
         // 建分类时点图标即把默认名填进名称框，改过的名字也一起覆盖（AC-F7-2）；

@@ -2,21 +2,32 @@ package io.github.guohangbk.tally.ui.assistant
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.provider.Settings
 import android.speech.RecognizerIntent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,10 +43,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -54,10 +65,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -75,7 +91,6 @@ import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.AiChatEntry
 import io.github.guohangbk.tally.domain.model.AiConversation
-import io.github.guohangbk.tally.domain.model.AiMessageRole
 import io.github.guohangbk.tally.domain.model.AiMessageType
 import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.model.BillType
@@ -94,12 +109,18 @@ import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.TallyToast
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.ToastTone
+import io.github.guohangbk.tally.ui.design.VoiceLive
+import io.github.guohangbk.tally.ui.design.VoiceOverlay
+import io.github.guohangbk.tally.ui.design.VoicePhase
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyTopBar
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 小莉问答。这里不画图、不生成账单，只是把本地数字拿去问一句；
@@ -126,14 +147,62 @@ fun AssistantChatScreen(
     var viewerPath by remember { mutableStateOf<String?>(null) }
     var showConversations by remember { mutableStateOf(false) }
     var voiceHint by remember { mutableStateOf<String?>(null) }
-    var holdMs by remember { mutableStateOf(0L) }
-    /** 语音走点击开关：idle 未开录 → listening 正在录 → recognizing 正在识别，全程一次点击一步。 */
-    var voicePhase by remember { mutableStateOf(VoicePhase.Idle) }
+    /** 提示旁边那颗「去应用设置」：只有权限被拒时才给，别的提示不配动作。 */
+    var voiceHintAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    /**
+     * 收音失败与「没听清」一律走贴底气泡，三秒自己收。
+     * 只有「去应用设置」这类要人去别处动手的提示才留在页面上。
+     */
+    fun voiceToast(text: String) {
+        voiceHint = null
+        voiceHintAction = null
+        TallyToast.show(text, ToastTone.ERROR, durationMillis = 3_000)
+    }
+    /** 输入栏是「打字」还是「按住 说话」：点话筒切过去，点键盘切回来。 */
+    var voiceMode by remember { mutableStateOf(false) }
+    /**
+     * 收音的实时状态（音量、半截文字、秒数、阶段、待发文字）。
+     * 单独一包是给组合器分流：音量一秒变几十次，读它的人只有蒙层，别把整页拉着重画。
+     */
+    val voice = remember { VoiceLive() }
+    /** 没授权时按下不弹系统框（弹窗一开这次按住就废了），松手后再申请。 */
+    var pendingMicPermission by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // 系统分享进来的截图：挂到待发位，等配置读出来就自动发出去。
+    // 小莉还没开启或没配好时不发，图留在待发位等人处理。
+    var sharedImageToSend by remember { mutableStateOf(false) }
+    LaunchedEffect(graph) {
+        graph.sharedImage.collect { uri ->
+            if (uri == null) return@collect
+            graph.sharedImage.value = null
+            viewModel.attachImages(listOf(uri))
+            sharedImageToSend = true
+        }
+    }
+    LaunchedEffect(sharedImageToSend, state.loaded, state.availability) {
+        if (!sharedImageToSend || !state.loaded) return@LaunchedEffect
+        sharedImageToSend = false
+        if (state.availability?.showsEntry == true) viewModel.send()
+    }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         DebugLog.log("Mic", "权限申请结果 granted=$granted")
-        if (!granted) voiceHint = "没有麦克风权限，可以在系统设置里允许；也可以打字或发图。"
+        if (granted) {
+            voiceHint = null
+            voiceHintAction = null
+            TallyToast.show("麦克风已授权 · 按住 说话", ToastTone.SUCCESS)
+        } else {
+            voiceHint = "没有麦克风权限，语音用不了；也可以打字或发图。"
+            voiceHintAction = {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null),
+                    ),
+                )
+            }
+        }
     }
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(AssistantChatViewModel.MAX_PENDING_IMAGES),
@@ -142,7 +211,7 @@ fun AssistantChatScreen(
     val systemVoice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val heard = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty()
         DebugLog.log("Mic", "系统语音输入返回：${if (heard.isBlank()) "空" else "「$heard」"}")
-        if (heard.isBlank()) voiceHint = "没有听清，请重试或直接打字" else viewModel.onInputChange(heard)
+        if (heard.isBlank()) voiceToast("没有听清，请重试或直接打字") else viewModel.onInputChange(heard)
     }
     fun launchSystemVoice() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -151,200 +220,335 @@ fun AssistantChatScreen(
             putExtra(RecognizerIntent.EXTRA_PROMPT, "说一句要问小莉的话")
         }
         if (intent.resolveActivity(context.packageManager) == null) {
-            voiceHint = "这台机器没有可用的系统语音输入，直接打字吧"
+            voiceToast("这台机器没有可用的系统语音输入，直接打字吧")
         } else {
             systemVoice.launch(intent)
         }
     }
 
-    // 语音是点击开关：点一下开始录，再点一下结束并发送，说满 20 秒自己收尾。
-    // 用组合作用域里的协程而不是 LaunchedEffect(voicePhase)——切换状态会改 key，
-    // 那会把正在等识别结果的协程一起取消掉。
-    var voiceJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    fun startVoice() {
-        if (voiceJob?.isActive == true) return
-        voicePhase = VoicePhase.Listening
-        holdMs = 0L
-        voiceJob = scope.launch {
-            val listen = async { graph.speechPort.listen() }
-            while (voicePhase == VoicePhase.Listening && !listen.isCompleted) {
-                delay(100)
-                holdMs += 100
-                // 到点先自己收尾，不等用户回想起来手还压着这件事。
-                if (holdMs >= VoiceMaxMillis) voicePhase = VoicePhase.Recognizing
-            }
-            graph.speechPort.stopListening()
-            val outcome = try {
-                listen.await()
-            } catch (cancellation: CancellationException) {
-                voicePhase = VoicePhase.Idle
-                return@launch
-            } catch (failure: Exception) {
-                SpeechOutcome.NothingHeard("识别失败，可以改用文字")
-            }
-            voicePhase = VoicePhase.Idle
-            when (outcome) {
-                is SpeechOutcome.Heard -> viewModel.sendVoice(outcome.text, holdMs)
-                is SpeechOutcome.NothingHeard -> voiceHint = outcome.reason
-                is SpeechOutcome.Unavailable -> voiceHint = outcome.reason
-                is SpeechOutcome.NeedsSystemInput -> launchSystemVoice()
-                SpeechOutcome.Cancelled -> Unit
-            }
-        }
-    }
+    // 一次收音只开一颗协程：按住开始、松手收尾、滑进取消区直接杀掉。
+    // 不用 LaunchedEffect(voice.phase)——切阶段会改 key，把正在等识别结果的协程一起取消掉。
+    var voiceJob by remember { mutableStateOf<Job?>(null) }
 
-    /** mic 的那一下：没录就开始，正在录就结束送去识别，识别中再点无效（两次识别不该叠在一起）。 */
-    fun toggleVoice() {
-        when (voicePhase) {
-            VoicePhase.Idle -> {
-                if (!graph.speechPort.hasPermission()) {
-                    DebugLog.log("Mic", "申请权限：RECORD_AUDIO（当前未授权）")
-                    micPermission.launch(Manifest.permission.RECORD_AUDIO)
+    /** 收尾只在这一处：谁先给出结果（引擎 / 看门狗 / 半截文字兜底）都走同一条出口。 */
+    fun finishVoice(outcome: SpeechOutcome) {
+        when (outcome) {
+            is SpeechOutcome.Heard -> {
+                if (outcome.text.isBlank()) {
+                    voiceToast("没有听清，请重试或输入文字")
+                    voice.phase = VoicePhase.Idle
                 } else {
-                    startVoice()
+                    voice.review = outcome.text
+                    voice.phase = VoicePhase.Review
                 }
             }
 
-            VoicePhase.Listening -> voicePhase = VoicePhase.Recognizing
-            VoicePhase.Recognizing -> Unit
+            is SpeechOutcome.NothingHeard ->
+                // 引擎没给最终结果、但前面吐过半截文字：直接拿去改，别让人重说一遍。
+                if (voice.partial.isNotBlank()) {
+                    voice.review = voice.partial
+                    voice.phase = VoicePhase.Review
+                } else {
+                    voiceToast(outcome.reason)
+                    voice.phase = VoicePhase.Idle
+                }
+
+            is SpeechOutcome.Unavailable -> {
+                voiceToast(outcome.reason)
+                voice.phase = VoicePhase.Idle
+            }
+
+            is SpeechOutcome.NeedsSystemInput -> {
+                voice.phase = VoicePhase.Idle
+                launchSystemVoice()
+            }
+
+            SpeechOutcome.Cancelled -> voice.phase = VoicePhase.Idle
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(colors.paper)) {
-        // 右上角空着：配置挪到 app 设置里的「小莉配置」，端侧/云端标签也不需要常驻在这一页。
-        // 对话列表（新建 / 重命名 / 删除）改由点标题唤起，不给它留入口就等于删了这些操作。
-        TallyTopBar(
-            title = "小莉",
-            onBack = onBack,
-            onTitleClick = { showConversations = true },
-        )
-
-        // 提示改成贴底气泡；「重新测试」是真动作，留在气泡上就地可点。
-        TallyToastEffects(
-            notice = state.notice,
-            error = state.error,
-            errorTitle = "小莉暂时联系不上",
-            onNoticeShown = viewModel::dismissMessages,
-            onErrorShown = viewModel::dismissMessages,
-            errorActionLabel = "重新测试",
-            onErrorAction = viewModel::refreshAvailability,
-        )
-
-        // 语音的提示自己带计时器收起，不走这条通道。
-        voiceHint?.let { text ->
-            LaunchedEffect(text) {
-                delay(3_200)
-                voiceHint = null
-            }
-            Text(text, style = TallyType.helper, color = colors.expense, modifier = Modifier.padding(horizontal = 15.dp))
+    fun beginVoice() {
+        if (voice.phase != VoicePhase.Idle || voiceJob?.isActive == true) return
+        // 上一次的失败提示不该跟着这一句走：真的开始录了就先收掉。
+        voiceHint = null
+        voiceHintAction = null
+        if (!graph.speechPort.hasPermission()) {
+            // 系统授权框一弹，这次按住就断了：先记下，松手再申请。
+            pendingMicPermission = true
+            return
         }
-
-        Box(modifier = Modifier.weight(1f)) {
-            if (state.isEmptyConversation) {
-                EmptyChat(gold = state.availability?.showsEntry == true)
-            } else {
-                val listState = rememberLazyListState()
-                // 进来就该停在最新一条，而不是停在第一条让人往上翻。
-                // 每来一段流式增量都贴回底部：key 用长度而不是「有没有」，否则只滚第一下。
-                LaunchedEffect(
-                    state.conversationId,
-                    state.entries.size,
-                    state.working,
-                    state.draftPending,
-                    state.streaming?.length,
-                ) {
-                    val extra = if (state.working || state.streaming != null || state.draftPending) 1 else 0
-                    val last = state.entries.size + extra - 1
-                    if (last >= 0) listState.scrollToItem(last)
+        pendingMicPermission = false
+        voice.phase = VoicePhase.Listening
+        voice.elapsedMs = 0L
+        voice.level = 0f
+        voice.partial = ""
+        voice.review = ""
+        voice.cancelArmed = false
+        val startedAt = SystemClock.elapsedRealtime()
+        voiceJob = scope.launch {
+            try {
+                coroutineScope {
+                    val listen = async {
+                        graph.speechPort.listen(
+                            onLevel = { voice.level = it },
+                            onPartial = { voice.partial = it },
+                        )
+                    }
+                    // 计时只走「按住」这一段：到 20 秒自己收尾进识别，不静默截断。
+                    while (voice.phase == VoicePhase.Listening && !listen.isCompleted) {
+                        delay(100)
+                        voice.elapsedMs = SystemClock.elapsedRealtime() - startedAt
+                        if (voice.elapsedMs >= VoiceMaxMillis) {
+                            voice.phase = VoicePhase.Recognizing
+                            graph.speechPort.stopListening()
+                        }
+                    }
+                    if (voice.phase == VoicePhase.Idle) {
+                        listen.cancel()
+                        return@coroutineScope
+                    }
+                    // 松手之后引擎最多再给几秒：回不来就按没听清收尾。
+                    // 少这一道，任何一次「引擎不回话」都会把输入栏永远锁在「正在识别」。
+                    val outcome = if (listen.isCompleted) {
+                        listen.await()
+                    } else {
+                        withTimeoutOrNull(VoiceResultGraceMillis) { listen.await() } ?: run {
+                            listen.cancel()
+                            graph.speechPort.stopListening()
+                            SpeechOutcome.NothingHeard("没有听清，请重试或输入文字")
+                        }
+                    }
+                    finishVoice(outcome)
                 }
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(9.dp),
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (failure: Throwable) {
+                // 引擎抛什么都只当这次失败：一层没兜住就会把整页带走。
+                DebugLog.log("Mic", "收音协程异常：$failure")
+                voiceToast("识别失败，可以改用文字")
+            } finally {
+                voice.level = 0f
+                voice.cancelArmed = false
+                // 进了审核态就把这层留给它；其余一律回空闲，按钮不会一直灰着。
+                if (voice.phase != VoicePhase.Review) voice.phase = VoicePhase.Idle
+            }
+        }
+    }
+
+    /** 松手：欠着的授权这时才申请；滑进取消区就整条丢掉，别事后补发一条。 */
+    fun endVoice(cancelled: Boolean) {
+        if (pendingMicPermission) {
+            pendingMicPermission = false
+            DebugLog.log("Mic", "申请权限：RECORD_AUDIO（当前未授权）")
+            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        if (voice.phase != VoicePhase.Listening) return
+        voice.cancelArmed = false
+        if (cancelled) {
+            voice.phase = VoicePhase.Idle
+            voiceJob?.cancel()
+            return
+        }
+        // 手指刚落下就抬起来：引擎还没开口就叫停，等回来的多半是「没听清」——
+        // 直接说清楚比空等一次更省事，也不会把一次误触变成一条脏消息。
+        if (voice.elapsedMs < VoiceMinHoldMillis && voice.partial.isBlank()) {
+            voiceToast("说话时间太短 · 按住说完再松手")
+            voice.phase = VoicePhase.Idle
+            voiceJob?.cancel()
+            return
+        }
+        voice.phase = VoicePhase.Recognizing
+        graph.speechPort.stopListening()
+    }
+
+    fun sendReviewedVoice() {
+        val text = voice.review.trim()
+        if (text.isEmpty()) return
+        val duration = voice.elapsedMs
+        voice.phase = VoicePhase.Idle
+        voice.review = ""
+        viewModel.sendVoice(text, duration)
+    }
+
+    fun cancelReviewedVoice() {
+        voice.phase = VoicePhase.Idle
+        voice.review = ""
+    }
+
+    // 蒙层挡着的时候返回键先收蒙层，别让人以为按错了还得再退一次页面。
+    BackHandler(enabled = voice.phase != VoicePhase.Idle) {
+        voiceJob?.cancel()
+        voice.phase = VoicePhase.Idle
+        voice.review = ""
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(colors.paper)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 右上角空着：配置挪到 app 设置里的「小莉配置」，端侧/云端标签也不需要常驻在这一页。
+            // 对话列表（新建 / 重命名 / 删除）改由点标题唤起，不给它留入口就等于删了这些操作。
+            TallyTopBar(
+                title = "小莉",
+                onBack = onBack,
+                onTitleClick = { showConversations = true },
+            )
+
+            // 提示改成贴底气泡；「重新测试」是真动作，留在气泡上就地可点。
+            TallyToastEffects(
+                notice = state.notice,
+                error = state.error,
+                errorTitle = "小莉暂时联系不上",
+                onNoticeShown = viewModel::dismissMessages,
+                onErrorShown = viewModel::dismissMessages,
+                errorActionLabel = "重新测试",
+                onErrorAction = viewModel::refreshAvailability,
+            )
+
+            // 收音失败一律走贴底气泡；页面上这一行只留给「去应用设置」——
+            // 它要人离开当前页动手，跟着三秒消失等于没说。
+            voiceHint?.let { text ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    itemsIndexed(state.entries, key = { _, entry -> entry.id }) { index, entry ->
-                        val previous = state.entries.getOrNull(index - 1)
-                        val showStamp = previous == null || entry.createdAt - previous.createdAt >= STAMP_GAP_MILLIS
-                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            if (showStamp) {
-                                Text(
-                                    text = formatChatStamp(entry.createdAt),
-                                    style = TallyType.eyebrow,
-                                    color = colors.ink3,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                )
-                            }
-                            if (entry.isDraft) {
-                                // 记账卡本身就是对话里的一条消息，位置天然排在它那条回复之后。
-                                DraftCardStack(
-                                    drafts = entry.drafts.map { it.toUi() },
-                                    onConfirmAll = { viewModel.confirmDraft(entry.id) },
-                                    // 「改」只把人带去记账页填那一格，卡片留着——先撤再跳，回来就永远没了。
-                                    onEditRow = { draft -> onOpenDraft(draft) },
-                                    onDismissRow = { index -> viewModel.dismissRow(entry.id, index) },
-                                )
-                            } else {
-                                // Compose 的 Text 默认不可选，所以长按气泡复制不了；整条消息包一层
-                                // SelectionContainer，长按就能选字并走系统的复制菜单。
-                                SelectionContainer {
-                                    MessageRow(entry = entry, onRetry = { viewModel.retry(entry.id) }, onOpenImage = { viewerPath = it })
+                    Text(text, style = TallyType.helper, color = colors.expense, modifier = Modifier.weight(1f))
+                    voiceHintAction?.let { action ->
+                        Text(
+                            text = "去应用设置",
+                            style = TallyType.helper,
+                            color = colors.gold,
+                            modifier = Modifier.clickable {
+                                voiceHint = null
+                                voiceHintAction = null
+                                action()
+                            },
+                        )
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                if (state.isEmptyConversation) {
+                    EmptyChat(gold = state.availability?.showsEntry == true)
+                } else {
+                    val listState = rememberLazyListState()
+                    // 进来就该停在最新一条，而不是停在第一条让人往上翻。
+                    // 每来一段流式增量都贴回底部：key 用长度而不是「有没有」，否则只滚第一下。
+                    LaunchedEffect(
+                        state.conversationId,
+                        state.entries.size,
+                        state.working,
+                        state.draftPending,
+                        state.streaming?.length,
+                    ) {
+                        val extra = if (state.working || state.streaming != null || state.draftPending) 1 else 0
+                        val last = state.entries.size + extra - 1
+                        if (last >= 0) listState.scrollToItem(last)
+                    }
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    ) {
+                        itemsIndexed(state.entries, key = { _, entry -> entry.id }) { index, entry ->
+                            val previous = state.entries.getOrNull(index - 1)
+                            val showStamp = previous == null || entry.createdAt - previous.createdAt >= STAMP_GAP_MILLIS
+                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                if (showStamp) {
+                                    Text(
+                                        text = formatChatStamp(entry.createdAt),
+                                        style = TallyType.eyebrow,
+                                        color = colors.ink3,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                    )
+                                }
+                                if (entry.isDraft) {
+                                    // 记账卡本身就是对话里的一条消息，位置天然排在它那条回复之后。
+                                    DraftCardStack(
+                                        drafts = entry.drafts.map { it.toUi() },
+                                        onConfirmAll = { viewModel.confirmDraft(entry.id) },
+                                        // 「改」只把人带去记账页填那一格，卡片留着——先撤再跳，回来就永远没了。
+                                        onEditRow = { draft -> onOpenDraft(draft) },
+                                        onDismissRow = { index -> viewModel.dismissRow(entry.id, index) },
+                                    )
+                                } else {
+                                    // Compose 的 Text 默认不可选，所以长按气泡复制不了；整条消息包一层
+                                    // SelectionContainer，长按就能选字并走系统的复制菜单。
+                                    SelectionContainer {
+                                        MessageRow(entry = entry, onRetry = { viewModel.retry(entry.id) }, onOpenImage = { viewerPath = it })
+                                    }
                                 }
                             }
                         }
-                    }
-                    state.streaming?.let { text ->
-                        item(key = "streaming") {
-                            // 流式期间先用一条临时气泡显示半截回复，落库后由正式消息接替。
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(13.dp, 13.dp, 13.dp, 4.dp))
-                                    .background(colors.card)
-                                    .border(1.dp, colors.line, RoundedCornerShape(13.dp, 13.dp, 13.dp, 4.dp))
-                                    .padding(horizontal = 11.dp, vertical = 9.dp),
-                            ) {
-                                Text(text + "▍", style = TallyType.body.copy(lineHeight = 22.sp), color = colors.ink)
+                        state.streaming?.let { text ->
+                            item(key = "streaming") {
+                                // 流式期间先用一条临时气泡显示半截回复，落库后由正式消息接替。
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(13.dp, 13.dp, 13.dp, 4.dp))
+                                        .background(colors.card)
+                                        .border(1.dp, colors.line, RoundedCornerShape(13.dp, 13.dp, 13.dp, 4.dp))
+                                        .padding(horizontal = 11.dp, vertical = 9.dp),
+                                ) {
+                                    Text(text + "▍", style = TallyType.body.copy(lineHeight = 22.sp), color = colors.ink)
+                                }
+                            }
+                        }
+                        if (state.working) {
+                            item(key = "working") {
+                                Text("小莉正在看…", style = TallyType.helper, color = colors.ink3)
+                            }
+                        }
+                        if (state.draftPending) {
+                            item(key = "draft-pending") {
+                                Text("正在生成卡片…", style = TallyType.helper, color = colors.ink3)
                             }
                         }
                     }
-                    if (state.working) {
-                        item(key = "working") {
-                            Text("小莉正在看…", style = TallyType.helper, color = colors.ink3)
-                        }
-                    }
-                    if (state.draftPending) {
-                        item(key = "draft-pending") {
-                            Text("正在生成卡片…", style = TallyType.helper, color = colors.ink3)
-                        }
-                    }
                 }
+                // 录音气泡浮在对话上，不挤动消息列表：说与识别都在本机，页面不该跟着跳。
             }
+
+            InputBar(
+                value = state.input,
+                onValueChange = viewModel::onInputChange,
+                onSend = viewModel::send,
+                enabled = state.canSend,
+                working = state.working,
+                voicePhase = voice.phase,
+                pendingImages = state.pendingImages,
+                onOpenPendingImage = { path -> viewerPath = path },
+                onPickImage = {
+                    imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onDetachImage = viewModel::detachImage,
+                voiceMode = voiceMode,
+                onEnterVoiceMode = { voiceMode = true },
+                onExitVoiceMode = { if (voice.phase == VoicePhase.Idle) voiceMode = false },
+                onVoicePress = ::beginVoice,
+                onVoiceRelease = ::endVoice,
+                onCancelArmedChange = { voice.cancelArmed = it },
+                micEnabled = state.availability?.showsEntry != false,
+                // 配置里没勾「支持图片输入」就不给发图，避免把截图发给一个看不了的模型。
+                imageEnabled = state.availability?.visionCapable == true,
+            )
+
+            bottomBar()
         }
 
-        InputBar(
-            value = state.input,
-            onValueChange = viewModel::onInputChange,
-            onSend = viewModel::send,
-            enabled = state.canSend,
-            working = state.working,
-            gold = state.availability?.showsEntry == true,
-            voicePhase = voicePhase,
-            holdMs = holdMs,
-            pendingImages = state.pendingImages,
-            onOpenPendingImage = { path -> viewerPath = path },
-            onPickImage = {
-                imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            },
-            onDetachImage = viewModel::detachImage,
-            onToggleVoice = ::toggleVoice,
-            micEnabled = state.availability?.showsEntry != false,
-            // 配置里没勾「支持图片输入」就不给发图，避免把截图发给一个看不了的模型。
-            imageEnabled = state.availability?.visionCapable == true,
+    // 语音蒙层盖在整页之上（含输入栏）：底下压暗，中间一颗圆盘与一张气泡。
+    if (voice.phase != VoicePhase.Idle) {
+        VoiceOverlay(
+            live = voice,
+            hint = if (voice.phase == VoicePhase.Listening) "松开转文字，上滑取消" else null,
+            onCancel = ::cancelReviewedVoice,
+            onSend = ::sendReviewedVoice,
         )
-
-        bottomBar()
+    }
     }
 
     if (showConversations) {
@@ -454,6 +658,12 @@ fun AssistantChatScreen(
 
 /** 相邻消息只在跨了一段时间后才插一行居中时间；每条都顶一个名字和时间是表单，不是对话。 */
 private const val STAMP_GAP_MILLIS = 5 * 60 * 1000L
+
+/** 松手之后等识别结果的上限：引擎一般一秒内就回，超过这个数多半是它自己卡住了。 */
+private const val VoiceResultGraceMillis = 4_000L
+
+/** 短于这个数的「按住」按误触处理：引擎还没开口就叫停，只会换来一条没听清。 */
+private const val VoiceMinHoldMillis = 350L
 
 @Composable
 private fun MessageRow(
@@ -752,12 +962,6 @@ private fun StaticAction(label: String, color: Color) {
 /**
  * 语音点击开关的三段。recognizing 期间 mic 不给点，避免两次识别叠在一起。
  */
-private enum class VoicePhase {
-    Idle,
-    Listening,
-    Recognizing,
-}
-
 /** 卡片的存储行 → 界面草稿：字段一样，只是界面上还要还原成枚举并判断「要不要补分类」。 */
 private fun DraftRow.toUi(): ChatBillDraft = ChatBillDraft(
     amountMinor = amountMinor,
@@ -938,9 +1142,9 @@ private fun PendingThumb(
 }
 
 /**
- * .cbar：图片、输入框、话筒、发送全部包在同一颗圆角里。
- * 三个按钮各占 48dp 触摸框（视觉上只是一个小图标），发送用香槟金箭头而不是「发送」两个字。
- * 输入框随内容长高，最多 3.5 行，再多就自己滚。
+ * 微信 / 飞书那一套：左边一颗圆按钮切「键盘 ⇄ 说话」，中间一颗圆角输入框，
+ * 右边的圆按钮随内容换脸——空着是发图，打了字是发送。三样同高、同一条中线；
+ * 切语音时中间那块横向推入再淡入，不是整根按钮原地换字。
  */
 @Composable
 private fun InputBar(
@@ -949,22 +1153,25 @@ private fun InputBar(
     onSend: () -> Unit,
     enabled: Boolean,
     working: Boolean,
-    gold: Boolean,
     voicePhase: VoicePhase,
-    holdMs: Long,
+    voiceMode: Boolean,
+    onEnterVoiceMode: () -> Unit,
+    onExitVoiceMode: () -> Unit,
+    onVoicePress: () -> Unit,
+    onVoiceRelease: (cancelled: Boolean) -> Unit,
+    onCancelArmedChange: (Boolean) -> Unit,
     pendingImages: List<PendingImage>,
     onOpenPendingImage: (String) -> Unit,
     onPickImage: () -> Unit,
     onDetachImage: (Int) -> Unit,
-    onToggleVoice: () -> Unit,
     micEnabled: Boolean,
     imageEnabled: Boolean,
 ) {
     val colors = tallyColors
     val context = LocalContext.current
-    val shape = RoundedCornerShape(17.dp)
-    val fieldScroll = rememberScrollState()
     val graph = rememberAppGraph()
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     // 优先用选中那一刻压好的缩略图；压不出来才退回按 URI 现场解码。
     val pendingBitmaps = remember(pendingImages) {
         pendingImages.map { pending ->
@@ -973,6 +1180,8 @@ private fun InputBar(
             } ?: decodeUriSampled(context, pending.uri, 240)
         }
     }
+    val idle = voicePhase == VoicePhase.Idle
+    val canSend = enabled && idle && !working
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1009,33 +1218,78 @@ private fun InputBar(
                         }
                     }
                 }
-                // 缩略图正常时不写任何说明；读不出来才说一句，免得看着像图没选上。
-                if (pendingBitmaps.any { it == null }) {
-                    Text("有图片读不出来 · 仍可发送，或换一张", style = TallyType.helper, color = colors.expense)
-                }
             }
         }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 15.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.Bottom,
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(shape)
-                    .background(colors.card)
-                    .border(1.dp, colors.line, shape)
-                    .padding(start = 3.dp, end = 3.dp, top = 3.dp, bottom = 3.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                BarButton(
+            CircleAction(
+                iconKey = if (voiceMode) "keyboard" else "mic",
+                label = if (voiceMode) "切回键盘" else "按住说话",
+                // 识别中不给切：语音态一撤，正在等的结果就没有落点了。退出语音不受麦克风限制，
+                // 否则没开小莉时切进去就再也切不回来。
+                enabled = idle && (voiceMode || micEnabled),
+                onClick = {
+                    if (voiceMode) {
+                        onExitVoiceMode()
+                    } else {
+                        // 键盘不收，切过去以后还盖着半屏，看不到「按住 说话」。
+                        keyboard?.hide()
+                        focus.clearFocus()
+                        onEnterVoiceMode()
+                    }
+                },
+            )
+            AnimatedContent(
+                targetState = voiceMode,
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart,
+                transitionSpec = {
+                    val from = if (targetState) 1 else -1
+                    (slideInHorizontally(tween(220)) { width -> width / 3 * from } + fadeIn(tween(180)))
+                        .togetherWith(
+                            slideOutHorizontally(tween(200)) { width -> -width / 3 * from } + fadeOut(tween(120)),
+                        )
+                },
+                label = "voiceMode",
+            ) { voice ->
+                if (voice) {
+                    HoldToTalkArea(
+                        phase = voicePhase,
+                        // 只认「空闲时按下」：识别中再按一下不会叠出第二条识别。
+                        enabled = micEnabled && idle,
+                        onPress = onVoicePress,
+                        onRelease = onVoiceRelease,
+                        onArmedChange = onCancelArmedChange,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    TextFieldPill(
+                        value = value,
+                        onValueChange = onValueChange,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            if (!voiceMode && value.isNotBlank()) {
+                CircleAction(
+                    iconKey = "chevron",
+                    label = "发送",
+                    enabled = canSend,
+                    filled = true,
+                    onClick = onSend,
+                )
+            } else {
+                CircleAction(
                     iconKey = "image",
                     label = if (imageEnabled) "发图片" else "当前模型未开启图片输入",
-                    enabled = imageEnabled && voicePhase == VoicePhase.Idle,
+                    enabled = imageEnabled && idle,
                     // 置灰但可点：看起来是禁用的，点一下告诉人为什么，而不是按了没反应。
-                    clickWhenDisabled = !imageEnabled && voicePhase == VoicePhase.Idle,
+                    clickWhenDisabled = !imageEnabled && idle,
                     onClick = {
                         if (imageEnabled) {
                             onPickImage()
@@ -1044,138 +1298,163 @@ private fun InputBar(
                         }
                     },
                 )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 42.dp, max = 63.dp)
-                        .padding(vertical = 11.dp),
-                ) {
-                    when (voicePhase) {
-                        // 秒数用起始时刻换算、在录制与识别两段都继续走，避免"看着像卡住"。
-                        VoicePhase.Listening -> Text(
-                            text = "正在聆听 · ${holdMs / 1000}秒 · 再点一次结束",
-                            fontSize = 12.5.sp, lineHeight = 15.6.sp,
-                            color = colors.onGlow,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                        )
-
-                        VoicePhase.Recognizing -> Text(
-                            text = "正在识别… ${formatClock(holdMs)}",
-                            fontSize = 12.5.sp, lineHeight = 15.6.sp,
-                            color = colors.ink2,
-                            maxLines = 1,
-                        )
-
-                        VoicePhase.Idle -> BasicTextField(
-                            value = value,
-                            onValueChange = onValueChange,
-                            modifier = Modifier.fillMaxWidth().verticalScroll(fieldScroll),
-                            textStyle = TallyType.body.copy(fontSize = 13.5.sp, lineHeight = 18.sp, color = colors.ink),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.gold),
-                            decorationBox = { inner ->
-                                if (value.isEmpty()) {
-                                    Text("问点什么…", style = TallyType.body, color = colors.ink3.copy(alpha = 0.6f))
-                                }
-                                inner()
-                            },
-                        )
-                    }
-                }
-                BarButton(
-                    iconKey = "mic",
-                    label = when (voicePhase) {
-                        VoicePhase.Idle -> "点一下说话"
-                        VoicePhase.Listening -> "点一下结束"
-                        VoicePhase.Recognizing -> "正在识别"
-                    },
-                    // 识别中不给点：两次识别叠在一起，回来的文字会互相盖掉。
-                    enabled = micEnabled && voicePhase != VoicePhase.Recognizing,
-                    tintIfActive = voicePhase == VoicePhase.Listening,
-                    onClick = onToggleVoice,
-                )
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(13.dp))
-                        .clickable(enabled = enabled && voicePhase == VoicePhase.Idle && !working, onClick = onSend),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(if (enabled && voicePhase == VoicePhase.Idle && !working) colors.ink else colors.paper),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        InlineIcon(
-                            iconKey = "chevron",
-                            contentDescription = "发送",
-                            size = 15.dp,
-                            tint = if (enabled && voicePhase == VoicePhase.Idle && !working) colors.gold else colors.ink3,
-                        )
-                    }
-                }
             }
         }
     }
 }
 
-/** 输入栏里的小方块按钮：48dp 见方只用来保证点得中，视觉上仍是一枚小图标。 */
+/**
+ * 输入栏中间那颗输入框：最多四行，超过就在框里滚，两端圆按钮不跟着长高。
+ * 圆角与两端按钮同径，三样落在同一条中线上。
+ */
 @Composable
-private fun BarButton(
+private fun TextFieldPill(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = tallyColors
+    val scroll = rememberScrollState()
+    val shape = RoundedCornerShape(20.dp)
+    Box(
+        modifier = modifier
+            .heightIn(min = 40.dp)
+            .clip(shape)
+            .background(colors.card)
+            .border(1.dp, colors.line, shape)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth().heightIn(max = 84.dp).verticalScroll(scroll),
+            textStyle = TallyType.body.copy(fontSize = 13.5.sp, lineHeight = 18.sp, color = colors.ink),
+            cursorBrush = SolidColor(colors.gold),
+            maxLines = 4,
+            decorationBox = { inner ->
+                if (value.isEmpty()) {
+                    Text("问点什么…", style = TallyType.body, color = colors.ink3.copy(alpha = 0.6f))
+                }
+                inner()
+            },
+        )
+    }
+}
+
+/**
+ * 输入栏两端的那颗圆按钮：40dp 与输入框同高，图标本身只有 18dp。
+ * [filled] 是实心墨底（发送），其余是纸面描边——两端重量不同，视线先落在能推进的那颗上。
+ */
+@Composable
+private fun CircleAction(
     iconKey: String,
     label: String,
     enabled: Boolean,
-    onClick: () -> Unit = {},
+    onClick: () -> Unit,
+    filled: Boolean = false,
     /** 视觉上仍置灰，但允许点：用于把「为什么点不了」讲给人听。 */
     clickWhenDisabled: Boolean = false,
-    onPress: (() -> Unit)? = null,
-    onRelease: (() -> Unit)? = null,
-    tintIfActive: Boolean = false,
 ) {
     val colors = tallyColors
-    // 按住松手必须用 pointerInput(Unit)：若把 enabled 当 key，按下置 holding=true 会立刻
-    // 让 enabled 变 false → pointerInput 重启 → awaitRelease()/onRelease() 被取消，松手永远不触发。
+    val solid = filled && enabled
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(if (solid) colors.ink else colors.card)
+            .border(1.dp, if (solid) Color.Transparent else colors.line, CircleShape)
+            .clickable(enabled = enabled || clickWhenDisabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        InlineIcon(
+            iconKey = iconKey,
+            contentDescription = label,
+            size = 18.dp,
+            tint = when {
+                !enabled -> colors.ink3
+                solid -> colors.gold
+                else -> colors.ink2
+            },
+        )
+    }
+}
+
+/**
+ * 「按住 说话」：按下开录、松手发送、指尖上移越过取消线即丢弃这一次。
+ * 手势必须用 pointerInput(Unit)：按下会立刻改 voice.phase，若把它当 key，作用域在按下瞬间
+ * 就重启，之后再也收不到松手（与按钮的点击态同一个坑）。
+ *
+ * awaitEachGesture 的 block 每轮必须至少挂起一次：开录后 enabled 会翻成 false，若 disabled
+ * 时在 awaitFirstDown 之前就 return，松手那帧外层会不停重进 block 且 awaitAllPointersUp
+ * 不会挂起，主线程被钉死在 dispatchTouchEvent 里，随后 ANR 被杀。
+ */
+@Composable
+private fun HoldToTalkArea(
+    phase: VoicePhase,
+    enabled: Boolean,
+    onPress: () -> Unit,
+    onRelease: (cancelled: Boolean) -> Unit,
+    onArmedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = tallyColors
+    val cancelThreshold = with(LocalDensity.current) { 56.dp.toPx() }
     val currentEnabled by rememberUpdatedState(enabled)
     val currentOnPress by rememberUpdatedState(onPress)
     val currentOnRelease by rememberUpdatedState(onRelease)
+    val currentOnArmed by rememberUpdatedState(onArmedChange)
+    // 松手收尾排进主线程消息队列再执行，不在触摸分发栈里直接翻转录音阶段。
+    val releaseLater = remember { Handler(Looper.getMainLooper()) }
+    val listening = phase == VoicePhase.Listening
+    val shape = RoundedCornerShape(20.dp)
     Box(
-        modifier = Modifier
-            .size(48.dp)
-            .then(
-                if (onPress != null && onRelease != null) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                if (!currentEnabled) return@detectTapGestures
-                                currentOnPress?.invoke()
-                                awaitRelease()
-                                currentOnRelease?.invoke()
-                            },
-                        )
+        modifier = modifier
+            .height(40.dp)
+            .clip(shape)
+            .background(if (listening) colors.glow else colors.card)
+            .border(1.dp, if (listening) colors.gold.copy(alpha = 0.4f) else colors.line, shape)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    // 先挂起等 down，再判 enabled。disabled 时提前 return 也必须让本轮挂起过，
+                    // 否则 awaitEachGesture 外层会在 UP 这一帧空转，主线程再也退不出事件分发。
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    if (!currentEnabled) return@awaitEachGesture
+                    currentOnPress()
+                    var armed = false
+                    var finished = false
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            // 按住期间消费这一路指针的变化，别让底层的点击 / 滚动也收到同一串事件。
+                            event.changes.forEach { it.consume() }
+                            val nowArmed = down.position.y - change.position.y > cancelThreshold
+                            if (nowArmed != armed) {
+                                armed = nowArmed
+                                currentOnArmed(armed)
+                            }
+                            if (!change.pressed) {
+                                finished = true
+                                releaseLater.post { currentOnRelease(armed) }
+                                break
+                            }
+                        }
+                    } finally {
+                        // 手势被系统打断（来电、熄屏、离开页面）按取消收尾，不留一条在后台等结果。
+                        if (!finished) currentOnRelease(true)
+                        if (armed) currentOnArmed(false)
                     }
-                } else {
-                    Modifier.clickable(enabled = enabled || clickWhenDisabled, onClick = onClick)
-                },
-            ),
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(if (tintIfActive) colors.glow else colors.paper)
-                .border(1.dp, if (tintIfActive) colors.gold.copy(alpha = 0.4f) else colors.line, RoundedCornerShape(9.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            InlineIcon(
-                iconKey = iconKey,
-                contentDescription = label,
-                size = 14.dp,
-                tint = if (tintIfActive) colors.onGlow else if (enabled) colors.ink2 else colors.ink3,
-            )
-        }
+        Text(
+            text = if (listening) "松开 发送" else "按住 说话",
+            fontSize = 13.5.sp,
+            lineHeight = 18.sp,
+            color = if (enabled) colors.ink2 else colors.ink3,
+            maxLines = 1,
+        )
     }
 }
 

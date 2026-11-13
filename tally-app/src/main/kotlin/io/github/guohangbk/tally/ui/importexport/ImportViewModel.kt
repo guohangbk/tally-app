@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 data class ImportUiState(
     val sourceType: ImportSourceType? = null,

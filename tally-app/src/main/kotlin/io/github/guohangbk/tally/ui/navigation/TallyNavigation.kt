@@ -21,9 +21,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -46,22 +46,23 @@ import io.github.guohangbk.tally.domain.Period
 import io.github.guohangbk.tally.domain.model.StatsBucket
 import io.github.guohangbk.tally.domain.model.StatsGranularity
 import io.github.guohangbk.tally.domain.model.StatsRequest
-import io.github.guohangbk.tally.ui.bill.BillDetailSheet
 import io.github.guohangbk.tally.ui.bill.BillEntryScreen
 import io.github.guohangbk.tally.ui.budget.BudgetHistoryScreen
 import io.github.guohangbk.tally.ui.budget.BudgetScreen
 import io.github.guohangbk.tally.ui.backup.BackupScreen
 import io.github.guohangbk.tally.ui.assistant.AssistantChatScreen
 import io.github.guohangbk.tally.ui.assistant.AssistantConfigScreen
-import io.github.guohangbk.tally.ui.assistant.ScreenshotScreen
 import io.github.guohangbk.tally.domain.model.CategoryType
 import io.github.guohangbk.tally.ui.category.CategoryScreen
 import io.github.guohangbk.tally.ui.category.IconLibraryMode
 import io.github.guohangbk.tally.ui.category.IconLibraryPage
 import io.github.guohangbk.tally.ui.design.TallyTheme
+import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.WarmIconPainters
 import io.github.guohangbk.tally.ui.design.IconLibrary
+import io.github.guohangbk.tally.ui.design.TallyToast
 import io.github.guohangbk.tally.ui.design.TallyToastHost
+import io.github.guohangbk.tally.ui.design.ToastTone
 import io.github.guohangbk.tally.ui.home.TallyHomeScreen
 import io.github.guohangbk.tally.ui.share.PosterScreen
 import io.github.guohangbk.tally.ui.importexport.ExportScreen
@@ -131,7 +132,6 @@ object Routes {
     /** 预算历史（BU21-15）：只读回看本账本最近若干段的额度与完成，从总览底部入口进。 */
     const val BUDGET_HISTORY = "budget/history"
     const val ASSISTANT = "assistant"
-    const val ASSISTANT_SCREENSHOT = "assistant/screenshot"
     const val ASSISTANT_CHAT = "assistant/chat?prompt={prompt}"
     /** 小莉配置独立成一页：从 app 设置里的「小莉配置」进，不再是对话页右上角压出来的弹层。 */
     const val ASSISTANT_CONFIG = "assistant/config"
@@ -239,20 +239,22 @@ fun TallyAppRoot() {
     val settings by graph.preferences.settings.collectAsStateWithLifecycle(initialValue = null)
     AppGraphProvider(graph) {
         TallyTheme(darkTheme = isDark(settings?.themeMode ?: ThemeMode.SYSTEM)) {
-            val loaded = settings
-            if (loaded == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(io.github.guohangbk.tally.ui.design.tallyColors.paper),
-                )
-            } else {
-                TallyAppShell(
-                    onboardingDone = loaded.onboardingCompleted,
-                    assistantEnabled = loaded.assistantEnabled,
-                    quickOpen = loaded.quickOpenEnabled,
-                    debugMode = loaded.debugMode,
-                )
+            CompositionLocalProvider(LocalMoneyGrouping provides (settings?.showThousandsSeparator ?: true)) {
+                val loaded = settings
+                if (loaded == null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(io.github.guohangbk.tally.ui.design.tallyColors.paper),
+                    )
+                } else {
+                    TallyAppShell(
+                        onboardingDone = loaded.onboardingCompleted,
+                        assistantEnabled = loaded.assistantEnabled,
+                        quickOpen = loaded.quickOpenEnabled,
+                        debugMode = loaded.debugMode,
+                    )
+                }
             }
         }
     }
@@ -300,9 +302,24 @@ private fun TallyAppShell(
         }
     }
 
+    // 系统分享进来的截图只有一个去处：小莉。没开启或没配好就先去设置 / 配置页，
+    // 不把图静默丢掉——否则人会以为分享成功了。
     LaunchedEffect(graph) {
-        graph.sharedScreenshot.collect { uri ->
-            if (uri != null) navController.navigate(Routes.ASSISTANT_SCREENSHOT)
+        graph.sharedImage.collect { uri ->
+            if (uri == null) return@collect
+            when (graph.aiGateway.availability().entry) {
+                AssistantEntry.Chat -> navController.navigate(Routes.ASSISTANT) { launchSingleTop = true }
+                AssistantEntry.Configure -> {
+                    graph.sharedImage.value = null
+                    TallyToast.show("先配置小莉，再分享截图", ToastTone.INFO)
+                    navController.navigate(Routes.ASSISTANT_CONFIG)
+                }
+                AssistantEntry.Settings -> {
+                    graph.sharedImage.value = null
+                    TallyToast.show("小莉开关已关闭，这张截图没有识别", ToastTone.INFO)
+                    navController.navigate(Routes.SETTINGS)
+                }
+            }
         }
     }
 
@@ -727,12 +744,6 @@ private fun TallyAppShell(
                     composable(Routes.ASSISTANT_CONFIG) {
                         AssistantConfigScreen(onBack = { navController.popBackStack() })
                     }
-                    composable(Routes.ASSISTANT_SCREENSHOT) {
-                        ScreenshotScreen(
-                            onBack = { navController.popBackStack() },
-                            onSaved = { navController.switchTab(Routes.HOME) },
-                        )
-                    }
                     composable(Routes.ASSISTANT_CHAT) { entry ->
                         AssistantChatScreen(
                             initialPrompt = entry.arguments?.getString("prompt")?.ifEmpty { null },
@@ -843,5 +854,4 @@ private fun NavHostController.switchTab(route: String) {
         restoreState = true
     }
 }
-
 

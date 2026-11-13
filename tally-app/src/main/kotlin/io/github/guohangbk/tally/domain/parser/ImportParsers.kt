@@ -6,13 +6,11 @@ import io.github.guohangbk.tally.domain.model.ImportEncoding
 import io.github.guohangbk.tally.domain.model.ImportSourceType
 import io.github.guohangbk.tally.domain.model.ParsedBillRow
 import io.github.guohangbk.tally.domain.model.ReimburseStatus
-import io.github.guohangbk.tally.domain.parseAmount
 import io.github.guohangbk.tally.domain.parseSignedAmount
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 data class ParsedTable(
     val sourceType: ImportSourceType,

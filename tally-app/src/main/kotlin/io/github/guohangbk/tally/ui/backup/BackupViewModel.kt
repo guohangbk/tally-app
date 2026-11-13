@@ -8,7 +8,6 @@ import io.github.guohangbk.tally.data.preferences.TallySettings
 import io.github.guohangbk.tally.data.storage.PublicDownloads
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.model.BackupManifest
-import io.github.guohangbk.tally.domain.model.RestoreResult
 import io.github.guohangbk.tally.domain.model.TallyError
 import io.github.guohangbk.tally.domain.model.WebDavConfig
 import io.github.guohangbk.tally.domain.model.WebDavFile
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /** 恢复前的待确认状态：已经读到明文清单，等用户输入密码。 */
 data class PendingRestore(

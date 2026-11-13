@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
     private fun intakeSharedImage(intent: Intent?) {
         if (intent?.action != Intent.ACTION_SEND) return
         val uri = sendStream(intent) ?: return
-        TallyApplication.from(this).graph.sharedScreenshot.value = uri
+        TallyApplication.from(this).graph.sharedImage.value = uri
     }
 
     /** 通知里的落点只带了两段字符串，还原成对象后交给导航图消费（T-04）。 */

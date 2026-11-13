@@ -3,17 +3,14 @@ package io.github.guohangbk.tally.ui.bill
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,7 +70,6 @@ import io.github.guohangbk.tally.ui.common.millisToLocalDate
 import io.github.guohangbk.tally.ui.common.startOfDay
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.InlineIcon
-import io.github.guohangbk.tally.ui.design.KeypadRole
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
 import io.github.guohangbk.tally.ui.design.TallyKeypad
 import io.github.guohangbk.tally.ui.design.TallyTag
@@ -82,14 +78,12 @@ import io.github.guohangbk.tally.ui.design.TallyToastEffects
 import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.ToastTone
-import io.github.guohangbk.tally.ui.design.rememberTallyHaptics
 import io.github.guohangbk.tally.ui.design.tallyColors
 import io.github.guohangbk.tally.ui.shell.TallyIconAction
 import kotlinx.coroutines.delay
 
 /** 键盘那格的底部留白；键盘本体在 `ui/design/TallyKeypad`。 */
 private val DOCK_BOTTOM_PADDING = 8.dp
-
 
 /**
  * P03 记账页。顶部只有支出 / 收入下划线 tab，分类占满中段可滚区，
@@ -735,7 +729,6 @@ private fun SessionToast(text: String, modifier: Modifier = Modifier) {
         Text(text, fontSize = 11.sp, lineHeight = 13.8.sp, color = colors.paper, maxLines = 1)
     }
 }
-
 
 /** chip 上的短日期：不是今天就写 10-14，省得把 dock 挤宽。 */
 private fun chipDate(epochMillis: Long): String {

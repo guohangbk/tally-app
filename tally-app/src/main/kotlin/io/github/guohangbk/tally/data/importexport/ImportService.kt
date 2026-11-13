@@ -9,7 +9,6 @@ import io.github.guohangbk.tally.data.db.dao.BillDao
 import io.github.guohangbk.tally.data.db.dao.CategoryDao
 import io.github.guohangbk.tally.data.db.dao.LedgerDao
 import io.github.guohangbk.tally.data.db.dao.TagDao
-import io.github.guohangbk.tally.data.db.entity.AttachmentEntity
 import io.github.guohangbk.tally.data.db.entity.BillEntity
 import io.github.guohangbk.tally.data.db.entity.BillTagEntity
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity

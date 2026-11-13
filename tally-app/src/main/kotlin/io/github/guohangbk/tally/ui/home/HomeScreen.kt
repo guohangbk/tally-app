@@ -68,7 +68,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -111,9 +110,14 @@ import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
 import io.github.guohangbk.tally.ui.design.TallyTag
-import io.github.guohangbk.tally.ui.design.TallyType
+import io.github.guohangbk.tally.ui.design.TallyToast
 import io.github.guohangbk.tally.ui.design.TallyToastEffects
+import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.TagTone
+import io.github.guohangbk.tally.ui.design.ToastTone
+import io.github.guohangbk.tally.ui.design.VoiceLive
+import io.github.guohangbk.tally.ui.design.VoicePhase
+import io.github.guohangbk.tally.ui.design.VoicePill
 import io.github.guohangbk.tally.ui.design.rememberSkeletonShown
 import io.github.guohangbk.tally.ui.design.sheetBody
 import io.github.guohangbk.tally.ui.design.tallyColors
@@ -216,9 +220,12 @@ fun TallyHomeScreen(
     var analyzing by remember { mutableStateOf(false) }
     // ＋ 在不在屏幕上，决定底部那几条浮层要不要抬起来让位。
     val fabShown = !selection.active && !analyzing
-    var level by remember { mutableStateOf(0f) }
+    /**
+     * 收音的实时状态也跟着蒙层走：音量一秒变几十次，读它的人只有蒙层，
+     * 别把整页（含账单列表）拉着一起重画。首页不进审核态，松手就直接去记账页。
+     */
+    val voiceLive = remember { VoiceLive() }
     var voiceStartedAt by remember { mutableStateOf(0L) }
-    var elapsedMs by remember { mutableStateOf(0L) }
     var voiceFailure by remember { mutableStateOf<VoiceFailure?>(null) }
     var micNotice by remember { mutableStateOf<String?>(null) }
     // 长按手势还没结束就弹系统授权框，窗口一失焦这次手势就废了、对话框也跟着不见
@@ -276,14 +283,20 @@ fun TallyHomeScreen(
         }
     }
 
+    // 收音失败一律走贴底气泡；只有要给设置入口的那种（权限、引擎起不来）才占一层弹层。
+    fun voiceToast(text: String) {
+        TallyToast.show(text, ToastTone.ERROR, durationMillis = 3_000)
+    }
+
     // 本机引擎起不来时（小米这类 ROM 回 error=9），改走系统语音输入界面：
     // 麦克风由系统应用持有，不受「语音服务没拿到麦克风」这条限制。
     val systemVoice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val heard = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty()
         DebugLog.log("Mic", "系统语音输入返回：${if (heard.isBlank()) "空" else "「$heard」"}")
         analyzing = false
+        voiceLive.phase = VoicePhase.Idle
         if (heard.isBlank()) {
-            voiceFailure = VoiceFailure("没有听清，请重试或改用文字输入")
+            voiceToast("没有听清，可再说一次或直接打字")
         } else {
             voice.acceptHeard(heard) { capture ->
                 if (capture.failure != null) {
@@ -344,24 +357,38 @@ fun TallyHomeScreen(
         if (recording || analyzing) return
         if (!graph.speechPort.hasPermission()) {
             // 抽屉里点进来是普通点击，可以直接弹；长按链路里要等松手（见 VoiceFinish）。
-            if (deferPermission) pendingMicPermission = true else requestMicPermission()
+            // 但按住这一段不能一声不响：扇面写着「正在收音」，其实一个字都没录。
+            if (deferPermission) {
+                pendingMicPermission = true
+                TallyToast.show("还需要麦克风权限 · 松手后去授权", ToastTone.INFO, durationMillis = 2_400)
+            } else {
+                requestMicPermission()
+            }
             return
         }
         recording = true
         voiceStartedAt = System.currentTimeMillis()
-        elapsedMs = 0L
-        level = 0f
-        voice.beginCapture(onLevel = { level = it }, onResult = { capture ->
+        voiceLive.phase = VoicePhase.Listening
+        voiceLive.elapsedMs = 0L
+        voiceLive.level = 0f
+        voiceLive.cancelArmed = false
+        voice.beginCapture(
+            onLevel = { voiceLive.level = it },
+            onResult = { capture ->
             recording = false
             analyzing = false
-            level = 0f
+            voiceLive.phase = VoicePhase.Idle
+            voiceLive.level = 0f
+            voiceLive.cancelArmed = false
             when {
                 capture.cancelled -> Unit
                 capture.needsSystemInput -> launchSystemVoice()
+                // 「没听清」是日常结果，一句话贴底说明即可，不必占一层弹层。
+                capture.heardNothing -> voiceToast(capture.failure ?: "没有听清，可再说一次或直接打字")
                 capture.failure != null -> voiceFailure =
                     // 应用已经有录音权限却还是录不了，卡的多半是引擎自己：给条去设置的路。
                     VoiceFailure(capture.failure, openSettings = graph.speechPort.hasPermission())
-                capture.heard.isBlank() -> voiceFailure = VoiceFailure("没有听清，请重试或改用文字输入")
+                capture.heard.isBlank() -> voiceToast("没有听清，可再说一次或直接打字")
                 else -> {
                     onOpenDraftBill(capture)
                 }
@@ -377,17 +404,18 @@ fun TallyHomeScreen(
         }
         recording = false
         analyzing = true
+        voiceLive.phase = VoicePhase.Recognizing
         voice.endCapture()
     }
 
     // 计时按起始时刻换算，不是一帧加 200ms（那样会漂），而且录音和识别两段都要继续走：
-    // 那根录音条只在松手之后出现，若 key 只跟 recording，协程会在松手这一刻被取消、数字就此冻住。
+    // 气泡上的秒数横跨这两段，若 key 只跟 recording，协程会在松手这一刻被取消、数字就此冻住。
     // 20s 上限只约束录音那一段：到点自己收尾进识别，不静默截断。
     LaunchedEffect(recording, analyzing) {
         if (!recording && !analyzing) return@LaunchedEffect
         while (recording || analyzing) {
-            elapsedMs = System.currentTimeMillis() - voiceStartedAt
-            if (recording && elapsedMs >= VoiceMaxMillis) stopVoice()
+            voiceLive.elapsedMs = System.currentTimeMillis() - voiceStartedAt
+            if (recording && voiceLive.elapsedMs >= VoiceMaxMillis) stopVoice()
             delay(200)
         }
     }
@@ -604,7 +632,7 @@ fun TallyHomeScreen(
 
         // 录音期间必须保留 FAB：这次「按住→上滑→松手」手势由 FAB 自己的 pointerInput 持有，
         // 一旦因 recording=true 把 FAB 移出组合，协程被取消，松手（VoiceFinish）永远收不到。
-        // 只在 analyzing（已松手、识别中）时收起，改由下面的 VoiceRecordBar 接管。
+        // 只在 analyzing（已松手、识别中）时收起，改由下面的录音气泡接管。
         val coach = guidanceState.coach?.takeIf { fabShown }
 
         coach?.let {
@@ -643,6 +671,13 @@ fun TallyHomeScreen(
                         TallyFanEvent.VoiceFinish -> stopVoice()
                         TallyFanEvent.VoiceCancel -> {
                             voice.abandonCapture()
+                            // 手势滑回原位就是不要这一次：录音态必须一起收掉，
+                            // 否则下一次上滑会被「正在录音」挡住，气泡也挂在那儿不散。
+                            recording = false
+                            analyzing = false
+                            voiceLive.phase = VoicePhase.Idle
+                            voiceLive.level = 0f
+                            voiceLive.cancelArmed = false
                             // 滑回原位置也算手势结束，欠着的授权框该弹还是得弹。
                             if (pendingMicPermission) requestMicPermission()
                         }
@@ -655,6 +690,9 @@ fun TallyHomeScreen(
                 },
                 xiaoliEntry = guidanceState.assistantEntry,
                 guide = coach != null,
+                voiceActive = recording,
+                // 滑离语音臂就该看见「松手会丢掉这一句」，所以取消态跟着手指走。
+                onVoiceArmed = { onArm -> voiceLive.cancelArmed = !onArm },
             )
         }
 
@@ -672,19 +710,17 @@ fun TallyHomeScreen(
             )
         }
 
-        if (analyzing) {
-            VoiceRecordBar(
-                elapsedMs = elapsedMs,
-                level = level,
-                analyzing = analyzing,
-                onCancel = {
-                    recording = false
-                    analyzing = false
-                    voice.abandonCapture()
-                },
+        // 首页的收音反馈只挂一枚浮标，不铺蒙层：起势那层压暗已经由扇面自己铺过了，
+        // 再叠一层会把 0.42 压成八成黑，也会把手指正按着的 ＋ 和整个工作区盖掉。
+        // 位置要压过扇面那一整套（臂在 133–185dp、提示在 199dp）：手指按在 ＋ 上时，
+        // 底部两百来 dp 全在手掌里，贴着 ＋ 放等于看不见。
+        if (recording || analyzing) {
+            VoicePill(
+                live = voiceLive,
+                capMillis = VoiceMaxMillis,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = tallyFabOverlayLift(false)),
+                    .padding(bottom = 232.dp),
             )
         }
 
@@ -1274,95 +1310,7 @@ private fun BudgetOverviewSheet(
     }
 }
 
-/** .recbar：录音条。首页在其后仍可见，识别在本机，松手结束并识别。 */
-@Composable
-private fun VoiceRecordBar(
-    elapsedMs: Long,
-    level: Float,
-    analyzing: Boolean,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = tallyColors
-    val shape = RoundedCornerShape(15.dp)
-    val seconds = (elapsedMs / 1000L).toInt()
-    val maxSeconds = (VoiceMaxMillis / 1000L).toInt()
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 15.dp)
-            .clip(shape)
-            .background(colors.card)
-            .border(1.dp, colors.line, shape)
-            .padding(horizontal = 11.dp, vertical = 9.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            VoiceWaveform(level = if (analyzing) 0f else level)
-            Text(
-                text = if (analyzing) "正在识别…" else "正在录音",
-                fontSize = 13.5.sp,
-                lineHeight = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                fontFamily = TallyType.screenTitle.fontFamily,
-                color = colors.ink,
-                maxLines = 1,
-            )
-            Text(
-                // 录音段给「已用/上限」这一对；识别段的数字走的是总耗时，
-                // 再挂着「最长 20 秒」会让人以为超时了，所以那里只报秒数。
-                text = if (analyzing) "${seconds}秒" else "${seconds}秒 / 最长 ${maxSeconds}秒",
-                fontSize = 10.5.sp, lineHeight = 13.1.sp,
-                color = colors.ink3,
-                maxLines = 1,
-                modifier = Modifier.weight(1f),
-            )
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .clickable(onClick = onCancel),
-                contentAlignment = Alignment.Center,
-            ) {
-                InlineIcon(iconKey = "close", contentDescription = "取消录音", size = 14.dp, tint = colors.ink3)
-            }
-        }
-        Spacer(Modifier.height(7.dp))
-        Text(
-            text = if (analyzing) "识别完成后会进记账页，金额与分类由你确认后才落库" else "松手结束并识别 · 滑回中间取消",
-            fontSize = 11.5.sp,
-            lineHeight = 16.sp,
-            color = colors.ink2,
-        )
-    }
-}
-
-/** 波形：11 根柱子按实时音量起伏，安静时保留一条底高，不至于看起来像卡住。 */
-@Composable
-private fun VoiceWaveform(level: Float) {
-    val colors = tallyColors
-    val bases = listOf(6, 14, 20, 11, 17, 7, 13, 19, 9, 15, 5)
-    Row(
-        modifier = Modifier.height(20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        bases.forEach { base ->
-            Box(
-                modifier = Modifier
-                    .width(2.5.dp)
-                    .height((base * (0.35f + 0.65f * level)).dp.coerceAtLeast(2.dp))
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(colors.brand.copy(alpha = 0.85f)),
-            )
-        }
-    }
-}
-
-/** 底部状态卡：识别进行中与「已存入 N 笔」共用一条，位置与录音条同一个。 */
+/** 底部状态卡：识别进行中与「已存入 N 笔」共用一条。 */
 @Composable
 private fun HomeStatusCard(title: String, detail: String?, modifier: Modifier = Modifier) {
     val colors = tallyColors

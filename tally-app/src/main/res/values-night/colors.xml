@@ -6,16 +6,11 @@
     <color name="widget_ink3">#FF93A09A</color>
     <color name="widget_line">#FF2D322E</color>
     <color name="widget_brand">#FF7ECBA9</color>
-    <color name="widget_brand_surface">#FF24342E</color>
     <color name="widget_expense">#FFE8917B</color>
-    <color name="widget_expense_surface">#FF37322D</color>
     <color name="widget_income">#FF7ECBA9</color>
-    <color name="widget_ripple">#33E9E5DA</color>
     <color name="widget_bar_dim">#2EE9E5DA</color>
     <color name="widget_bar_zero">#14E9E5DA</color>
     <color name="widget_on_brand">#FF131A17</color>
     <color name="widget_gold">#FFE8C57A</color>
-    <color name="widget_gold_hi">#FFF5E3BE</color>
     <color name="widget_budget_track">#29E9E5DA</color>
-    <color name="widget_budget_tick">#66E9E5DA</color>
 </resources>

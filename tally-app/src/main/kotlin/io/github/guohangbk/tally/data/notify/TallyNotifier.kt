@@ -123,7 +123,7 @@ class TallyNotifier(private val context: Context) {
     companion object {
         /**
          * MainActivity 读到这两个 extra 就还原成 [NotificationLink] 交给一个应用级待跳转状态，
-         * 导航图就绪后消费——与分享截图 `sharedScreenshot` 用的是同一套解耦方式，
+         * 导航图就绪后消费——与分享截图 `sharedImage` 用的是同一套解耦方式，
          * 冷启动和已在前台都能走。
          */
         const val EXTRA_LINK_KEY = "io.github.guohangbk.tally.extra.LINK_KEY"
