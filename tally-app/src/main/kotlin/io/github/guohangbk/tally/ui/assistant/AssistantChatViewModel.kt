@@ -4,20 +4,21 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.ai.AiAvailability
-import io.github.guohangbk.tally.data.ai.BillDraftOutcome
+import io.github.guohangbk.tally.data.db.entity.CategoryEntity
+import io.github.guohangbk.tally.data.ingest.MaterialOutcome
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.ai.AiTurn
-import io.github.guohangbk.tally.domain.formatAmount
+import io.github.guohangbk.tally.domain.ingest.IngestRequest
+import io.github.guohangbk.tally.domain.ingest.IngestSource
+import io.github.guohangbk.tally.domain.ingest.InputKind
 import io.github.guohangbk.tally.domain.model.AiAnswer
 import io.github.guohangbk.tally.domain.model.AiChatEntry
 import io.github.guohangbk.tally.domain.model.AiConversation
 import io.github.guohangbk.tally.domain.model.AiMessageType
-import io.github.guohangbk.tally.domain.model.BillDraft
 import io.github.guohangbk.tally.domain.model.BillSource
-import io.github.guohangbk.tally.domain.model.DraftRow
 import io.github.guohangbk.tally.domain.model.BillType
-import io.github.guohangbk.tally.domain.model.TimePrecision
-import io.github.guohangbk.tally.domain.parser.QuickNoteCatalog
+import io.github.guohangbk.tally.domain.model.CategoryType
+import io.github.guohangbk.tally.domain.model.DraftRow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,9 +33,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * 小莉从一条消息里读出来、等人确认的一笔账。
- * 识别由云端完成：模型调用 `propose_bills` 工具，回传收支方向、日期、分类 id、
- * 备注与金额这几个固定参数（见 AiBillTool），代码只做逐条校验；端侧不再有关键词与正则匹配。
- * 校验合格也只是「弹一张卡」，点确认才落库。
+ * 识别走统一管线：对话通道由模型判意图，本机做复核、判级与去重；
+ * 校验合格也只是「弹一张卡」，点确认才落库——识别得再全也不会绕过这一步。
  */
 data class ChatBillDraft(
     val amountMinor: Long,
@@ -45,14 +45,36 @@ data class ChatBillDraft(
     val note: String?,
     val occurredAt: Long,
     val source: BillSource,
+    /** 输入形态（文字 / 语音 / 图片）：卡上那个小标签读它，不再拿 [source] 兼当。null = 升级前的老卡。 */
+    val inputKind: InputKind? = null,
     val merchant: String?,
+    /** 订单号与图片指纹：从卡上「改」进记账页时带过去，存回来才认得出「这一笔记过」。 */
+    val externalId: String? = null,
+    val imageSha: String? = null,
+    /** 本机判级：HIGH 的那几笔由管线自动落库，其余留在卡上等人点。 */
+    val grade: String = "MEDIUM",
+    /** 判级缺的那几项，写在行上——比一句「不确定」有用。 */
+    val missing: List<String> = emptyList(),
+    /** 日期不是原文给的、按采集时刻落账：行上直接写日期，不用技术词。 */
+    val dateDefaulted: Boolean = false,
+    /** 提到日期却没解析出来：行上提示改日期。 */
+    val dateUnresolved: Boolean = false,
+    /** 同一订单号或同一张图已经记过：卡上直说，不再重复记。 */
+    val duplicate: Boolean = false,
+    /** 已撤销：账单进了回收站。 */
+    val reverted: Boolean = false,
+    /** 自动记入的（不是人点的）：卡上写「已自动记入」。 */
+    val savedBillId: String? = null,
     val saved: Boolean = false,
     val dismissed: Boolean = false,
 ) {
     val needsCategory: Boolean get() = categoryL1Id == null
 
-    /** 还等人表态的那一笔：已记入和已不要的都不该再被点一次。 */
-    val pending: Boolean get() = !saved && !dismissed
+    /**
+     * 还等人表态的那一笔：已记入、已不要的都不该再被点一次。
+     * 已记过的那几笔也不算待办——账上已经有一笔了，再点一次就是重复记账。
+     */
+    val pending: Boolean get() = !saved && !dismissed && !duplicate
 }
 
 /**
@@ -70,6 +92,9 @@ data class PendingImage(val uri: Uri, val thumbPath: String? = null)
  * 每条消息并行发两次调用：一次回话（流式），一次抽账（工具调用，非流式）。
  * 抽账成功就在该条消息下面挂一张待确认记账卡，点了确认才落库（[confirmDraft]）。
  */
+/** 「记入」时缺分类的那一行在卡上的坐标：补完分类，把这一批接着写下去。 */
+data class DraftCategoryTarget(val messageId: String, val index: Int)
+
 data class AssistantChatUiState(
     val loaded: Boolean = false,
     val conversationId: String? = null,
@@ -82,6 +107,11 @@ data class AssistantChatUiState(
     val availability: AiAvailability? = null,
     val notice: String? = null,
     val error: String? = null,
+    /** 本地撤销失败不再装成网络故障，气泡单独走一句人话。 */
+    val undoError: String? = null,
+    /** 点「记入」时缺分类的那一行：就地弹分类选择，补完继续落库。 */
+    val draftCategoryTarget: DraftCategoryTarget? = null,
+    val draftCategories: List<CategoryEntity> = emptyList(),
     /** 已经选好、还没发出的图片，最多 [AssistantChatViewModel.MAX_PENDING_IMAGES] 张；发出去就清空。 */
     val pendingImages: List<PendingImage> = emptyList(),
     /** 流式回复进行中的半截文字；落库后清空，列表里用临时气泡显示。 */
@@ -104,14 +134,10 @@ class AssistantChatViewModel(
     val uiState: StateFlow<AssistantChatUiState> = state.asStateFlow()
 
     private val conversationId = MutableStateFlow<String?>(null)
-    private var ledgerId: String? = null
-    private var catalog: QuickNoteCatalog = QuickNoteCatalog(emptyList(), emptyList())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
             // 分类与关键词表都是全机一套，取目录不再需要默认账本 id。
-            ledgerId = graph.ledgerRepository.defaultLedger()?.id
-            catalog = graph.keywordRuleRepository.catalog()
             try {
                 val latest = store.ensureConversation(null)
                 conversationId.value = latest
@@ -262,11 +288,11 @@ class AssistantChatViewModel(
                 null
             }
 
-            suspend fun attachCard(drafts: List<DraftRow>) {
+            suspend fun attachCard(drafts: List<DraftRow>): String? {
                 // 卡片落成对话里的一条 DRAFT 消息，而不是 ViewModel 里的一张 map：
                 // 切走再回来、进程被回收之后，卡片和"这几笔已经记过了"都还在。
-                if (drafts.isEmpty()) return
-                runCatching { store.appendDraft(id, drafts) }
+                if (drafts.isEmpty()) return null
+                return runCatching { store.appendDraft(id, drafts) }.getOrNull()
             }
             try {
                 val answer = store.ask(id, question, type, durationMs, bytes) { chunk ->
@@ -284,7 +310,8 @@ class AssistantChatViewModel(
                         error = (answer as? AiAnswer.Unavailable)?.reason,
                     )
                 }
-                attachCard(draftTask?.await().orEmpty())
+                val rows = draftTask?.await().orEmpty()
+                attachCard(rows)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (failure: Exception) {
@@ -295,40 +322,99 @@ class AssistantChatViewModel(
         }
     }
 
-    /** 卡片上的「记入」：逐条落到默认账本，某一条失败不影响其它条；人已不要的那几笔跳过。 */
+    /**
+     * 卡片上的「记入」：逐条落到默认账本，某一条失败不影响其它条；已不要的、已记过的都跳过。
+     * 分类是硬条件——缺的那一行就地弹分类选择，补完继续把这一批写下去，
+     * 不在卡上堆一行「缺什么」让人先读一遍再点。
+     */
     fun confirmDraft(messageId: String) {
         val rows = state.value.entries.firstOrNull { it.id == messageId }?.drafts.orEmpty()
-        val ledger = ledgerId ?: return
-        val pending = rows.filterNot { it.saved || it.dismissed }
+        val pending = rows.pendingRows()
         if (pending.isEmpty()) return
-        if (pending.any { it.categoryL1Id == null }) {
-            state.update { it.copy(error = "有 ${pending.count { row -> row.categoryL1Id == null }} 笔没认出分类，补上才能记入") }
+        val missing = pending.firstOrNull { it.categoryL1Id == null }
+        if (missing != null) {
+            openCategoryPicker(messageId, rows.indexOf(missing), missing.billType())
             return
         }
+        viewModelScope.launch(Dispatchers.IO) { graph.ingestDrafts.confirm(messageId, rows) }
+    }
+
+    /** 还等着落库的那几笔：已记入、已不要、已记过都不再写。 */
+    /** 卡上这一行的收支方向；存的是字符串，认不出来按支出。 */
+    private fun DraftRow.billType(): BillType =
+        runCatching { BillType.valueOf(type) }.getOrDefault(BillType.EXPENSE)
+
+    private fun List<DraftRow>.pendingRows(): List<DraftRow> =
+        filterNot { it.saved || it.dismissed || it.duplicate }
+
+    /**
+     * 「记入」时发现某一笔缺分类：把它的坐标与可选分类放进状态，屏幕上就地弹一张选择器。
+     * 分类表按这一行自己的收支方向取——收入不可能挂到支出分类上去。
+     */
+    private fun openCategoryPicker(messageId: String, index: Int, type: BillType) {
         viewModelScope.launch(Dispatchers.IO) {
-            val savedIds = mutableSetOf<String>()
-            val failures = mutableListOf<String>()
-            pending.forEach { row ->
-                try {
-                    graph.billRepository.save(row.toBillDraft(ledger))
-                    savedIds += row.key()
-                } catch (cancellation: CancellationException) {
-                    throw cancellation
-                } catch (failure: Exception) {
-                    failures += failure.message ?: "有一笔没记上"
-                }
+            val direction = if (type == BillType.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
+            val categories = runCatching { graph.billRepository.activeCategories(direction) }
+                .getOrDefault(emptyList())
+            state.update {
+                it.copy(draftCategoryTarget = DraftCategoryTarget(messageId, index), draftCategories = categories)
             }
-            // 记上的那一笔在卡上留「已记入」，没记上的留在原地带着原因——半成功要说清楚，不整卡回滚。
-            if (savedIds.isNotEmpty()) {
-                runCatching {
-                    store.updateDraft(messageId, rows.map { row -> if (row.key() in savedIds) row.copy(saved = true) else row })
-                }
+        }
+    }
+
+    fun dismissDraftCategory() =
+        state.update { it.copy(draftCategoryTarget = null, draftCategories = emptyList()) }
+
+    /** 补上分类后继续把这一批写下去：只改这一行，其它行原地不动。 */
+    fun applyDraftCategory(l1Id: String, l2Id: String?) {
+        val target = state.value.draftCategoryTarget ?: return
+        val rows = state.value.entries.firstOrNull { it.id == target.messageId }?.drafts.orEmpty()
+        if (rows.getOrNull(target.index) == null) return dismissDraftCategory()
+        val next = rows.mapIndexed { i, row ->
+            if (i != target.index) row
+            else row.copy(
+                categoryL1Id = l1Id,
+                categoryL2Id = l2Id,
+                categoryLabel = l2Id ?: l1Id,
+            )
+        }
+        dismissDraftCategory()
+        viewModelScope.launch(Dispatchers.IO) {
+            graph.ingestDrafts.applyCategory(target.messageId, target.index, l1Id, l2Id, l2Id ?: l1Id)
+            graph.ingestDrafts.confirm(target.messageId, next)
+        }
+    }
+
+    /**
+     * 撤销卡上已记入的一笔：软删那笔账单（回收站里能找回），行上留「已撤销」。
+     * 自动记入与人工记入共用这一个入口——自动写的钱更得能一键退回来。
+     */
+    fun undoRow(messageId: String, index: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val done = graph.ingestDrafts.undo(messageId, index)
+            state.update {
+                it.copy(
+                    notice = if (done) "已撤销，可在回收站找回" else null,
+                    undoError = if (done) null else "没找到这一笔，可能已经删过了",
+                )
             }
-            val total = pending.filter { it.key() in savedIds }.sumOf { it.amountMinor }
-            state.update { previous ->
-                previous.copy(
-                    notice = if (savedIds.isNotEmpty()) "已记入 ${savedIds.size} 笔 · ¥" + formatAmount(total, grouping = false) else null,
-                    error = failures.firstOrNull() ?: if (savedIds.isEmpty()) "这几笔都没有记上" else null,
+        }
+    }
+
+    /**
+     * 卡收起成一行结果之后整批撤销：那时行上的「撤销」已经跟着收掉了，
+     * 没有这个入口，自动记入的那几笔就只剩去回收站一条路。
+     */
+    fun undoAllSaved(messageId: String) {
+        val rows = state.value.entries.firstOrNull { it.id == messageId }?.drafts.orEmpty()
+        val indexes = rows.indices.filter { rows[it].saved }
+        if (indexes.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val undone = indexes.count { index -> graph.ingestDrafts.undo(messageId, index) }
+            state.update {
+                it.copy(
+                    notice = if (undone > 0) "已撤销 $undone 笔，可在回收站找回" else null,
+                    undoError = if (undone > 0) null else "没找到这几笔，可能已经删过了",
                 )
             }
         }
@@ -339,65 +425,41 @@ class AssistantChatViewModel(
      * 刚才那句话也一起没了。再点一次「恢复」把它放回待确认。
      */
     fun dismissRow(messageId: String, index: Int) {
-        val rows = state.value.entries.firstOrNull { it.id == messageId }?.drafts.orEmpty()
-        if (rows.getOrNull(index) == null) return
-        val next = rows.mapIndexed { i, row -> if (i == index) row.copy(dismissed = !row.dismissed) else row }
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { store.updateDraft(messageId, next) }
+            graph.ingestDrafts.dismiss(messageId, index)
         }
     }
 
-    private fun DraftRow.key(): String = "$amountMinor-$occurredAt-${note.orEmpty()}"
-
-    private fun DraftRow.toBillDraft(ledgerId: String) = BillDraft(
-        ledgerId = ledgerId,
-        categoryL1Id = requireNotNull(categoryL1Id),
-        categoryL2Id = categoryL2Id,
-        type = runCatching { BillType.valueOf(type) }.getOrDefault(BillType.EXPENSE),
-        amountMinor = amountMinor,
-        occurredAt = occurredAt,
-        timePrecision = runCatching { TimePrecision.valueOf(timePrecision) }.getOrDefault(TimePrecision.DATE),
-        note = note,
-        source = runCatching { BillSource.valueOf(source) }.getOrDefault(BillSource.MANUAL),
-    )
-
-    /**
-     * 让小莉抽账：文字、语音识别出的文字、截图都走同一个工具调用，
-     * 模型回传收支方向 / 日期 / 分类 id / 备注 / 金额，代码校验后才成卡。一句话里有几笔就出几笔。
-     * 认不出金额、或模型判定「这不是账」就不推卡片——宁可不推，也不推一张要人手改三处的假账。
-     */
+    /** 对话通道：规则不做过滤，模型判意图；图与文字的原文只留在本机复核。 */
     private suspend fun draftOf(
         question: String,
         type: AiMessageType,
         images: List<ByteArray>,
         history: List<AiTurn> = emptyList(),
     ): List<DraftRow> {
-        // 分类表每次发送前重取一次：开着这页改了分类，下一句就该按新表认，
-        // 不能拿进页时那份旧目录——新加的类目认不出、删掉的还在往里塞。
-        catalog = graph.keywordRuleRepository.catalog()
-        val outcome = graph.aiBillDraftService.extract(question, images, catalog, history)
-        if (outcome !is BillDraftOutcome.Draft) return emptyList()
+        val now = System.currentTimeMillis()
+        val request = if (images.isEmpty()) null else graph.materialReader.ocrText(images)
+        val ocrText = (request as? MaterialOutcome.Ready)?.request?.ocrText.orEmpty()
+        val result = graph.billIngestor.ingest(
+            IngestRequest(
+                source = IngestSource.CHAT,
+                userText = question,
+                ocrText = ocrText,
+                images = images,
+                nowMillis = now,
+                fallbackMillis = now,
+                singleMaterial = images.size <= 1,
+                history = history,
+                allowLlm = true,
+                redactedOcrText = (request as? MaterialOutcome.Ready)?.request?.redactedOcrText.orEmpty(),
+            ),
+        )
         val source = when {
-            images.isNotEmpty() -> BillSource.SCREENSHOT
-            type == AiMessageType.VOICE -> BillSource.VOICE
-            else -> BillSource.MANUAL
+            images.isNotEmpty() -> InputKind.IMAGE
+            type == AiMessageType.VOICE -> InputKind.VOICE
+            else -> InputKind.TEXT
         }
-        return outcome.fields.mapNotNull { fields ->
-            val amount = fields.amountMinor ?: return@mapNotNull null
-            DraftRow(
-                amountMinor = amount,
-                // 方向由模型定，它给不出时按支出：记账场景里花钱远多于进账，猜错的这一眼在卡片上看得见。
-                type = (fields.type ?: BillType.EXPENSE).name,
-                occurredAt = fields.occurredAt,
-                timePrecision = fields.timePrecision.name,
-                source = source.name,
-                categoryL1Id = fields.categoryL1Id,
-                categoryL2Id = fields.categoryL2Id,
-                categoryLabel = (fields.categoryL2Id ?: fields.categoryL1Id)?.let { catalog.categoryOf(it)?.name },
-                note = fields.note ?: fields.merchant,
-                merchant = fields.merchant,
-            )
-        }
+        return graph.ingestDrafts.chatRows(result, source)
     }
 
     fun retry(messageId: String) {
@@ -433,7 +495,7 @@ class AssistantChatViewModel(
         state.update { it.copy(availability = graph.aiGateway.availability()) }
     }
 
-    fun dismissMessages() = state.update { it.copy(notice = null, error = null) }
+    fun dismissMessages() = state.update { it.copy(notice = null, error = null, undoError = null) }
 
     private fun runOp(notice: String, block: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {

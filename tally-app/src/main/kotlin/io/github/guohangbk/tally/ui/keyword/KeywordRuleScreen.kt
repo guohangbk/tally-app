@@ -281,7 +281,7 @@ private fun BuiltinSection(
                     } else {
                         "原分类已删 · 该组失效"
                     },
-                    iconKey = if (resolved) category?.iconKey ?: "tag" else "warn",
+                    iconKey = if (resolved) category.iconKey else "warn",
                     iconTone = if (resolved) IconTone.PAPER else IconTone.EXPENSE,
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -367,6 +367,7 @@ private fun UserRuleSection(
                     WordChips(
                         words = group.words.map { it.keyword },
                         learned = group.words.filter { it.source == KeywordSource.LEARNED }.map { it.keyword }.toSet(),
+                        learnedAi = group.words.filter { it.source == KeywordSource.LEARNED_AI }.map { it.keyword }.toSet(),
                         onWord = { keyword -> group.words.firstOrNull { it.keyword == keyword }?.let(onWord) },
                         onAdd = if (searching) null else ({ onAdd(group.categoryId) }),
                     )
@@ -392,6 +393,7 @@ private fun UserRuleSection(
 private fun WordChips(
     words: List<String>,
     learned: Set<String>,
+    learnedAi: Set<String> = emptySet(),
     onWord: ((String) -> Unit)? = null,
     onAdd: (() -> Unit)? = null,
 ) {
@@ -412,8 +414,14 @@ private fun WordChips(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                if (word in learned) {
-                    Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(colors.gold))
+                // 沉淀来的词带一颗点：本机学的是金点，AI 给的是墨绿点——规则从哪来本该看得出来。
+                val dot = when {
+                    word in learned -> colors.gold
+                    word in learnedAi -> colors.brand
+                    else -> null
+                }
+                if (dot != null) {
+                    Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(dot))
                 }
                 Text(word, fontSize = 11.5.sp, lineHeight = 14.sp, color = colors.ink2, maxLines = 1)
             }
@@ -572,6 +580,7 @@ private fun KeywordWordSheet(
 ) {
     val colors = tallyColors
     val learned = rule.source == KeywordSource.LEARNED
+    val learnedAi = rule.source == KeywordSource.LEARNED_AI
     val category = snapshot?.category(rule.categoryId)
     val path = snapshot?.categoryPath(rule.categoryId) ?: "原分类已删"
     TallyBottomSheet(onDismissRequest = onDismiss, containerColor = colors.paper) {
@@ -585,7 +594,10 @@ private fun KeywordWordSheet(
                     color = colors.ink,
                     modifier = Modifier.weight(1f),
                 )
-                if (learned) TallyTag(text = "沉淀", tone = TagTone.GOLD)
+                when {
+                    learned -> TallyTag(text = "沉淀", tone = TagTone.GOLD)
+                    learnedAi -> TallyTag(text = "AI 沉淀", tone = TagTone.BRAND)
+                }
             }
             Spacer(Modifier.height(12.dp))
             TallyCard {

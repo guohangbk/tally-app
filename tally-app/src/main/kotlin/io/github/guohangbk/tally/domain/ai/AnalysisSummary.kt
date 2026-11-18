@@ -43,6 +43,48 @@ object AnalysisSummaryParser {
         return fromLines(content)
     }
 
+    /**
+     * 流式过程中的半截输出：只取**已经闭合**的字段，界面才能边收边长。
+     * 先按 JSON 键值对抠（模型按固定顺序吐字段），没抠到再按完整行认标签；
+     * 最后一行可能正吐到一半，不参与解析。
+     */
+    fun parsePartial(content: String): Map<AnalysisField, String> {
+        if (content.isBlank()) return emptyMap()
+        val parsed = LinkedHashMap<AnalysisField, String>()
+        jsonPair.findAll(content).forEach { match ->
+            val field = analysisLabels.entries.firstOrNull { it.value == match.groupValues[1] }?.key
+                ?: return@forEach
+            val value = unescapeJson(match.groupValues[2]).trim()
+            if (value.isNotEmpty()) parsed.putIfAbsent(field, value)
+        }
+        if (parsed.isNotEmpty()) return parsed
+        return fromLines(content.substringBeforeLast('\n', ""))
+    }
+
+    /** 只匹配已经出现收尾引号的 `"标签":"值"`；值里的转义引号不算收尾。 */
+    private val jsonPair = Regex(
+        "\"(" + analysisLabels.values.joinToString("|") + ")\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"",
+    )
+
+    private fun unescapeJson(raw: String): String = buildString {
+        var index = 0
+        while (index < raw.length) {
+            val char = raw[index]
+            if (char == '\\' && index + 1 < raw.length) {
+                when (val next = raw[index + 1]) {
+                    'n' -> append('\n')
+                    't' -> append('\t')
+                    'r' -> append('\r')
+                    else -> append(next)
+                }
+                index += 2
+            } else {
+                append(char)
+                index++
+            }
+        }
+    }
+
     private fun fromJson(content: String): Map<AnalysisField, String>? {
         val start = content.indexOf('{')
         val end = content.lastIndexOf('}')

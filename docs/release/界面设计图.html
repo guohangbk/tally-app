@@ -2421,7 +2421,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <p class="cjk">塔莉</p>
     <p class="slog">小莉帮你管好每一笔收支。</p>
     <p class="slog2">Tally 塔莉是一台<b>只存在手机里的记账本</b>：记账、看统计、整理分类、导入导出、备份恢复都不依赖网络，
-      也没有账号。小莉（AI）是<b>可选增强</b>——不开它，语音速记与截图记账照样在手机里跑完；
+      也没有账号。小莉（AI）是<b>可选增强</b>——不开它，语音速记与识图记账照样在手机里跑完；
       开了它，机器也只负责把草稿摆好，<b>落库这一步永远留给人</b>。
       这块板收录该版本的全部界面：设计语言、图标系统、导航与组件规格，以及三十一节的逐屏样子。</p>
     <div class="facts">
@@ -2721,7 +2721,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="fmask">
           <div class="hint">上滑语音 · 左滑截图 · 右滑小莉</div>
           <div class="arm up"><span class="bub"><svg><use href="#i-mic"/></svg></span><div class="lb"><b>语音记账</b><em>↑ 上滑</em></div></div>
-          <div class="arm lf stk"><span class="bub"><svg><use href="#i-img"/></svg></span><div class="lb"><b>截图记账</b><em>← 左滑</em></div></div>
+          <div class="arm lf stk"><span class="bub"><svg><use href="#i-img"/></svg></span><div class="lb"><b>识图记账</b><em>← 左滑</em></div></div>
           <div class="arm rt hot stk"><span class="bub"><svg><use href="#i-ai"/></svg></span><div class="lb"><b>问小莉</b><em>右滑 →</em></div></div>
           <span class="trail up"><i></i><i></i><i></i></span>
           <span class="trail lf"><i></i><i></i><i></i></span>
@@ -2743,7 +2743,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="fmask">
           <div class="hint">关闭的只是入口 · 手势照旧可用</div>
           <div class="arm up"><span class="bub"><svg><use href="#i-mic"/></svg></span><div class="lb"><b>语音记账</b><em>↑ 上滑</em></div></div>
-          <div class="arm lf stk"><span class="bub"><svg><use href="#i-img"/></svg></span><div class="lb"><b>截图记账</b><em>← 左滑</em></div></div>
+          <div class="arm lf stk"><span class="bub"><svg><use href="#i-img"/></svg></span><div class="lb"><b>识图记账</b><em>← 左滑</em></div></div>
           <div class="arm rt stk"><span class="bub"><svg><use href="#i-ai"/></svg></span><div class="lb"><b>问小莉</b><em>右滑 → 去设置开</em></div></div>
           <span class="trail up"><i></i><i></i><i></i></span>
           <span class="trail lf"><i></i><i></i><i></i></span>
@@ -2816,7 +2816,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     </div>
     <div class="grp" style="flex:1 1 300px;padding:2px 12px">
       <div class="grpt" style="margin-top:8px">抽屉 · 四组十一项</div>
-      <div class="set"><span class="ic" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-plus"/></svg></span><div class="x"><div class="t">记账</div><div class="s">记一笔 · 语音记账 · 截图记账</div></div><span class="tag">3</span></div>
+      <div class="set"><span class="ic" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-plus"/></svg></span><div class="x"><div class="t">记账</div><div class="s">记一笔 · 语音记账 · 识图记账</div></div><span class="tag">3</span></div>
       <div class="set"><span class="ic" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-tag"/></svg></span><div class="x"><div class="t">管理</div><div class="s">我的账本 · 分类 · 报销 · 周期 · 分期</div></div><span class="tag">5</span></div>
       <div class="set"><span class="ic" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-import"/></svg></span><div class="x"><div class="t">数据</div><div class="s">导入与导出 · 备份与同步</div></div><span class="tag">2</span></div>
       <div class="set"><span class="ic" style="width:24px;height:24px;border-radius:8px"><svg style="width:12px;height:12px"><use href="#i-set"/></svg></span><div class="x"><div class="t">系统</div><div class="s">设置 · 关于（记账偏好、本机统计）</div></div><span class="tag">1</span></div>
@@ -4830,12 +4830,12 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 
 <section class="sec">
   <div class="sec-h"><span class="no">11</span><h2>小莉 · AI 层</h2>
-    <div class="meta">端侧识别为基线<br>草稿绝不自动入账</div></div>
+    <div class="meta">一条管线 · 规则先跑<br>AI 只补缺，落库都要人点</div></div>
   <div class="rail"><b>Flow 07</b><ol>
-    <li><strong>说或截图</strong>一句话、一张支付截图，都落在小莉速记页——底部一级入口，点了必须进得去</li>
-    <li><strong>端侧解析成草稿</strong>规则层先跑；小莉只补口语表达与视觉字段</li>
-    <li class="hot"><strong>人确认</strong>分类、金额、日期、备注逐个可改；确认之前，什么都不是</li>
-    <li><strong>落库带角标</strong>确认那一刻写库，账单流里盖一枚小莉金角标，与手动账同流不同标</li>
+    <li><strong>说或截图</strong>首页按住 ＋ 说话、左滑选图，或在系统里分享给「塔莉速记」——三条路都回首页，共用一张确认卡</li>
+    <li><strong>本机管线</strong>本机 OCR → 脱敏 → 规则抽取 → 小莉只补缺 → 本机判级；小莉关着也能出卡</li>
+    <li class="hot"><strong>只有一个落点</strong>不管规则还是小莉认出来的，都出同一张确认卡，点「存入」才写账</li>
+    <li><strong>落库带角标</strong>语音 / 截图 / 分享记的账标「速记」，小莉对话里记的账标「小莉」，与手动账同流不同标</li>
   </ol></div>
   <div class="grid q4">
 
@@ -4924,13 +4924,13 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="row mt0" style="gap:6px;font-size:9px;color:var(--ink3)"><span class="dot g"></span><span>金角标只代表「机器起草 · 人确认」，金额口径与手动账完全一致</span></div>
       </div>
     </div></div>
-    <figcaption><div class="pn">P15b</div><div class="ph">语音速记草稿</div>
-      <div class="pd">识别出的文字先由端侧规则解析成日期、时间、金额、分类与备注，结果只预填进记账页输入框，任何情况下不自动落库。开启小莉时再叠加一次 AI 抽账，两条路的产物都要人确认。</div></figcaption></figure>
+    <figcaption><div class="pn">P15b</div><div class="ph">语音速记草稿（0.1.8 起并入首页素材卡）</div>
+      <div class="pd">这一屏当时的做法是「一句话只预填进记账页、不自动落库」。现在改成：说出的那句话与截图走同一条本机管线，判级为高就直接记一笔（气泡可撤销），其余汇成一张确认卡；这页不再存在。</div></figcaption></figure>
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>21:08</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-close"/></svg></span><span class="tt">截图记账</span><span class="sp"></span><span class="tag g">端侧 OCR + 小莉视觉</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-close"/></svg></span><span class="tt">识图记账</span><span class="sp"></span><span class="tag g">端侧 OCR + 小莉视觉</span></div>
         <div class="row mt0" style="gap:8px">
           <div class="phImg" style="flex:1.05"><div style="font-size:8.5px;opacity:.6;text-align:center">微信支付 · 支付成功</div><div class="amt">¥ 126.00</div><div style="font-size:8.5px;opacity:.55;text-align:center;margin-top:4px">星巴克 · 10-14 21:06</div></div>
           <div style="flex:1;font-size:9px;color:var(--ink2);line-height:1.75">
@@ -4953,14 +4953,14 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="row" style="margin-top:auto;gap:7px;margin-bottom:8px"><span class="btn gh" style="flex:1;height:35px">换一张</span><span class="btn gd" style="flex:1.3;height:35px;opacity:.4"><svg><use href="#i-check"/></svg>确认入账</span></div>
       </div>
     </div></div>
-    <figcaption><div class="pn">P16</div><div class="ph">截图记账 · 低置信度拦截（0.1.7 起下线独立页）</div>
+    <figcaption><div class="pn">P16</div><div class="ph">识图记账 · 低置信度拦截（0.1.7 起下线独立页）</div>
       <div class="pd">端侧 OCR 先出金额、商户、日期与分类建议，字段全部可改；「保存到账单」复选框常驻且默认不勾选。置信度低的那行用陶土红标出并把候选摆好，人选完之前保存键保持禁用。</div></figcaption></figure>
 
     
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:47</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">小莉配置</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">服务商配置</span></div>
         <div class="grpt">当前配置</div>
         <div class="grp" style="padding:10px 11px">
           <div class="row" style="align-items:center;gap:7px"><b style="font-family:var(--serif);font-size:13.5px">DeepSeek</b><span class="x" style="flex:1"></span><span class="tag">文本</span></div>
@@ -4982,14 +4982,14 @@ html,body{margin:0;padding:0;background:#F2EEE4}
           <span style="font-size:8.5px;color:var(--ink3)">Key 只存 Android Keystore · 不进备份包、不进日志</span></div>
       </div>
     </div></div>
-    <figcaption><div class="pn">X-04</div><div class="ph">小莉配置 · 当前配置卡</div>
+    <figcaption><div class="pn">X-04</div><div class="ph">服务商配置 · 当前配置卡</div>
       <div class="pd">一屏只维护「当前用哪一个模型」：服务商、模型、服务地址、更新时间与图片能力，动作是修改、重新测试、删除。不放状态点，也不显示连接状态标签——异常由调用当场说。</div></figcaption></figure>
 
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:48</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">小莉配置</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">服务商配置</span></div>
         <div class="grpt">连接配置</div>
         <div class="grp" style="padding:10px 11px">
           <div class="fld" style="margin-bottom:8px"><label>服务商</label><div class="selr">DeepSeek<span class="x"></span><svg><use href="#i-chev"/></svg></div></div>
@@ -5008,14 +5008,14 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="row" style="gap:7px;margin-top:10px"><span class="btn gd" style="flex:1;height:36px"><svg><use href="#i-refresh"/></svg>测试并保存</span><span class="btn gh" style="width:78px;height:36px">取消</span></div>
       </div>
     </div></div>
-    <figcaption><div class="pn">X-05</div><div class="ph">小莉配置 · 修改态</div>
+    <figcaption><div class="pn">X-05</div><div class="ph">服务商配置 · 修改态</div>
       <div class="pd">服务商与模型都是下拉：选服务商自动带出地址与常用模型，base URL 仍可改成中转地址。图片能力是保存前的一次勾选：勾上对话页才能发图，不勾只走文字与语音。保存按钮是「测试并保存」，没测通什么都不写。</div></figcaption></figure>
 
 
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:48</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">小莉配置</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">服务商配置</span></div>
         <div class="grp" style="padding:10px 11px;opacity:.22">
           <div class="fld" style="margin-bottom:0"><label>服务商</label><div class="selr">DeepSeek<span class="x"></span><svg><use href="#i-chev"/></svg></div></div>
         </div>
@@ -5041,7 +5041,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:49</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
       <div class="body">
-        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">小莉配置</span></div>
+        <div class="ab"><span class="iB"><svg><use href="#i-back"/></svg></span><span class="tt">服务商配置</span></div>
         <div class="grp" style="padding:10px 11px;opacity:.22">
           <div class="fld" style="margin-bottom:0"><label>模型</label><div class="selr">gpt-4o-mini<span class="x"></span><span class="tag g" style="font-size:8px">图片</span><svg><use href="#i-chev"/></svg></div></div>
         </div>
@@ -5238,15 +5238,15 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       </div>
       <div class="sheet">
         <div class="grab"></div>
-        <div class="sh-h"><b>识别出 3 笔</b><span class="x" style="flex:1"></span><span class="tag" style="font-size:8.5px">来自 2 张截图</span></div>
-        <div class="prow"><span class="ck on"><svg><use href="#i-check"/></svg></span><div class="x"><div class="t">三餐 · 晚餐 ¥398.00</div><div class="s"><span class="conf"><i style="width:92%"></i></span>高置信 · 10-14 12:26</div></div></div>
-        <div class="prow"><span class="ck on"><svg><use href="#i-check"/></svg></span><div class="x"><div class="t">交通 · 打车 ¥46.50</div><div class="s"><span class="conf"><i style="width:88%"></i></span>高置信 · 10-14 09:12</div></div></div>
-        <div class="prow"><span class="ck on"><svg><use href="#i-check"/></svg></span><div class="x"><div class="t">未分类 ¥12.00</div><div class="s"><span class="conf lo"><i style="width:34%"></i></span><b>分类未认出 · 请补</b></div></div></div>
-        <div class="row" style="gap:7px;margin-top:10px"><span class="btn gh" style="flex:1;height:34px">逐条修改</span><span class="btn dg" style="flex:1;height:34px">存入 3 笔</span></div>
+        <div class="sh-h"><b>识别出 3 笔</b><span class="x" style="flex:1"></span><span class="tag" style="font-size:8.5px">来自 2 张图</span><span style="font-size:9px;color:var(--ink3)">先不处理</span></div>
+        <div class="prow"><span class="ck on"><svg><use href="#i-check"/></svg></span><div class="x"><div class="t" style="color:var(--exp)">还没选分类 299.00</div><div class="s">11月10日 · 修改</div></div></div>
+        <div class="prow"><span class="ck"><svg><use href="#i-check"/></svg></span><div class="x"><div class="t">还没选分类 128.50</div><div class="s"><b>账单已存在 · 已跳过</b></div></div></div>
+        <div class="prow"><span class="ck on"><svg><use href="#i-check"/></svg></span><div class="x"><div class="t">交通 60.10</div><div class="s">11月12日 · 修改</div></div></div>
+        <div class="row" style="gap:7px;margin-top:10px"><span class="btn gh" style="flex:1;height:34px">逐条确认</span><span class="btn dg" style="flex:1;height:34px">存入 2 笔</span></div>
       </div>
     </div></div>
     <figcaption><div class="pn">V-06</div><div class="ph">截图批量 · 多笔待确认</div>
-      <div class="pd">首页批量截图最多 9 张，在本机识别后逐笔出草稿卡。图片不离开设备，除非用户主动选择让小莉看。</div></figcaption></figure>
+      <div class="pd">首页批量截图最多 9 张，在本机识别后逐笔出草稿卡。默认只发脱敏文字。</div></figcaption></figure>
 
 <figure class="pc"><div class="dev"><div class="scr">
       <div class="notch"></div><div class="sb"><span>9:45</span><span class="r"><svg><use href="#i-signal"/></svg><svg style="width:14px"><use href="#i-wifi"/></svg></span></div>
@@ -5657,7 +5657,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
         <div class="grpt">小莉（AI）</div>
         <div class="grp" style="padding:0 12px">
           <div class="set"><div><div class="t">小莉（AI）</div><div class="s">默认关闭 · 界面不显示 AI 入口</div></div><span class="sw"></span></div>
-          <div class="set"><div><div class="t">小莉配置</div><div class="s">服务商、模型与连接测试</div></div><span class="ar"><span class="tag" style="font-size:8.5px">未配置</span><svg><use href="#i-chev"/></svg></span></div>
+          <div class="set"><div><div class="t">服务商配置</div><div class="s">服务商、模型与连接测试</div></div><span class="ar"><span class="tag" style="font-size:8.5px">未配置</span><svg><use href="#i-chev"/></svg></span></div>
         </div>
         <div class="grpt">提醒</div>
         <div class="grp" style="padding:0 12px">
@@ -5896,7 +5896,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>分类归属</td><td>全机一套两级树，账本不隔离；新建账本复用同一棵树，「上次分类」是全机一对键；笔数与删除提示按全部账本口径。</td></tr>
       <tr><td>关键词规则</td><td>展示按分类成组、存储仍一词一行；组内就地加词（空格 / 顿号可写多个），不再开表单弹窗；组 ⋯ 只放换分类与删除整组，词 ⋯ 只放改绑与删词；内置词组只读，没有 ＋ 与 ⋯。</td></tr>
       <tr><td>底部弹层</td><td>顶部只留一条抓手（M3 默认 dragHandle 位），不再另画一根；内容区给上限高度 + 内部滚动，长列表不顶满整屏。新建 / 编辑账本也走这一形态，不再用居中弹窗。</td></tr>
-      <tr><td>小莉配置</td><td>一屏只维护当前模型：服务商与模型走下拉，图片能力是保存前的一次勾选，测通才落库；保存后只留当前配置卡，不放状态点与状态标签。</td></tr>
+      <tr><td>服务商配置</td><td>一屏只维护当前模型：服务商与模型走下拉，图片能力是保存前的一次勾选，测通才落库；保存后只留当前配置卡，不放状态点与状态标签。</td></tr>
       <tr><td>震动</td><td>按键 KEYBOARD_TAP、点击 CONTEXT_CLICK、长按 LONG_PRESS、确认 CONFIRM、取消 REJECT（API 30 以下回退），全部跟随系统触感开关。</td></tr>
       <tr><td>金晕</td><td>只有小莉相关触点用金晕与金色按钮；其余保持纸墨，避免哪里都在发光。</td></tr>
     </table>
@@ -6194,14 +6194,14 @@ html,body{margin:0;padding:0;background:#F2EEE4}
     </div>
 
     <div class="card" style="flex:1 1 306px;width:306px;align-self:start">
-      <div class="shl" style="margin:0">AI-01 · 速记链路<span class="x"></span><span class="shlk">一次成型，不叠加</span></div>
-      <div style="font-size:9px;color:var(--ink3);line-height:1.65;margin:6px 0 9px">语音在端侧一次解析成草稿，截图只发<b>一次</b>识别请求；两条链路都不再在草稿之上覆盖第二遍 AI——<b style="color:var(--ink)">「29 块 8 毛 5」读成 29.8</b> 这类错，多一层就多一次推翻的机会。</div>
-      <div class="kv2" style="border-top:0"><b style="color:var(--brand)">语音</b><span>端侧规则解析 → 记账页预填，全程可以不联网</span></div>
-      <div class="kv2"><b style="color:var(--brand)">截图</b><span>一次识别 → 确认卡逐笔勾选，点「记入」才写库</span></div>
-      <div class="kv2"><b style="color:var(--brand)">小莉</b><span>对话抽账、统计页分析照旧，是独立的第三个触点</span></div>
-      <div class="kv2"><b style="color:var(--exp)">不做</b><span>速记里的二次复核 · 逐条置信度 · 自动落库</span></div>
+      <div class="shl" style="margin:0">AI-01 · 速记链路<span class="x"></span><span class="shlk">一条管线，规则先跑</span></div>
+      <div style="font-size:9px;color:var(--ink3);line-height:1.65;margin:6px 0 9px">语音、截图、系统分享三条路都进<b>同一条本机管线</b>：本机 OCR → 脱敏 → 规则抽取 → 小莉补缺 → 本机判级。规则永远在场，小莉只是补缺层——<b style="color:var(--ink)">「29 块 8 毛 5」读成 29.8</b> 这类错，不会因为开着小莉就被推翻。</div>
+      <div class="kv2" style="border-top:0"><b style="color:var(--brand)">语音</b><span>按住说话 → 同一张卡；分类对上且判级为高就直接记一笔，气泡上可撤销</span></div>
+      <div class="kv2"><b style="color:var(--brand)">截图 / 分享</b><span>本机 OCR 后同样入管线；确认卡逐笔勾选，分类没认出不许写入</span></div>
+      <div class="kv2"><b style="color:var(--brand)">小莉</b><span>对话抽账、统计页分析照旧；对话里记的账标「小莉」，其余机器账标「速记」</span></div>
+      <div class="kv2"><b style="color:var(--exp)">不做</b><span>用模型自评的置信度判级 · 让模型算钱 · 默认把原图发出去</span></div>
       <div style="font-size:8.5px;color:var(--ink3);line-height:1.65;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line)">
-        <b style="color:var(--ink)">代价说清楚：</b>规则读不懂的表达从此没有就地补救，只能去对话页再说一遍。<b>不留开关。</b></div>
+        <b style="color:var(--ink)">判级只看本机能复核的事实：</b>金额在不在原文、分类有没有对上真实分类、这一轮是不是只有一笔、有没有记过。没提日期按这一刻落账；提了日期却没认出来则不自动入账，卡上提示改日期。</div>
     </div>
   </div>
 </section>
@@ -8365,7 +8365,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 
       <div class="vz-arm-side vz-arm-left vz-ghost">
         <div class="vz-alabel vz-center">
-          <b>截图记账</b>
+          <b>识图记账</b>
           <i>← 左滑</i>
         </div>
         <div class="vz-atile">
@@ -8481,7 +8481,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 
       <div class="vz-arm-side vz-arm-left vz-ghost">
         <div class="vz-alabel vz-center">
-          <b>截图记账</b>
+          <b>识图记账</b>
           <i>← 左滑</i>
         </div>
         <div class="vz-atile">
@@ -8594,7 +8594,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
 
       <div class="vz-arm-side vz-arm-left vz-ghost">
         <div class="vz-alabel vz-center">
-          <b>截图记账</b>
+          <b>识图记账</b>
           <i>← 左滑</i>
         </div>
         <div class="vz-atile">
@@ -8730,15 +8730,15 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>P12 · P12b</td><td>周期规则列表（含所属账本）与新建预览</td><td>§09</td><td>ui/recurring/RecurringScreen.kt · data/repository/RecurringRepository.kt</td></tr>
       <tr><td>P13 · P13b</td><td>分期进度、提前结清、单期账单</td><td>§09</td><td>ui/installment/InstallmentScreen.kt · InstallmentFormScreen.kt</td></tr>
       <tr><td>P14·①…③ · 口径</td><td>报销三段与标记体系</td><td>§07</td><td>ui/reimbursement/ReimbursementScreen.kt · ui/design/BillBadges.kt</td></tr>
-      <tr><td>P15b</td><td>语音速记草稿</td><td>§11</td><td>ui/assistant/QuickNoteViewModel.kt · domain/parser/QuickNoteRules.kt</td></tr>
-      <tr><td>V-06 · V-07</td><td>批量截图、识别失败出路（P16 那台独立页 0.1.7 起下线）</td><td>§11</td><td>ui/assistant/ScreenshotBatchViewModel.kt · ScreenshotConfirmSheet.kt · ui/home/HomeScreen.kt（＋ 左臂）</td></tr>
+      <tr><td>P15b</td><td>语音速记草稿（0.1.8 起并入首页素材卡）</td><td>§11</td><td>ui/assistant/VoiceCaptureViewModel.kt · MaterialBatchViewModel.kt · domain/parser/QuickNoteRules.kt</td></tr>
+      <tr><td>V-06 · V-07</td><td>批量截图、识别失败出路（P16 那台独立页 0.1.7 起下线）</td><td>§11</td><td>ui/assistant/MaterialBatchViewModel.kt · MaterialConfirmSheet.kt · ui/home/HomeScreen.kt（＋ 左臂）</td></tr>
       <tr><td>V-04</td><td>语音识别结果落进记账页</td><td>§11</td><td>data/speech/SystemSpeechPort.kt · ui/bill/BillEntryScreen.kt</td></tr>
       <tr><td>V-08…V-11</td><td>对话输入条四态（点击录音）</td><td>§11</td><td>ui/assistant/AssistantChatScreen.kt · VoicePhase</td></tr>
       <tr><td>V-12…V-20</td><td>小莉语音蒙层五态、贴底吐司与首页语音浮标四态</td><td>§30</td><td><code>ui/design/VoiceOverlay.kt · ui/assistant/AssistantChatScreen.kt · ui/home/HomeScreen.kt · ui/shell/TallyShell.kt · data/speech/SystemSpeechPort.kt</code></td></tr>
       <tr><td>P-01 · P-02</td><td>待发图片条与全屏预览</td><td>§11</td><td>ui/assistant/AssistantChatScreen.kt · PendingThumb</td></tr>
       <tr><td>B-01 · B-02</td><td>批量记账卡与部分成功</td><td>§11</td><td>ui/assistant/AssistantChatViewModel.kt · data/ai/AiBillDraftService.kt</td></tr>
       <tr><td>X-01 · X-02</td><td>小莉对话与带图带语音问答</td><td>§11</td><td>ui/assistant/AssistantChatScreen.kt · data/ai/AiConversationRepository.kt</td></tr>
-      <tr><td>X-04…X-07</td><td>小莉配置四屏</td><td>§11</td><td>ui/assistant/AssistantConfigScreen.kt · AssistantConfigViewModel.kt · domain/ai/AiProviderPresets.kt</td></tr>
+      <tr><td>X-04…X-07</td><td>服务商配置四屏</td><td>§11</td><td>ui/assistant/AssistantConfigScreen.kt · AssistantConfigViewModel.kt · domain/ai/AiProviderPresets.kt</td></tr>
       <tr><td>P18</td><td>月度分析报告</td><td>§11</td><td>ui/assistant/AssistantAnalysisViewModel.kt · ai_report 表</td></tr>
       <tr><td>P19</td><td>备份与同步、WebDAV 手动快照</td><td>§13</td><td>ui/backup/BackupScreen.kt · data/backup/BackupContainer.kt</td></tr>
       <tr><td>P20 · P20b–P20e</td><td>设置、数据隐私与检查更新</td><td>§13</td><td>ui/settings/SettingsScreen.kt · SettingsRows.kt · data/preferences/TallyPreferences.kt</td></tr>
@@ -8752,7 +8752,7 @@ html,body{margin:0;padding:0;background:#F2EEE4}
       <tr><td>RF-01</td><td>退款 · 关联原单与累计拦截</td><td>§16</td><td><code>ui/bill/BillRefundSheet.kt · data/repository/BillRepository.kt</code></td></tr>
       <tr><td>IMP-01</td><td>导入预览 · 重复行单独成段</td><td>§16</td><td><code>ui/importexport/ImportScreen.kt · domain/parser/ImportParsers.kt</code></td></tr>
       <tr><td>IV-01</td><td>分期间隔档</td><td>§16</td><td><code>ui/installment/InstallmentFormScreen.kt · domain/schedule/InstallmentSchedule.kt</code></td></tr>
-      <tr><td>AI-01</td><td>速记链路 · 一次成型不叠加</td><td>§16</td><td><code>ui/assistant/QuickNoteViewModel.kt · ScreenshotViewModel.kt · domain/parser/QuickNoteRules.kt</code></td></tr>
+      <tr><td>AI-01</td><td>速记链路 · 一条管线、规则先跑</td><td>§16</td><td><code>domain/ingest/ · data/ingest/ · ui/assistant/MaterialBatchViewModel.kt · ui/assistant/VoiceCaptureViewModel.kt</code></td></tr>
       <tr><td>T-01</td><td>提醒与通知 · 设置页</td><td>§17</td><td><code>ui/settings/NotificationSettingsScreen.kt · SettingsRows.kt</code></td></tr>
       <tr><td>T-02 · T-03 · T-04</td><td>四类通知样子 · 未授权 · 点哪儿去哪</td><td>§17</td><td><code>data/notify/TallyNotifier.kt · ReminderCoordinator.kt · NotificationLink.kt</code></td></tr>
       <tr><td>R-01 · R-02</td><td>回收站列表 · 彻底删除</td><td>§18</td><td><code>ui/recycle/RecycleBinScreen.kt · data/repository/RecycleBinRepository.kt</code></td></tr>

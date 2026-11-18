@@ -36,17 +36,34 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- 系统分享入口：相册/微信里把支付截图「分享」到 Tally，直达小莉。 -->
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="image/*" />
-            </intent-filter>
             <!-- 长按图标的两条静态快捷方式：记一笔、添加小部件。 -->
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <!--
+          系统分享入口单独挂一个别名：相册 / 微信里「分享」时，选应用的列表里显示
+          「塔莉速记」，桌面图标仍然叫「Tally 塔莉」。
+          单张与多张各一条 filter——只声明 SEND 的话，图库里一次选好几张不会出现我们。
+          这两条必须挂在别名上：同一个 Activity 再声明一份，系统会把我们列成两个入口。
+        -->
+        <activity-alias
+            android:name=".ShareTarget"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="@string/share_target_label">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- 桌面组件（WG-06）：近七日只读，点了落回 MainActivity 走 pendingLink。 -->
         <receiver

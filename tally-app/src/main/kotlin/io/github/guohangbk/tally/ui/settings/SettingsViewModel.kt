@@ -92,7 +92,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setMonthStartDay(day: Int) = persist(
-        notice = "每月从 ${day.coerceIn(1, 28)} 号起算 · 首页与统计已按新周期分段",
+        notice = "每月从 ${day.coerceIn(1, 28)} 号起算，首页与统计已按新周期分段",
     ) {
         graph.settingRepository.setMonthStartDay(day)
     }
@@ -100,7 +100,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
     fun setBillImageEnabled(enabled: Boolean) = persist { graph.preferences.setBillImageEnabled(enabled) }
 
     fun setQuickOpenEnabled(enabled: Boolean) = persist(
-        notice = if (enabled) "秒开模式已开启 · 下次打开应用直接进记账页" else "秒开模式已关闭 · 打开应用先进首页",
+        notice = if (enabled) "秒开模式已开启，下次打开应用直接进记账页" else "秒开模式已关闭，打开应用先进首页",
     ) {
         graph.preferences.setQuickOpenEnabled(enabled)
     }
@@ -117,7 +117,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
 
     /** 调试模式：设置 → 关于 → 版本，1.2 秒内连点 5 次开关，开启后每个页面右下角会出现控制台。 */
     fun setDebugMode(enabled: Boolean) = persist(
-        notice = if (enabled) "调试模式已开启 · 每个页面右下角可以调出控制台" else "调试模式已关闭",
+        notice = if (enabled) "调试模式已开启，每个页面右下角可以调出控制台" else "调试模式已关闭",
     ) {
         graph.preferences.setDebugMode(enabled)
     }
@@ -159,9 +159,9 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
     fun setAssistantEnabled(enabled: Boolean) {
         persist(
             notice = if (enabled) {
-                "小莉已开启 · 长按 ＋ 右滑去配置，配好就能聊"
+                "问小莉已开启，长按 ＋ 右滑就能直接问"
             } else {
-                "小莉已关闭 · 右滑仍会带你到这里的开关"
+                "问小莉已关闭，右滑仍会带你到这里的开关"
             },
         ) {
             // 沿用配置仓的口径：重新打开时，配置齐全但从未验证过的记为「疑似异常」，让下一次调用去确认。
@@ -203,7 +203,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun confirmResetPreferences() {
         persist(
-            notice = "偏好已恢复默认 · 账单、账本、分类和图片都没有改动。",
+            notice = "偏好已恢复默认，账单、账本、分类和图片都没有改动。",
             onSaved = ::dismissDialog,
         ) {
             graph.preferences.setBillImageEnabled(TallySettings.DEFAULT.billImageEnabled)
@@ -211,6 +211,10 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
             graph.preferences.setReimburseEnabled(TallySettings.DEFAULT.reimburseEnabled)
             graph.preferences.setExcludeEnabled(TallySettings.DEFAULT.excludeEnabled)
             graph.preferences.setTagEnabled(TallySettings.DEFAULT.tagEnabled)
+            graph.preferences.setAiVoiceEnabled(TallySettings.DEFAULT.aiVoiceEnabled)
+            graph.preferences.setAiImageEnabled(TallySettings.DEFAULT.aiImageEnabled)
+            graph.preferences.setAiQuickNoteEnabled(TallySettings.DEFAULT.aiQuickNoteEnabled)
+            graph.preferences.setAutoSaveBillImage(TallySettings.DEFAULT.autoSaveBillImage)
             graph.preferences.setThemeMode(TallySettings.DEFAULT.themeMode)
             graph.preferences.setShowCurrencySymbol(TallySettings.DEFAULT.showCurrencySymbol)
             graph.preferences.setShowThousandsSeparator(TallySettings.DEFAULT.showThousandsSeparator)

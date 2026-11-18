@@ -26,6 +26,10 @@ import io.github.guohangbk.tally.data.notify.ReminderCoordinator
 import io.github.guohangbk.tally.data.notify.TallyNotifier
 import io.github.guohangbk.tally.data.preferences.TallyPreferences
 import io.github.guohangbk.tally.data.importexport.ExportService
+import io.github.guohangbk.tally.data.ingest.IngestDraftService
+import io.github.guohangbk.tally.data.ingest.MaterialReader
+import io.github.guohangbk.tally.data.ingest.PendingIngestStore
+import io.github.guohangbk.tally.data.ingest.createBillIngestor
 import io.github.guohangbk.tally.data.ocr.MlKitTextReader
 import io.github.guohangbk.tally.data.ocr.ScreenshotTextReader
 import io.github.guohangbk.tally.data.importexport.ImportService
@@ -49,6 +53,7 @@ import io.github.guohangbk.tally.domain.model.StatsRequest
 import io.github.guohangbk.tally.ui.design.IconLibrary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * 不引入 DI 框架，手工装配单一依赖图；包一层仅为 ViewModel 与测试提供注入点。
@@ -272,23 +277,60 @@ class AppGraph(
 
     val screenshotTextReader: ScreenshotTextReader = MlKitTextReader(context.applicationContext)
 
+    /** 四条入口共用的素材读取：一次取字节、一次本机 OCR，OCR 原文只留在本机。 */
+    val materialReader: MaterialReader = MaterialReader(
+        attachments = attachmentStore,
+        textReader = screenshotTextReader,
+        preferences = preferences,
+    )
+
     /**
      * 小莉对话页的抽账调用：文字、语音识别出的文字、截图（视觉模型直接看图，
      * 不支持图片时先 OCR 成文字）都走这一次工具调用，由模型回传分类 id 等固定参数。
      */
-    val aiBillDraftService: AiBillDraftService = AiBillDraftService(
-        gateway = aiGateway,
-        textReader = screenshotTextReader,
+    val aiBillDraftService: AiBillDraftService = AiBillDraftService(gateway = aiGateway)
+
+    /** 四条入口共用的识别管线：规则永远在场，AI 只补规则没给出的字段。 */
+    val billIngestor = createBillIngestor(
+        service = aiBillDraftService,
+        bills = billRepository,
+        catalog = { keywordRuleRepository.catalog() },
+    )
+
+    /** 卡片状态、落库、撤销与保存成功事件都在这里收口。 */
+    val ingestDrafts: IngestDraftService = IngestDraftService(
+        bills = billRepository,
+        conversations = aiConversationRepository,
+        attachments = attachmentStore,
+        catalog = { keywordRuleRepository.catalog() },
     )
 
     /**
-     * 系统分享进来的截图。用一条流把「Activity 收到 intent」与「送进小莉」解耦，
-     * Activity 不需要认识 NavController，冷启动与 singleTask 复用两条路径共用同一入口。
+     * 多图待确认清单：识别完落盘，逐笔确认一笔删一笔。
+     * 放 filesDir 下的普通 JSON，不进数据库、不进备份——它是一次操作的中间状态，不是账。
      */
-    val sharedImage: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    val pendingIngestStore: PendingIngestStore = PendingIngestStore(context.applicationContext.filesDir)
 
     /**
-     * 通知点进来的去处（T-04）。与 [sharedImage] 同一套解耦：
+     * 系统分享进来的截图只是素材：不进对话、不进上下文，交给首页截图那条路出卡。
+     * 一次分享可能连着好几张，所以收的是一批；带自增 id，同一批连续分享两次也各处理一次，
+     * 消费后清空不重复弹卡。
+     */
+    val sharedMaterial: MutableStateFlow<SharedMaterial?> = MutableStateFlow(null)
+
+    private val sharedMaterialIds = AtomicLong(0)
+
+    fun emitSharedMaterial(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        sharedMaterial.value = SharedMaterial(sharedMaterialIds.incrementAndGet(), uris)
+    }
+
+    fun consumeSharedMaterial(id: Long) {
+        if (sharedMaterial.value?.id == id) sharedMaterial.value = null
+    }
+
+    /**
+     * 通知点进来的去处（T-04）。与 [sharedMaterial] 同一套解耦：
      * Activity 只写这一个值，谁在导航图就绪后消费由导航层决定，冷启动与已在前台都能走。
      */
     val pendingLink: MutableStateFlow<NotificationLink?> = MutableStateFlow(null)
@@ -446,5 +488,7 @@ class AppGraph(
         }
     }
 }
+
+data class SharedMaterial(val id: Long, val uris: List<Uri>)
 
 

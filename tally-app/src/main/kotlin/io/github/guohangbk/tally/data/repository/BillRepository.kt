@@ -448,6 +448,10 @@ class BillRepository(
     suspend fun findByExternalId(externalId: String): BillListItem? =
         billDao.findByExternalId(externalId)?.id?.let { find(it) }
 
+    /** 同一张图第二次分享进来：指纹命中就是「这张图已经记过」，不必再写一遍。 */
+    suspend fun findByFingerprint(fingerprint: String): BillListItem? =
+        billDao.findByFingerprint(fingerprint)?.id?.let { find(it) }
+
     /**
      * 周期/分期生成的账单入口。幂等键是 (rule|plan, period_index)：
      * 已存在同期的**任何**账单时直接返回 null，补执行重复触发也不会多记一笔。

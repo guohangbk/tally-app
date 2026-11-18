@@ -35,6 +35,15 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
     val EXCLUDE_ENABLED = booleanPreferencesKey("exclude_enabled")
     /** 标签：记账页那枚 chip 的开关，归设置 → 记账键盘。 */
     val TAG_ENABLED = booleanPreferencesKey("tag_enabled")
+        /**
+         * 自动记账的 AI 提取：规则缺金额或缺分类的那一步才交给 AI，三个入口各管一路。
+         * **默认关**：没配服务商之前打开也不会生效，不如让人自己去开。
+         */
+        val AI_VOICE_ENABLED = booleanPreferencesKey("ai_voice_enabled")
+        val AI_IMAGE_ENABLED = booleanPreferencesKey("ai_image_enabled")
+        val AI_QUICK_NOTE_ENABLED = booleanPreferencesKey("ai_quick_note_enabled")
+        /** 识图记账时把那张原图存进这一笔：默认关，关着只留识别结果。 */
+        val AUTO_SAVE_BILL_IMAGE = booleanPreferencesKey("auto_save_bill_image")
         val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val SHOW_CURRENCY_SYMBOL = booleanPreferencesKey("show_currency_symbol")
@@ -84,6 +93,10 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
             // 默认开：这枚 chip 一直是常驻的，加开关只是给个关掉的口子，不改变已有行为。
             excludeEnabled = prefs[Keys.EXCLUDE_ENABLED] ?: true,
             tagEnabled = prefs[Keys.TAG_ENABLED] ?: true,
+            aiVoiceEnabled = prefs[Keys.AI_VOICE_ENABLED] ?: false,
+            aiImageEnabled = prefs[Keys.AI_IMAGE_ENABLED] ?: false,
+            aiQuickNoteEnabled = prefs[Keys.AI_QUICK_NOTE_ENABLED] ?: false,
+            autoSaveBillImage = prefs[Keys.AUTO_SAVE_BILL_IMAGE] ?: false,
             assistantEnabled = prefs[Keys.ASSISTANT_ENABLED] ?: false,
             themeMode = prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
@@ -128,6 +141,14 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
     suspend fun setExcludeEnabled(enabled: Boolean) = put(Keys.EXCLUDE_ENABLED, enabled)
 
     suspend fun setTagEnabled(enabled: Boolean) = put(Keys.TAG_ENABLED, enabled)
+
+    suspend fun setAiVoiceEnabled(enabled: Boolean) = put(Keys.AI_VOICE_ENABLED, enabled)
+
+    suspend fun setAiImageEnabled(enabled: Boolean) = put(Keys.AI_IMAGE_ENABLED, enabled)
+
+    suspend fun setAiQuickNoteEnabled(enabled: Boolean) = put(Keys.AI_QUICK_NOTE_ENABLED, enabled)
+
+    suspend fun setAutoSaveBillImage(enabled: Boolean) = put(Keys.AUTO_SAVE_BILL_IMAGE, enabled)
 
     suspend fun setAssistantEnabled(enabled: Boolean) = put(Keys.ASSISTANT_ENABLED, enabled)
 
@@ -307,6 +328,14 @@ data class TallySettings(
     val excludeEnabled: Boolean = true,
     /** 标签：记账页要不要出现「标签」chip；默认开，管理页、筛选与批量打标签不受它影响。 */
     val tagEnabled: Boolean = true,
+    /** 语音记账的 AI 提取：缺金额或缺分类时才交给 AI。默认关，没配服务商之前打开也不生效。 */
+    val aiVoiceEnabled: Boolean = false,
+    /** 识图记账的 AI 提取。默认关。 */
+    val aiImageEnabled: Boolean = false,
+    /** 塔莉速记（图库分享）的 AI 提取。默认关。 */
+    val aiQuickNoteEnabled: Boolean = false,
+    /** 识图记账时把那张图存进账单附件。 */
+    val autoSaveBillImage: Boolean = false,
     val assistantEnabled: Boolean,
     val themeMode: ThemeMode,
     val showCurrencySymbol: Boolean,
@@ -344,6 +373,10 @@ data class TallySettings(
             reimburseEnabled = false,
             excludeEnabled = true,
             tagEnabled = true,
+            aiVoiceEnabled = false,
+            aiImageEnabled = false,
+            aiQuickNoteEnabled = false,
+            autoSaveBillImage = false,
             assistantEnabled = false,
             themeMode = ThemeMode.SYSTEM,
             showCurrencySymbol = true,

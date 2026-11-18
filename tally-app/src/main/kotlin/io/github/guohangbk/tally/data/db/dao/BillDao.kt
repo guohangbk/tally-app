@@ -502,6 +502,13 @@ interface BillDao {
     @Query("SELECT * FROM bill WHERE external_id = :externalId AND deleted_at IS NULL LIMIT 1")
     suspend fun findByExternalId(externalId: String): BillEntity?
 
+    /**
+     * 图片指纹去重：同一张截图第二次分享进来时认出「这张图已经记过」。
+     * 与订单号是两条互补的路——订单号管「同一笔换张图再发」，指纹管「同一张图再发一次」。
+     */
+    @Query("SELECT * FROM bill WHERE fingerprint = :fingerprint AND deleted_at IS NULL LIMIT 1")
+    suspend fun findByFingerprint(fingerprint: String): BillEntity?
+
     /** 周期/分期幂等：同一任务（或计划）的同一期只允许一笔有效账单。 */
     @Query(
         "SELECT * FROM bill WHERE recurrence_rule_id = :ruleId AND period_index = :periodIndex " +

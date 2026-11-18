@@ -139,6 +139,6 @@ private val DEPENDENCIES = listOf(
     Triple("WorkManager", "Apache-2.0", "周期与分期补执行、每日清理"),
     Triple("OkHttp", "Apache-2.0", "小莉与 WebDAV 的网络层"),
     Triple("kotlinx-serialization", "Apache-2.0", "协议与备份包的 JSON"),
-    Triple("ML Kit 中文文字识别", "Apache-2.0", "截图记账的端侧 OCR"),
+    Triple("ML Kit 中文文字识别", "Apache-2.0", "识图记账的端侧 OCR"),
     Triple("Kotlin / KSP / Gradle", "Apache-2.0 等", "构建工具链，不随包分发"),
 )

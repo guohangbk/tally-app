@@ -95,10 +95,12 @@ import io.github.guohangbk.tally.domain.model.AiMessageType
 import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.DraftRow
+import io.github.guohangbk.tally.domain.ingest.InputKind
 import io.github.guohangbk.tally.ui.common.formatDay
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.common.CategoryPickerSheet
 import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyCard
@@ -133,7 +135,7 @@ fun AssistantChatScreen(
     onBack: () -> Unit,
     bottomBar: @Composable () -> Unit = {},
     /** 记账卡上「补分类 / 改一下」：带上已识别的字段去记账页，落库前仍过人手。 */
-    onOpenDraft: (ChatBillDraft) -> Unit = {},
+    onOpenDraft: (ChatBillDraft, Int) -> Unit = { _, _ -> },
 ) {
     val graph = rememberAppGraph()
     val context = LocalContext.current
@@ -168,23 +170,6 @@ fun AssistantChatScreen(
     /** 没授权时按下不弹系统框（弹窗一开这次按住就废了），松手后再申请。 */
     var pendingMicPermission by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-
-    // 系统分享进来的截图：挂到待发位，等配置读出来就自动发出去。
-    // 小莉还没开启或没配好时不发，图留在待发位等人处理。
-    var sharedImageToSend by remember { mutableStateOf(false) }
-    LaunchedEffect(graph) {
-        graph.sharedImage.collect { uri ->
-            if (uri == null) return@collect
-            graph.sharedImage.value = null
-            viewModel.attachImages(listOf(uri))
-            sharedImageToSend = true
-        }
-    }
-    LaunchedEffect(sharedImageToSend, state.loaded, state.availability) {
-        if (!sharedImageToSend || !state.loaded) return@LaunchedEffect
-        sharedImageToSend = false
-        if (state.availability?.showsEntry == true) viewModel.send()
-    }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         DebugLog.log("Mic", "权限申请结果 granted=$granted")
@@ -385,7 +370,7 @@ fun AssistantChatScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(colors.paper)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 右上角空着：配置挪到 app 设置里的「小莉配置」，端侧/云端标签也不需要常驻在这一页。
+            // 右上角空着：配置挪到 app 设置里的「服务商配置」，端侧/云端标签也不需要常驻在这一页。
             // 对话列表（新建 / 重命名 / 删除）改由点标题唤起，不给它留入口就等于删了这些操作。
             TallyTopBar(
                 title = "小莉",
@@ -402,6 +387,11 @@ fun AssistantChatScreen(
                 onErrorShown = viewModel::dismissMessages,
                 errorActionLabel = "重新测试",
                 onErrorAction = viewModel::refreshAvailability,
+            )
+            TallyToastEffects(
+                notice = null,
+                error = state.undoError,
+                onErrorShown = viewModel::dismissMessages,
             )
 
             // 收音失败一律走贴底气泡；页面上这一行只留给「去应用设置」——
@@ -471,8 +461,18 @@ fun AssistantChatScreen(
                                         drafts = entry.drafts.map { it.toUi() },
                                         onConfirmAll = { viewModel.confirmDraft(entry.id) },
                                         // 「改」只把人带去记账页填那一格，卡片留着——先撤再跳，回来就永远没了。
-                                        onEditRow = { draft -> onOpenDraft(draft) },
+                                        onEditRow = { draft, index -> onOpenDraft(draft, index) },
                                         onDismissRow = { index -> viewModel.dismissRow(entry.id, index) },
+                                        // 自动记入的钱更得能一键退回：撤销软删那一笔，回收站里还能找回。
+                                        onUndoRow = { index -> viewModel.undoRow(entry.id, index) },
+                                        onUndoAll = { viewModel.undoAllSaved(entry.id) },
+                                        // 卡片就地变高变矮，列表得跟着贴回底部：展开才像"把上面的内容顶上去"。
+                                        onExpandToggle = {
+                                            scope.launch {
+                                                val last = listState.layoutInfo.totalItemsCount - 1
+                                                if (last >= 0) listState.animateScrollToItem(last)
+                                            }
+                                        },
                                     )
                                 } else {
                                     // Compose 的 Text 默认不可选，所以长按气泡复制不了；整条消息包一层
@@ -549,6 +549,17 @@ fun AssistantChatScreen(
             onSend = ::sendReviewedVoice,
         )
     }
+    }
+
+    // 点「记入」时缺的那一格就地补：只问缺的分类，补完继续落库，卡上不堆一行「缺什么」。
+    state.draftCategoryTarget?.let { _ ->
+        CategoryPickerSheet(
+            categories = state.draftCategories,
+            selectedL1 = null,
+            selectedL2 = null,
+            onDismiss = { viewModel.dismissDraftCategory() },
+            onConfirm = { l1Id, l2Id -> viewModel.applyDraftCategory(l1Id, l2Id) },
+        )
     }
 
     if (showConversations) {
@@ -801,8 +812,11 @@ private fun ImageBubble(entry: AiChatEntry, onOpen: (String) -> Unit) {
 private fun DraftCardStack(
     drafts: List<ChatBillDraft>,
     onConfirmAll: () -> Unit,
-    onEditRow: (ChatBillDraft) -> Unit,
+    onEditRow: (ChatBillDraft, Int) -> Unit,
     onDismissRow: (Int) -> Unit,
+    onUndoRow: (Int) -> Unit,
+    onUndoAll: () -> Unit,
+    onExpandToggle: () -> Unit = {},
 ) {
     val colors = tallyColors
     if (drafts.isEmpty()) return
@@ -810,28 +824,57 @@ private fun DraftCardStack(
 
     if (pending.isEmpty()) {
         val savedCount = drafts.count { it.saved }
-        val droppedCount = drafts.size - savedCount
+        // 已经记过的那些既不占「已记入」也不占「先不记」：写明了才不会让人以为漏了一笔。
+        val duplicateCount = drafts.count { it.duplicate }
+        val droppedCount = drafts.count { it.dismissed }
         val savedTotal = drafts.filter { it.saved }.sumOf { it.amountMinor }
         val done = savedCount > 0
-        TallyCard(corner = 13, contentPadding = 10.dp, borderColor = if (done) colors.brand.copy(alpha = 0.32f) else colors.line) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                InlineIcon(
-                    iconKey = if (done) "check" else "close",
-                    contentDescription = null,
-                    size = 13.dp,
-                    tint = if (done) colors.brand else colors.ink3,
-                )
-                Text(
-                    text = buildString {
-                        if (done) append("已记入 ${savedCount} 笔 · ¥" + formatAmount(savedTotal, grouping = false))
-                        if (droppedCount > 0) {
-                            append(if (done) " · 先不记 ${droppedCount} 笔" else "${droppedCount} 笔先不记了")
-                        }
-                    },
-                    style = TallyType.helper,
-                    color = if (done) colors.brand else colors.ink3,
-                    fontWeight = FontWeight.Medium,
-                )
+        // 已经表过态的卡默认收起来（计入过的尤其如此）：对话流里它只该占一行结果，
+        // 想看明细点「展开」。还在等确认的行不适用这一支，它们本来就该全露着。
+        var expanded by remember { mutableStateOf(false) }
+        LaunchedEffect(expanded) { onExpandToggle() }
+        TallyCard(corner = 13, contentPadding = 0.dp, borderColor = if (done) colors.brand.copy(alpha = 0.32f) else colors.line) {
+            Column {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    InlineIcon(
+                        iconKey = if (done) "check" else "close",
+                        contentDescription = null,
+                        size = 13.dp,
+                        tint = if (done) colors.brand else colors.ink3,
+                    )
+                    Text(
+                        text = buildString {
+                            if (done) append("已记入 ${savedCount} 笔 · ¥" + formatAmount(savedTotal, grouping = false))
+                            if (duplicateCount > 0) {
+                                append(if (done) " · 已记入 ${duplicateCount} 笔" else "已有 ${duplicateCount} 笔记入")
+                            }
+                            if (droppedCount > 0) {
+                                append(if (done || duplicateCount > 0) " · 先不记 ${droppedCount} 笔" else "${droppedCount} 笔先不记了")
+                            }
+                        },
+                        style = TallyType.helper,
+                        color = if (done) colors.brand else colors.ink3,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (done) TextAction(label = "全部撤销", onClick = onUndoAll, color = colors.ink2)
+                    TextAction(label = if (expanded) "收起" else "展开", onClick = { expanded = !expanded }, color = colors.ink2)
+                }
+                if (expanded) {
+                    drafts.forEachIndexed { index, draft ->
+                        if (index > 0) Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.line))
+                        DraftRow(
+                            draft = draft,
+                            onEdit = { onEditRow(draft, index) },
+                            onDismiss = { onDismissRow(index) },
+                            onUndo = { onUndoRow(index) },
+                        )
+                    }
+                }
             }
         }
         return
@@ -860,14 +903,7 @@ private fun DraftCardStack(
                     modifier = Modifier.weight(1f),
                 )
                 // 来源是整条消息的属性，标一次就够，不必每行重复。
-                TallyTag(
-                    text = when (drafts.first().source) {
-                        BillSource.SCREENSHOT -> "图片"
-                        BillSource.VOICE -> "语音"
-                        else -> "文字"
-                    },
-                    tone = TagTone.OUTLINE,
-                )
+                TallyTag(text = drafts.first().inputLabel(), tone = TagTone.OUTLINE)
                 TextAction(
                     label = if (pending.size == 1) "记入这一笔" else "全部记入",
                     onClick = onConfirmAll,
@@ -878,19 +914,29 @@ private fun DraftCardStack(
                 if (index > 0) Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.line))
                 DraftRow(
                     draft = draft,
-                    onEdit = { onEditRow(draft) },
+                    onEdit = { onEditRow(draft, index) },
                     onDismiss = { onDismissRow(index) },
+                    onUndo = { onUndoRow(index) },
                 )
             }
         }
     }
 }
 
-/** 批量卡里的一笔：金额 + 「日期 · 分类 · 备注」+ 两个行内动作。缺一格只标这一行，不连累其余。 */
+/**
+ * 批量卡里的一笔：金额 + 「日期 · 分类 · 备注」+ 行内动作。缺一格只标这一行，不连累其余。
+ * 三档都在这张行上收口：已记入的那笔给「撤销」，缺东西的写清缺哪几项，已记过的直说不用再点。
+ */
 @Composable
-private fun DraftRow(draft: ChatBillDraft, onEdit: () -> Unit, onDismiss: () -> Unit) {
+private fun DraftRow(
+    draft: ChatBillDraft,
+    onEdit: () -> Unit,
+    onDismiss: () -> Unit,
+    onUndo: () -> Unit,
+) {
     val colors = tallyColors
     val dropped = draft.dismissed
+    val reverted = draft.reverted
     val decoration = if (dropped) TextDecoration.LineThrough else TextDecoration.None
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 9.dp),
@@ -909,8 +955,8 @@ private fun DraftRow(draft: ChatBillDraft, onEdit: () -> Unit, onDismiss: () -> 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = listOfNotNull(
-                    draft.occurredAt.takeIf { isNotToday(it) }?.let { formatDraftDay(it) },
-                    draft.categoryLabel ?: "分类未认出",
+                    if (draft.dateDefaulted) "今天" else draft.occurredAt.takeIf { isNotToday(it) }?.let { formatDraftDay(it) },
+                    draft.categoryLabel ?: "还没选分类",
                     draft.merchant?.takeIf { it.isNotBlank() && it != draft.note },
                     draft.note?.takeIf { it.isNotBlank() },
                 ).joinToString(" · ").ifBlank { "备注待补" },
@@ -921,14 +967,18 @@ private fun DraftRow(draft: ChatBillDraft, onEdit: () -> Unit, onDismiss: () -> 
         }
         when {
             // 记入与划掉都只影响这一行：留一个能看懂的状态，比让整卡消失更有用。
-            draft.saved -> StaticAction(label = "已记入", color = colors.brand)
+            draft.saved -> {
+                StaticAction(label = "已记入", color = colors.brand)
+                if (draft.savedBillId != null) TextAction(label = "撤销", onClick = onUndo, color = colors.ink2)
+            }
+
+            draft.duplicate -> StaticAction(label = "已记入", color = colors.ink3)
+            reverted -> StaticAction(label = "已撤销", color = colors.ink3)
             dropped -> TextAction(label = "恢复", onClick = onDismiss, color = colors.ink2)
             else -> {
-                TextAction(
-                    label = if (draft.needsCategory) "补分类" else "改",
-                    onClick = onEdit,
-                    color = if (draft.needsCategory) colors.expense else colors.ink2,
-                )
+                // 缺分类不再是「红字催你补」：点「记入」时会就地弹分类选择器，
+                // 这里统一叫「改」，落点还是记账页那一页。
+                TextAction(label = "改", onClick = onEdit, color = colors.ink2)
                 TextAction(label = "先不记", onClick = onDismiss, color = colors.ink3)
             }
         }
@@ -972,13 +1022,38 @@ private fun DraftRow.toUi(): ChatBillDraft = ChatBillDraft(
     note = note,
     occurredAt = occurredAt,
     source = runCatching { BillSource.valueOf(source) }.getOrDefault(BillSource.MANUAL),
+    inputKind = runCatching { InputKind.valueOf(inputKind) }.getOrNull(),
     merchant = merchant,
+    externalId = externalId,
+    imageSha = imageSha,
+    grade = grade,
+    missing = missing,
+    dateDefaulted = dateDefaulted,
+    dateUnresolved = dateUnresolved,
+    duplicate = duplicate,
+    reverted = reverted,
+    savedBillId = savedBillId,
     saved = saved,
     dismissed = dismissed,
 )
 
 /** 卡片上的落账日期只在不是今天时显示：今天本来就是默认落账日，多写一段反而占字。 */
 private fun isNotToday(millis: Long): Boolean = dayKey(millis) != dayKey(System.currentTimeMillis())
+
+/**
+ * 卡上那个小标签：这条消息是文字、语音还是图片进来的。
+ * 升级前落库的老卡没有 `inputKind`，按当时的来源回推——不然「语音」会被显示成「文字」。
+ */
+private fun ChatBillDraft.inputLabel(): String = when (inputKind) {
+    InputKind.IMAGE -> "图片"
+    InputKind.VOICE -> "语音"
+    InputKind.TEXT -> "文字"
+    null -> when (source) {
+        BillSource.SCREENSHOT -> "图片"
+        BillSource.VOICE -> "语音"
+        else -> "文字"
+    }
+}
 
 private fun formatDraftDay(millis: Long): String =
     java.text.SimpleDateFormat("M月d日", java.util.Locale.CHINA).format(java.util.Date(millis))
@@ -1275,7 +1350,7 @@ private fun InputBar(
                     )
                 }
             }
-            if (!voiceMode && value.isNotBlank()) {
+            if (!voiceMode) {
                 CircleAction(
                     iconKey = "chevron",
                     label = "发送",
@@ -1283,21 +1358,31 @@ private fun InputBar(
                     filled = true,
                     onClick = onSend,
                 )
+                // 发图入口挪进输入框：只有文字时也能补图，只有图片时也能发送。
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(colors.card)
+                        .border(1.dp, colors.line, CircleShape)
+                        .clickable(enabled = imageEnabled && idle) {
+                            if (imageEnabled) {
+                                onPickImage()
+                            } else {
+                                TallyToast.show("当前模型不支持图片识别，换成支持图片的模型后再试", ToastTone.INFO)
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    InlineIcon(iconKey = "image", contentDescription = "发图片", size = 17.dp, tint = colors.ink3)
+                }
             } else {
-                CircleAction(
-                    iconKey = "image",
-                    label = if (imageEnabled) "发图片" else "当前模型未开启图片输入",
-                    enabled = imageEnabled && idle,
-                    // 置灰但可点：看起来是禁用的，点一下告诉人为什么，而不是按了没反应。
-                    clickWhenDisabled = !imageEnabled && idle,
-                    onClick = {
-                        if (imageEnabled) {
-                            onPickImage()
-                        } else {
-                            TallyToast.show("当前模型不支持图片识别，换成支持图片的模型后再试", ToastTone.INFO)
-                        }
-                    },
-                )
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    InlineIcon(iconKey = "image", contentDescription = null, size = 18.dp, tint = colors.ink3)
+                }
             }
         }
     }

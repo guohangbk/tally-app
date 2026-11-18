@@ -194,6 +194,20 @@ class AiConversationRepository(
         messages.update(existing.copy(content = DraftRow.encode(rows), updatedAt = now()))
     }
 
+    /**
+     * 按当前内容改一行：调用方只给变换，读与写落在同一个挂起点上。
+     * 「上记账页把这一笔补完再存」那条路靠它回写卡上的行状态——先读再写会拿到过期的一版。
+     */
+    suspend fun updateDraft(messageId: String, transform: (List<DraftRow>) -> List<DraftRow>) {
+        val existing = messages.findById(messageId) ?: return
+        val rows = DraftRow.decode(existing.content)
+        messages.update(existing.copy(content = DraftRow.encode(transform(rows)), updatedAt = now()))
+    }
+
+    /** 管线服务按行做撤销/补分类时读一次当前持久化状态，不经过聊天 VM 的内存副本。 */
+    suspend fun draftRows(messageId: String): List<DraftRow> =
+        DraftRow.decode(messages.findById(messageId)?.content.orEmpty())
+
     /** 重试一条失败回复：拿它前面那条用户消息再问一次，成功就把失败消息改写掉。 */
     suspend fun retry(failedMessageId: String): AiAnswer {
         val failed = messages.findById(failedMessageId) ?: return AiAnswer.Unavailable("这条消息已经不在了。")

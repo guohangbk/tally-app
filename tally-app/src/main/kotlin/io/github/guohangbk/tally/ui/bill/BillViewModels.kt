@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.attachment.AttachmentOutcome
 import io.github.guohangbk.tally.data.db.dao.TagUsageRow
 import io.github.guohangbk.tally.data.db.entity.CategoryEntity
+import io.github.guohangbk.tally.data.ingest.BillSavedEvent
 import io.github.guohangbk.tally.data.preferences.TallySettings
 import io.github.guohangbk.tally.data.repository.LedgerListItem
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.BillDraft
+import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.CategoryType
 import io.github.guohangbk.tally.domain.model.ReimburseStatus
@@ -18,6 +20,8 @@ import io.github.guohangbk.tally.domain.model.RefundEntry
 import io.github.guohangbk.tally.domain.model.TallyError
 import io.github.guohangbk.tally.domain.model.TimePrecision
 import io.github.guohangbk.tally.domain.parseAmount
+import io.github.guohangbk.tally.domain.parser.KeywordLearning
+import io.github.guohangbk.tally.data.ai.KeywordSource
 import io.github.guohangbk.tally.domain.parseAmountExpression
 import io.github.guohangbk.tally.ui.common.alignToPrecision
 import io.github.guohangbk.tally.ui.common.startOfDay
@@ -135,6 +139,8 @@ class BillEntryViewModel(
     prefillOccurredAt: Long? = null,
     /** 语音 / 截图命中分类的那个词；分类被改掉时用它问一句沉淀。 */
     private val prefillKeyword: String? = null,
+    /** 这次带进来的备注是 AI 写的：静默沉淀时标成 `LEARNED_AI`。 */
+    private val noteFromAi: Boolean = false,
 ) : ViewModel() {
     /** 同一句话只问一次沉淀，即便在「再记」里连着存了几笔。 */
     private var sedimentAsked = false
@@ -429,6 +435,10 @@ class BillEntryViewModel(
         val current = local.value
         viewModelScope.launch {
             try {
+                // 从卡上「改」进来的一笔带着去重标识（订单号 / 图片指纹），要写回账单，
+                // 否则同一张图再走一次识别会被当成新账记第二笔。手工记一笔没有来源条，取到 null。
+                val identity = if (current.sourceKind != null) graph.ingestDrafts.takeIdentity() else null
+                val sourceImage = if (current.sourceKind != null) graph.ingestDrafts.takeAttachment() else null
                 val id = graph.billRepository.save(
                     BillDraft(
                         id = current.billId,
@@ -436,6 +446,9 @@ class BillEntryViewModel(
                         categoryL1Id = current.categoryL1Id,
                         categoryL2Id = current.categoryL2Id,
                         type = current.type,
+                        // 来源要跟着这一笔落库：不写的话小莉 / 语音 / 截图记的账全变成「手动」，
+                        // 列表上的来源角标就永远是空的。编辑一笔时仓库会沿用原值，不会被这里覆盖。
+                        source = billSourceOf(current.sourceKind),
                         amountMinor = current.amountMinor ?: 0L,
                         occurredAt = alignToPrecision(current.occurredAt, current.timePrecision),
                         timePrecision = current.timePrecision,
@@ -445,13 +458,43 @@ class BillEntryViewModel(
                         refundOfBillId = current.refundOfBillId,
                         excludedFromStats = current.excludedFromStats,
                         tagIds = current.selectedTags.map { it.id },
+                        externalId = identity?.first,
+                        fingerprint = identity?.second,
+                    ),
+                )
+                graph.ingestDrafts.emitBillSaved(
+                    BillSavedEvent(
+                        billId = id,
+                        amountMinor = current.amountMinor ?: 0L,
+                        occurredAt = alignToPrecision(current.occurredAt, current.timePrecision),
+                        note = current.note.ifBlank { null },
+                        savedAt = System.currentTimeMillis(),
                     ),
                 )
                 val categoryPath = (current.categoryL1?.name ?: "") +
                     current.categoryChildren.firstOrNull { it.id == current.categoryL2Id }?.name?.let { " / $it" }.orEmpty()
                 val amount = formatAmount(current.amountMinor ?: 0L)
                 val imageFailure = current.imageUri?.let { attachImage(id, it) }
+                    // 识别卡带过来的那张来源图（「账单图片」开着时才有）：直接在同一个保存动作里落下。
+                    ?: sourceImage?.let { attachBytes(id, it) }
                 val sediment = offerSediment(current)
+                // 静默沉淀：机器没命中关键词、人自己选了分类 → 把备注写成一条新规则，不弹提示。
+                // 与上面的 offerSediment 互斥：那条只处理「命中过关键词又改分类」。
+                val learned = KeywordLearning.candidate(
+                    note = current.note,
+                    sourceKind = current.sourceKind,
+                    prefillKeyword = prefillKeyword,
+                    editing = current.editing,
+                    fromAi = noteFromAi,
+                )
+                val learnedCategoryId = current.categoryL2Id ?: current.categoryL1Id
+                if (learned != null && learnedCategoryId != null) {
+                    graph.keywordSediment.rememberIfAbsent(
+                        keyword = learned.word,
+                        categoryId = learnedCategoryId,
+                        source = if (learned.fromAi) KeywordSource.LEARNED_AI else KeywordSource.LEARNED,
+                    )
+                }
                 if (repeat) {
                     // 再记：金额 / 备注 / 日期 / 图片复位，分类 / 类型 / 两个标记 / 标签保留，页面停留（F1.5）。
                     // 退款关联不保留：原单已经退过一笔，再来一笔应当是用户重新选的。
@@ -504,6 +547,14 @@ class BillEntryViewModel(
     private suspend fun attachImage(billId: String, uri: Uri): String? = withContext(Dispatchers.IO) {
         val bytes = graph.attachmentStore.readSource(uri)
             ?: return@withContext "账单已记下，图片读不出来"
+        when (val outcome = graph.attachmentStore.attachToBill(billId, bytes)) {
+            is AttachmentOutcome.Saved -> null
+            is AttachmentOutcome.NotSaved -> outcome.reason
+        }
+    }
+
+    /** 与 [attachImage] 同一条落法，只是这张图的字节已经在手上（识别那一步读过一次）。 */
+    private suspend fun attachBytes(billId: String, bytes: ByteArray): String? = withContext(Dispatchers.IO) {
         when (val outcome = graph.attachmentStore.attachToBill(billId, bytes)) {
             is AttachmentOutcome.Saved -> null
             is AttachmentOutcome.NotSaved -> outcome.reason
@@ -776,4 +827,15 @@ class BillDetailViewModel(
             }
         }
     }
+}
+
+/**
+ * 记账页顶那条来源条走的是路由参数（`bill/new?sk=...`），这里是它与账单来源的唯一映射。
+ * 认不出来的（手工记一笔、编辑旧账）一律按手工处理——来源宁可不标，也不能标错。
+ */
+private fun billSourceOf(sourceKind: String?): BillSource = when (sourceKind) {
+    "shot" -> BillSource.SCREENSHOT
+    "voice" -> BillSource.VOICE
+    "assistant" -> BillSource.ASSISTANT
+    else -> BillSource.MANUAL
 }

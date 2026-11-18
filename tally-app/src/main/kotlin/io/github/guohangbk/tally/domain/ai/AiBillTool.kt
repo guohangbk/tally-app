@@ -54,6 +54,7 @@ object AiBillTool {
      */
     class Catalog(refs: List<AiCategoryRef>) {
         private val ordered: List<Pair<String, AiCategoryRef>> = refs.mapIndexed { index, ref -> handleOf(index) to ref }
+        private val handleById: Map<String, String> = ordered.associate { (handle, ref) -> ref.id to handle }
 
         /** 短柄 → 分类，交给校验层做精确命中。 */
         val handles: Map<String, AiCategoryRef> = ordered.toMap()
@@ -61,10 +62,12 @@ object AiBillTool {
         val tools: List<AiToolSpec> = listOf(
             AiToolSpec(
                 name = PROPOSE_BILLS,
-                description = "登记这段内容里要记的账：有几笔就在 bills 里放几笔，只有一笔也照样给一个数组。" +
+                description = "把这段内容整理成待确认账单草稿：一共几笔就在 bills 里放几笔，只有一笔也照样给一个数组。" +
+                    "同一张图里的多笔订单用 item_index 标顺序；多图分段时每笔用 material_index 标注属于第几张。" +
+                    "结果不会自动记账。" +
                     "金额、日期、分类都来自这段内容本身；" +
                     "category_id 必须逐字复制给定分类表里的 id，选不出二级就选一级，都对不上就填 null。",
-                parametersSchema = withCategoryEnum(AiDraftSchema.billsJsonSchema, handles.keys.toList()),
+                parametersSchema = withCategoryEnum(AiDraftSchema.billsJsonSchema(), handles.keys.toList()),
             ),
             AiToolSpec(
                 name = SKIP,
@@ -96,11 +99,37 @@ object AiBillTool {
             }.trimEnd()
         }
 
+        /**
+         * 用户自己沉淀过的说法 → 短柄。规则命中的词带着人的习惯（「加油」记成交通而不是"其他"），
+         * 把它一并交给模型，AI 判出来的分类才跟本机规则对得上。
+         *
+         * 只发用户自己建的词：内置常用词有上百条，模型看分类表就够了；用户词表压过分类表的判断。
+         * 分类只写短柄；本次分类表里没有的词整条丢掉，不给模型编分类的机会。
+         */
+        fun keywordTable(
+            keywords: List<io.github.guohangbk.tally.domain.parser.KeywordMapping>,
+        ): String {
+            val rows = keywords
+                .filterNot { it.builtin }
+                .sortedByDescending { it.priority }
+                .mapNotNull { mapping -> handleById[mapping.categoryId]?.let { handle -> mapping.keyword to handle } }
+                .distinctBy { it.first }
+                .take(MAX_KEYWORD_HINTS)
+            if (rows.isEmpty()) return ""
+            return buildString {
+                append("用户自己沉淀过的说法（命中就照这个分类填，不必再推理；只认这几条）：\n")
+                rows.forEach { (keyword, handle) -> append("- ").append(keyword).append(" → ").append(handle).append('\n') }
+            }.trimEnd()
+        }
+
         private fun row(handle: String, type: io.github.guohangbk.tally.domain.model.CategoryType, label: String): String =
             "$handle | ${if (type == io.github.guohangbk.tally.domain.model.CategoryType.INCOME) "收入" else "支出"} | $label"
 
         private companion object {
             fun handleOf(index: Int): String = "c%02d".format(index + 1)
+
+            /** 提示词里的沉淀词上限：再多就比分类表还长，收益也不见了。 */
+            const val MAX_KEYWORD_HINTS = 120
         }
     }
 
@@ -143,9 +172,10 @@ object AiBillTool {
         catalog: Catalog,
         fallbackMillis: Long,
         zone: ZoneId = ZoneId.systemDefault(),
+        batch: Boolean = false,
     ): BillsVerdict {
         val calls = completion.toolCalls
-        if (calls.isEmpty()) return verdictOf(fromText(completion.text, catalog, fallbackMillis, zone))
+        if (calls.isEmpty()) return verdictOf(fromText(completion.text, catalog, fallbackMillis, zone), batch)
         val creates = calls.filter { it.name == PROPOSE_BILLS }
         if (creates.isEmpty()) return BillsVerdict.NotABill(NOT_A_BILL)
         val refs = catalog.handles.values.toList()
@@ -158,7 +188,7 @@ object AiBillTool {
                 AiDraftSchema.readBills(items, refs, fallbackMillis, zone, catalog.handles)
             }
         }
-        return verdictOf(verdicts)
+        return verdictOf(verdicts, batch)
     }
 
     private fun fromText(
@@ -170,8 +200,20 @@ object AiBillTool {
         AiDraftSchema.readBillsFromText(text, catalog.handles.values.toList(), fallbackMillis, zone, catalog.handles)
 
     /** 逐笔判定收成一次结果：合格的都留下，一笔没成才算「不是账」。 */
-    private fun verdictOf(verdicts: List<AiDraftVerdict>): BillsVerdict {
-        val accepted = verdicts.filterIsInstance<AiDraftVerdict.Accepted>().map { it.fields }.take(AiDraftSchema.MAX_BILLS)
+    private fun verdictOf(verdicts: List<AiDraftVerdict>, batch: Boolean): BillsVerdict {
+        // 留下整条 Accepted 而不只是 fields：它带的 `needsConfirmation` 是判级里
+        // 「日期是原文给的」与「分类真的对上了」的唯一来源，丢掉它就只剩猜。
+        val accepted = verdicts.filterIsInstance<AiDraftVerdict.Accepted>().take(AiDraftSchema.MAX_BILLS)
+        if (batch) {
+            val usable = accepted.filter { it.fields.amountMinor != null }
+            if (usable.any { it.fields.materialIndex == null }) {
+                return BillsVerdict.Rejected(INVALID)
+            }
+            val indexes = usable.mapNotNull { bill ->
+                bill.fields.itemIndex?.let { item -> bill.fields.materialIndex to item }
+            }
+            if (indexes.toSet().size != indexes.size) return BillsVerdict.Rejected(INVALID)
+        }
         val rejected = verdicts.filterIsInstance<AiDraftVerdict.Rejected>().map { it.reason }
         return when {
             accepted.isNotEmpty() -> BillsVerdict.Some(accepted, rejected)
@@ -182,7 +224,11 @@ object AiBillTool {
 
     /** 一次抽账的读取结果。[Some] 里的顺序就是模型给的顺序，超过 [AiDraftSchema.MAX_BILLS] 笔已被截断。 */
     sealed interface BillsVerdict {
-        data class Some(val fields: List<AiBillFields>, val droppedReasons: List<String>) : BillsVerdict
+        data class Some(
+            val accepted: List<AiDraftVerdict.Accepted>,
+            val droppedReasons: List<String>,
+        ) : BillsVerdict
+
         data class NotABill(val reason: String) : BillsVerdict
         data class Rejected(val reason: String) : BillsVerdict
     }

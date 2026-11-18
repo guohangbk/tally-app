@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -95,7 +96,7 @@ val TallyBottomBarHeight = 50.dp
 
 /** 账单页的悬浮 ＋：它是本页的动作，不是导航目的地。 */
 /**
- * ＋ 长按放射菜单的三个方向：上＝语音记账、左＝截图记账、右＝小莉。
+ * ＋ 长按放射菜单的三个方向：上＝语音记账、左＝识图记账、右＝小莉。
  * 没有下臂——＋ 贴在屏幕底部，向下的行程会撞系统手势区。右臂常驻：
  * 小莉关着或没配好时仍然出，只是落点变成设置或配置页，入口不会随开关凭空消失。
  *
@@ -198,6 +199,9 @@ fun BoxScope.TallyRecordFab(
     voiceActive: Boolean = false,
     /** 手指是否还落在语音臂上；滑开就说明松手会丢掉这一句。 */
     onVoiceArmed: (Boolean) -> Unit = {},
+    /** 语音 / 识图这两路开着 AI 提取：臂上多一枚 AI 角标，点开之前就知道这一步会走 AI。 */
+    voiceAi: Boolean = false,
+    imageAi: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = tallyColors
@@ -299,7 +303,7 @@ fun BoxScope.TallyRecordFab(
         BoxWithConstraints(
             modifier = Modifier
                 .matchParentSize()
-                .background(colors.ink.copy(alpha = if (colors.isDark) 0.55f else 0.42f)),
+                .background(colors.ink.copy(alpha = if (colors.isDark) 0.72f else 0.6f)),
         ) {
             // ＋ 在底部居中，所以两臂的横向落点要从屏幕中线量起：气泡中心得压在 ＋ 的正上方 / 正左方。
             val upEnd = maxWidth / 2 - BubbleHalf
@@ -313,6 +317,7 @@ fun BoxScope.TallyRecordFab(
                 hint = if (armed == TallyFanEvent.VoiceStart) "松手即结束" else "↑ 上滑",
                 hot = armed == TallyFanEvent.VoiceStart,
                 ghost = armed != TallyFanEvent.VoiceStart,
+                badge = voiceAi,
                 up = true,
                 stacked = false,
                 enterDelayMillis = 0,
@@ -322,10 +327,11 @@ fun BoxScope.TallyRecordFab(
             // 左臂的标签不能留在气泡左侧：reach 拉到 118 后，窄屏上那几个字会被屏幕左边裁掉。
             FanArm(
                 iconKey = "image",
-                label = "截图记账",
+                label = "识图记账",
                 hint = if (armed == TallyFanEvent.Screenshot) "松手即选图" else "← 左滑",
                 hot = armed == TallyFanEvent.Screenshot,
                 ghost = armed != TallyFanEvent.Screenshot,
+                badge = imageAi,
                 up = false,
                 stacked = true,
                 enterDelayMillis = FanArmStaggerMillis,
@@ -534,7 +540,9 @@ private fun PointerInputScope.armAt(position: Offset): TallyFanEvent? {
 }
 
 /**
- * 一臂：起势时从 ＋ 缩放滑出，上臂先、左臂晚 70ms；未命中的一臂压到 40%，命中那条才实体化并填墨绿。
+ * 一臂：起势时从 ＋ 缩放滑出，上臂先、左臂晚 70ms；未命中的一臂**只把标签压到 40%**，命中那条才实体化并填墨绿。
+ *
+ * 压暗不落在气泡本体上：气泡是实心卡片，半透明会让底下的账单从气泡里透出来（真机上撞见过）。
  * 上臂沿用板上的「标签在左、气泡在右」；左臂改成标签压在气泡上方——＋ 居中后
  * 左臂气泡已在屏幕左半，标签再往左伸，窄屏上就会被左边裁掉。
  */
@@ -549,6 +557,8 @@ private fun FanArm(
     stacked: Boolean,
     enterDelayMillis: Int,
     reduced: Boolean,
+    /** 这一臂这一路的 AI 提取开着：气泡右上角挂一枚 AI 角标。 */
+    badge: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val appear = remember { Animatable(if (reduced) 1f else 0f) }
@@ -562,7 +572,7 @@ private fun FanArm(
     val enter = Modifier.graphicsLayer {
         val t = appear.value
         // 弹性曲线会过冲（t 能 >1）：透明度钳一下，缩放与位移留着那个回弹。
-        alpha = (if (ghost) GhostAlpha else 1f) * t.coerceIn(0f, 1f)
+        alpha = t.coerceIn(0f, 1f)
         scaleX = 0.62f + 0.38f * t
         scaleY = 0.62f + 0.38f * t
         val slide = (1f - t) * FanArmEnter.toPx()
@@ -575,8 +585,8 @@ private fun FanArm(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            FanArmLabel(label = label, hint = hint, hot = hot, centered = true)
-            FanArmIconTile(iconKey = iconKey, label = label, hot = hot)
+            FanArmLabel(label = label, hint = hint, hot = hot, centered = true, dim = ghost)
+            FanArmIconTile(iconKey = iconKey, label = label, hot = hot, badge = badge)
         }
     } else {
         Row(
@@ -584,29 +594,36 @@ private fun FanArm(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FanArmLabel(label = label, hint = hint, hot = hot, centered = false)
-            FanArmIconTile(iconKey = iconKey, label = label, hot = hot)
+            FanArmLabel(label = label, hint = hint, hot = hot, centered = false, dim = ghost)
+            FanArmIconTile(iconKey = iconKey, label = label, hot = hot, badge = badge)
         }
     }
 }
 
 @Composable
-private fun FanArmLabel(label: String, hint: String, hot: Boolean, centered: Boolean) {
+private fun FanArmLabel(label: String, hint: String, hot: Boolean, centered: Boolean, dim: Boolean) {
     val colors = tallyColors
+    // 未命中的一臂靠标签变淡来区分：气泡必须保持不透明。
+    val fade = if (dim) GhostAlpha else 1f
     Column(horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.End) {
         Text(
             text = label,
             fontSize = 12.5.sp, lineHeight = 15.6.sp,
             fontWeight = FontWeight.Bold,
-            color = if (hot) colors.goldHi else colors.paper.copy(alpha = 0.94f),
+            color = if (hot) colors.goldHi else colors.paper.copy(alpha = 0.94f * fade),
             maxLines = 1,
         )
-        Text(text = hint, fontSize = 10.sp, lineHeight = 12.5.sp, color = colors.paper.copy(alpha = 0.62f), maxLines = 1)
+        Text(
+            text = hint,
+            fontSize = 10.sp, lineHeight = 12.5.sp,
+            color = colors.paper.copy(alpha = 0.62f * fade),
+            maxLines = 1,
+        )
     }
 }
 
 @Composable
-private fun FanArmIconTile(iconKey: String, label: String, hot: Boolean) {
+private fun FanArmIconTile(iconKey: String, label: String, hot: Boolean, badge: Boolean) {
     val colors = tallyColors
     val bubbleShape = RoundedCornerShape(FabCorner)
     Box(
@@ -617,14 +634,53 @@ private fun FanArmIconTile(iconKey: String, label: String, hot: Boolean) {
                     scaleX = 1.14f
                     scaleY = 1.14f
                 }
-            }
-            .shadow(10.dp, bubbleShape, ambientColor = colors.ink, spotColor = colors.ink)
-            .clip(bubbleShape)
-            .background(if (hot) colors.brand else colors.card)
-            .border(1.dp, if (hot) colors.brand else colors.line, bubbleShape),
+            },
         contentAlignment = Alignment.Center,
     ) {
-        InlineIcon(iconKey = iconKey, contentDescription = label, size = 22.dp, tint = if (hot) colors.onBrand else colors.ink)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                // 自己画影子，不用 Modifier.shadow：平台那层在这种尺寸下按外框矩形投，
+                // 圆角外面会露出四个直角的边（真机上看得出来）。这里下移 2dp 画一层圆角暗色。
+                .drawBehind {
+                    drawRoundRect(
+                        color = colors.ink.copy(alpha = 0.16f),
+                        topLeft = Offset(0f, 2.dp.toPx()),
+                        size = size,
+                        cornerRadius = CornerRadius(FabCorner.toPx()),
+                    )
+                }
+                .clip(bubbleShape)
+                .background(if (hot) colors.brand else colors.card)
+                .border(1.dp, if (hot) colors.brand else colors.line, bubbleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            InlineIcon(
+                iconKey = iconKey,
+                contentDescription = label,
+                size = 22.dp,
+                tint = if (hot) colors.onBrand else colors.ink,
+            )
+        }
+        // AI 角标压在气泡右上角：它是「规则认不全时这一步会走 AI」的标记，
+        // 不是第三个可点的东西，所以不占命中区、也不改气泡本身的大小。
+        if (badge) {
+            Text(
+                text = "AI",
+                fontSize = 8.sp,
+                lineHeight = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.onGlow,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    // 压进气泡自己的方框里：越出边界会被裁成半枚，而这里离屏幕边还有富余。
+                    .offset(x = (-1).dp, y = 1.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(colors.glow)
+                    .padding(horizontal = 4.dp, vertical = 1.dp),
+            )
+        }
     }
 }
 

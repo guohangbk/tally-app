@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Tally 塔莉</string>
+    <!-- 系统分享列表里显示的名字：这条入口不开小莉也能用（纯规则），所以不叫「小莉速记」。 -->
+    <string name="share_target_label">塔莉速记</string>
 
     <!-- 长按图标的快捷方式。短标签放不下时 launcher 会截断，两条都控制在四个字。 -->
     <string name="shortcut_new_bill">记一笔</string>

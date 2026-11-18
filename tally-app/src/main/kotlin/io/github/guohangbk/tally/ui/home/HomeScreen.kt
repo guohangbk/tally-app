@@ -47,6 +47,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.guohangbk.tally.data.debug.DebugLog
 import io.github.guohangbk.tally.data.ai.AssistantEntry
 import io.github.guohangbk.tally.data.notify.NotificationLink
+import io.github.guohangbk.tally.domain.ingest.IngestSource
 import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.ui.bill.BillDetailSheet
 import io.github.guohangbk.tally.domain.Period
@@ -93,15 +95,16 @@ import io.github.guohangbk.tally.ui.common.SelectionBar
 import io.github.guohangbk.tally.ui.common.TallyMonthPickerDialog
 import io.github.guohangbk.tally.ui.common.formatDay
 import io.github.guohangbk.tally.ui.common.tallyViewModel
-import io.github.guohangbk.tally.ui.assistant.QuickNoteViewModel
+import io.github.guohangbk.tally.ui.assistant.VoiceCaptureViewModel
 import io.github.guohangbk.tally.ui.assistant.ScannedBill
-import io.github.guohangbk.tally.ui.assistant.ScreenshotBatchViewModel
-import io.github.guohangbk.tally.ui.assistant.ScreenshotConfirmSheet
+import io.github.guohangbk.tally.ui.assistant.MaterialBatchViewModel
+import io.github.guohangbk.tally.ui.assistant.MaterialConfirmSheet
 import io.github.guohangbk.tally.ui.assistant.VoiceCapture
 import io.github.guohangbk.tally.ui.assistant.VoiceMaxMillis
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.BudgetUsageRow
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.RecognitionOverlay
 import io.github.guohangbk.tally.ui.design.MoneySign
 import io.github.guohangbk.tally.ui.design.MoneyText
 import io.github.guohangbk.tally.ui.design.SkeletonBar
@@ -143,7 +146,6 @@ fun TallyHomeScreen(
     onOpenLedgers: () -> Unit,
     onOpenStats: (String?, Long) -> Unit = { _, _ -> },
     onOpenBill: (String?, String?, BillType?) -> Unit = { _, _, _ -> },
-    onOpenDraftBill: (VoiceCapture) -> Unit = {},
     /** ＋ 右臂＝小莉：关闭去设置、开启未配置去配置页、可用才进对话。 */
     onOpenAssistant: (AssistantEntry) -> Unit = {},
     onOpenShotDraft: (ScannedBill) -> Unit = {},
@@ -160,6 +162,8 @@ fun TallyHomeScreen(
     val batch = tallyViewModel(key = "home-batch") { BillBatchViewModel(graph) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val guidanceState by guidance.state.collectAsStateWithLifecycle()
+    // AI 真能用（总开关开着且配好了服务商）才会亮 ＋ 上的角标；右臂落到对话页就是可用。
+    val aiReady = guidanceState.assistantEntry == AssistantEntry.Chat
     // 账本切换弹层的每本笔数才需要整表聚合：点开弹层前是空列表，不占首屏。
     val ledgerStats by viewModel.ledgerStats.collectAsStateWithLifecycle()
     // 卡片下那条预算进度 + 速览弹层的数据源（总额 + 各分类）。
@@ -214,8 +218,89 @@ fun TallyHomeScreen(
     // G-01 不自己走：这次没看到就算白教了，只有点掉、点「更多手势」或用掉 ＋ 才收起。
     // 一次性标记在浮出时就落下了，所以下次打开 App 不会再出现。
 
-    // 首页 ＋ 上滑的语音链路：识别复用速记页那套管线，结果交给记账页，不在这里落库。
-    val voice = tallyViewModel(key = "home-voice") { QuickNoteViewModel(graph) }
+    // 首页这三条机器记账入口（＋ 左滑截图、系统分享、按住说话）共用同一套收尾：
+    // 逐份识别 → 本机判级 → 汇成一张待确认列表；落库一律等人点头。
+    val materials = tallyViewModel(key = "home-material") { MaterialBatchViewModel(graph) }
+    val materialState by materials.uiState.collectAsStateWithLifecycle()
+    val pendingCount by materials.pendingCount.collectAsStateWithLifecycle()
+    var showMaterialSheet by rememberSaveable { mutableStateOf(false) }
+    val materialPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(MaterialBatchViewModel.MAX_IMAGES),
+    ) { uris ->
+        if (uris.isNotEmpty()) materials.scan(uris)
+    }
+
+    // 超出一次上限的那几张：识别一开始就说，用一句贴底气泡。
+    // 卡头以前也写一行小字，字号太小基本看不见，还跟「识别出 N 笔」抢同一行——
+    // 现在那件事归气泡，卡头只讲识别出几笔。气泡浮在识别蒙层之上，所以这时候能看见。
+    LaunchedEffect(materialState.droppedCount) {
+        if (materialState.droppedCount <= 0 || materialState.restored) return@LaunchedEffect
+        TallyToast.show(overLimitNote(materialState.droppedCount), ToastTone.INFO)
+    }
+
+    LaunchedEffect(materialState.done, materialState.scanSeq) {
+        if (!materialState.done) return@LaunchedEffect
+        // 上次没处理完的那一批：不自动摆卡，首页只留一枚「待确认」入口，点开才给。
+        if (materialState.restored) return@LaunchedEffect
+        // 「之前记过」的那些只在这里报一句，不跟新认出来的挤在同一张卡上。
+        val duplicate = materialState.duplicates
+        if (duplicate > 0) {
+            TallyToast.show(
+                if (duplicate == 1) "账单已存在，已跳过" else "有 $duplicate 笔账单已存在，已跳过",
+                ToastTone.INFO,
+            )
+        }
+        // 全重复、又没有别的结果：只留气泡，不再摆一张按钮全灰的空表。
+        if (materialState.bills.isEmpty() && materialState.failures.isEmpty()) return@LaunchedEffect
+        showMaterialSheet = true
+    }
+
+    LaunchedEffect(materialState.done, materialState.bills.any { it.editing }) {
+        if (materialState.done && materialState.bills.any { it.editing }) showMaterialSheet = true
+    }
+
+    // 逐笔确认：卡上的「逐条确认」与保存后自动接上的下一笔，都从这一条信号进记账页。
+    val nextBill by materials.nextToOpen.collectAsStateWithLifecycle()
+    LaunchedEffect(nextBill) {
+        nextBill?.let { bill ->
+            materials.consumeNext()
+            onOpenShotDraft(bill)
+        }
+    }
+
+    // 卡上没有等人处理的行了就收掉：全部存入、或逐笔确认走完最后一个，都不该留一张空表在屏幕上。
+    // 这里不能看 done——「全存完」时列表恰好空了，done 反而为假，卡会一直留着（真机上撞见过）。
+    // 有没识别到的图也照样收：那几张的交代跟着一句气泡，不必为此把空表钉在屏幕上。
+    LaunchedEffect(showMaterialSheet, materialState.settled) {
+        if (!showMaterialSheet || !materialState.settled) return@LaunchedEffect
+        val missed = materialState.failures.size
+        val anyBill = materialState.bills.isNotEmpty()
+        showMaterialSheet = false
+        materials.clear()
+        if (missed > 0) {
+            TallyToast.show(
+                when {
+                    !anyBill && missed == 1 -> "这张没识别到，换一张更清楚的试试"
+                    !anyBill -> "这 $missed 张都没识别到，换几张更清楚的试试"
+                    missed == 1 -> "有 1 张没识别到，其余都处理完了"
+                    else -> "有 $missed 张没识别到，其余都处理完了"
+                },
+                ToastTone.INFO,
+            )
+        }
+    }
+
+    // 系统分享来的图只是素材：回首页走确认卡，不进小莉对话、不进上下文。
+    LaunchedEffect(graph) {
+        graph.sharedMaterial.collect { material ->
+            if (material == null) return@collect
+            graph.consumeSharedMaterial(material.id)
+            materials.scanShared(material.uris)
+        }
+    }
+
+    // 首页 ＋ 上滑的语音链路：与截图同一条收尾，不在这里落库。
+    val voice = tallyViewModel(key = "home-voice") { VoiceCaptureViewModel(graph) }
     var recording by remember { mutableStateOf(false) }
     var analyzing by remember { mutableStateOf(false) }
     // ＋ 在不在屏幕上，决定底部那几条浮层要不要抬起来让位。
@@ -302,7 +387,7 @@ fun TallyHomeScreen(
                 if (capture.failure != null) {
                     voiceFailure = VoiceFailure(capture.failure, openSettings = graph.speechPort.hasPermission())
                 } else {
-                    onOpenDraftBill(capture)
+                    materials.scanSpoken(capture.heard)
                 }
             }
         }
@@ -389,9 +474,7 @@ fun TallyHomeScreen(
                     // 应用已经有录音权限却还是录不了，卡的多半是引擎自己：给条去设置的路。
                     VoiceFailure(capture.failure, openSettings = graph.speechPort.hasPermission())
                 capture.heard.isBlank() -> voiceToast("没有听清，可再说一次或直接打字")
-                else -> {
-                    onOpenDraftBill(capture)
-                }
+                else -> materials.scanSpoken(capture.heard)
             }
         })
     }
@@ -417,28 +500,6 @@ fun TallyHomeScreen(
             voiceLive.elapsedMs = System.currentTimeMillis() - voiceStartedAt
             if (recording && voiceLive.elapsedMs >= VoiceMaxMillis) stopVoice()
             delay(200)
-        }
-    }
-
-    // 首页 ＋ 左滑的截图链路：一次最多 9 张，逐张本机识别后汇成待确认列表。
-    val shots = tallyViewModel(key = "home-shot") { ScreenshotBatchViewModel(graph) }
-    val shotState by shots.uiState.collectAsStateWithLifecycle()
-    var showShotSheet by remember { mutableStateOf(false) }
-    var shotNotice by remember { mutableStateOf<String?>(null) }
-    val shotPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(ScreenshotBatchViewModel.MAX_IMAGES),
-    ) { uris ->
-        if (uris.isNotEmpty()) shots.scan(uris)
-    }
-
-    LaunchedEffect(shotState.done, shotState.bills.size) {
-        if (!shotState.done) return@LaunchedEffect
-        val single = shotState.bills.singleOrNull()
-        if (single != null && shotState.failures.isEmpty()) {
-            onOpenShotDraft(single)
-            shots.clear()
-        } else {
-            showShotSheet = true
         }
     }
 
@@ -521,6 +582,13 @@ fun TallyHomeScreen(
                 bar = homeBudgetBar(budgetOverview),
                 onOpenBudget = { showBudgetSheet = true },
             )
+
+            // 预算进度条下边那枚入口：上一次没处理完的清单还在文件里，一进来就看得见。
+            // 卡开着时它也不撤——撤掉再摆回来会在蒙层里闪一下，而它本来就被卡盖住，
+            // 留着不多占注意力，还能省掉那一跳。
+            if (pendingCount > 0) {
+                PendingIngestEntry(count = pendingCount) { materials.openPending { showMaterialSheet = true } }
+            }
 
             // 首帧只组合屏幕内可见的几天：非懒加载的 Column 会把整月几十笔一次性
             // 组合完（每行带图标/徒章/自定义字体），这就是之前主线程被占住 ~900ms 的真因。
@@ -643,7 +711,7 @@ fun TallyHomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        if (colors.isDark) Color.Black.copy(alpha = 0.58f) else colors.ink.copy(alpha = 0.36f),
+                        if (colors.isDark) Color.Black.copy(alpha = 0.72f) else colors.ink.copy(alpha = 0.52f),
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -681,7 +749,7 @@ fun TallyHomeScreen(
                             // 滑回原位置也算手势结束，欠着的授权框该弹还是得弹。
                             if (pendingMicPermission) requestMicPermission()
                         }
-                        TallyFanEvent.Screenshot -> shotPicker.launch(
+                        TallyFanEvent.Screenshot -> materialPicker.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                         )
                         // 右臂＝小莉：底部导航那一格搬到这里，入口从此只有一个。
@@ -689,6 +757,9 @@ fun TallyHomeScreen(
                     }
                 },
                 xiaoliEntry = guidanceState.assistantEntry,
+                // 角标只在真会走 AI 时才亮：总开关关着、或压根没配服务商，都没有「增强」这回事。
+                voiceAi = aiReady && state.settings.aiVoiceEnabled,
+                imageAi = aiReady && state.settings.aiImageEnabled,
                 guide = coach != null,
                 voiceActive = recording,
                 // 滑离语音臂就该看见「松手会丢掉这一句」，所以取消态跟着手指走。
@@ -724,27 +795,10 @@ fun TallyHomeScreen(
             )
         }
 
-        if (shotState.busy) {
-            HomeStatusCard(
-                title = shotState.stage ?: "正在本机识别…",
-                detail = "${shotState.imageDone} / ${shotState.imageTotal} 张 · 图片不离开设备",
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = tallyFabOverlayLift(false)),
-            )
-        }
-
-        shotNotice?.let { text ->
-            LaunchedEffect(text) {
-                delay(2_400)
-                shotNotice = null
-            }
-            HomeStatusCard(
-                title = text,
-                detail = null,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = tallyFabOverlayLift(false)),
+        if (materialState.busy) {
+            RecognitionOverlay(
+                title = materialState.stage ?: "正在识别",
+                detail = if (materialState.source == IngestSource.VOICE) null else "${materialState.imageDone}/${materialState.imageTotal} 张",
             )
         }
 
@@ -766,15 +820,21 @@ fun TallyHomeScreen(
 
     }
 
-    if (showShotSheet) {
-        ScreenshotConfirmSheet(
-            state = shotState,
-            onToggle = shots::toggle,
-            onEdit = { key -> shots.takeForEdit(key)?.let(onOpenShotDraft) },
-            onSave = { shots.saveChecked { count -> shotNotice = "已存入 $count 笔" } },
+    if (showMaterialSheet) {
+        MaterialConfirmSheet(
+            state = materialState,
+            onToggle = materials::toggle,
+            onEdit = materials::requestEdit,
+            onQueue = materials::requestQueue,
+            // 存完立刻报一句；卡面上没有待处理的行时，上面那条 effect 会把弹窗收掉。
+            onSave = { materials.saveChecked { count -> TallyToast.show("已存入 $count 笔", ToastTone.SUCCESS) } },
+            onDiscard = {
+                materials.discard()
+                showMaterialSheet = false
+            },
             onDismiss = {
-                showShotSheet = false
-                shots.clear()
+                showMaterialSheet = false
+                materials.clear()
             },
         )
     }
@@ -1137,6 +1197,41 @@ private fun SummaryBar(
 private fun summaryExpenseNote(billCount: Int, dailyAverageMinor: Long, grouping: Boolean): String =
     "$billCount 笔 · 日均 ${formatAmount(dailyAverageMinor, grouping)}"
 
+/** 一次给多了：一次上限就 9 张，多出来的当场不认。这件事只在首页用一句气泡交代。 */
+private fun overLimitNote(dropped: Int): String =
+    "塔莉速记一次最多识别 ${MaterialBatchViewModel.MAX_IMAGES} 张，最后 $dropped 张没有识别"
+
+/**
+ * 「还有 N 笔待确认」：上一次识别完没处理完的那一批。
+ * 它挂在预算进度条下边——那一块本来就在讲「这个月还剩多少」，待确认的账正是同一件事的续集。
+ */
+@Composable
+private fun PendingIngestEntry(count: Int, onClick: () -> Unit) {
+    val colors = tallyColors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 15.dp)
+            .padding(top = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.gold.copy(alpha = 0.13f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 11.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        InlineIcon(iconKey = "receipt", contentDescription = null, size = 13.dp, tint = colors.onGlow)
+        Text(
+            text = "有 $count 笔待确认",
+            style = TallyType.helper,
+            color = colors.ink,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        Text("去确认", style = TallyType.helper, color = colors.onGlow)
+    }
+}
+
 @Composable
 private fun SummaryCell(
     label: String,
@@ -1310,7 +1405,7 @@ private fun BudgetOverviewSheet(
     }
 }
 
-/** 底部状态卡：识别进行中与「已存入 N 笔」共用一条。 */
+/** 麦克风授权结果这类短提示，仍用底部小卡；识别进度已交给 RecognitionOverlay。 */
 @Composable
 private fun HomeStatusCard(title: String, detail: String?, modifier: Modifier = Modifier) {
     val colors = tallyColors
