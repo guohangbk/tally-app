@@ -1,6 +1,8 @@
 package io.github.guohangbk.tally.data.speech
 
 import android.Manifest
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.Intent
@@ -16,6 +18,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.guohangbk.tally.data.debug.DebugLog
 import io.github.guohangbk.tally.domain.model.TallyError
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -86,8 +89,8 @@ interface SpeechPort {
  * **一句一颗识别器**：建、用、destroy 都落在同一句里。真机上所有冻结都出在
  * 「进程内第二句复用上一句留下的识别器」上，第一句从未冻过，所以不再复用。
  *
- * 另有一只看门狗线程盯着主线程心跳：卡住超过两秒就把主线程栈写进 logcat 与文件日志，
- * 让下一次冻结自己留下现场。
+ * 另有一只看门狗线程盯着主线程心跳：**界面在前台**且卡住超过两秒，就把主线程栈写进 logcat
+ * 与文件日志，让下一次冻结自己留下现场；后台与睡眠不算卡死（见 [MainThreadWatch]）。
  *
  * 各家的内置引擎对参数组合的容忍度差别很大：小米 / 讯飞一类不认 `EXTRA_PREFER_OFFLINE`，
  * 缺 `EXTRA_CALLING_PACKAGE` 会直接回 ERROR_SERVER，Google 那套又要求语言包。
@@ -97,7 +100,7 @@ class SystemSpeechPort(context: Context) : SpeechPort {
     private val appContext = context.applicationContext
 
     init {
-        MainThreadWatch.install()
+        MainThreadWatch.install(appContext)
     }
 
     /** 引擎调用唯一合法的线程：只用来排队，不让调用方协程 `withContext(Main)` 硬等。 */
@@ -439,25 +442,32 @@ private const val TAG = "TallySpeech"
  *
  * 两帧栈相同 = 主线程真停在同一处；两帧不同 = 主线程还在往前走，多半是整机 CPU 被
  * 离线识别等负载抢到饿死——这时把全线程栈一并写出，看是谁在吃 CPU。
+ *
+ * 量时间只用 [SystemClock.uptimeMillis]，并且只在有 Activity 停在前台时才看心跳：
+ * 心跳本身是按 uptime 排的（睡眠期间不走），判定以前却读 elapsedRealtime（睡眠照走），
+ * 于是设备睡一觉醒来，两个时钟的第一个差值就等于整段睡眠——后台放一夜，第二天必报一次
+ * 「主线程卡了几百秒」，还往诊断包里灌一整份全线程栈。后台被系统冻结同理，也不该算卡死。
  */
 private object MainThreadWatch {
     private const val BEAT_MILLIS = 500L
     private const val STALL_MILLIS = 2_000L
     private const val SAMPLE_GAP_MILLIS = 1_000L
 
-    private val beatAt = AtomicLong(SystemClock.elapsedRealtime())
+    private val beatAt = AtomicLong(SystemClock.uptimeMillis())
     private val beatSeq = AtomicLong(0L)
     private val reportedSeq = AtomicLong(-1L)
     private val stalledAt = AtomicLong(0L)
+    /** 停在前台的 Activity 数：0 表示界面不在，心跳与卡死判定都先停。 */
+    private val resumed = AtomicInteger(0)
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val beat = object : Runnable {
         override fun run() {
-            beatAt.set(SystemClock.elapsedRealtime())
+            beatAt.set(SystemClock.uptimeMillis())
             beatSeq.incrementAndGet()
             val stallStart = stalledAt.get()
             if (stallStart != 0L && stalledAt.compareAndSet(stallStart, 0L)) {
-                val recovered = "主线程恢复 · 卡了 ${SystemClock.elapsedRealtime() - stallStart}ms"
+                val recovered = "主线程恢复 · 卡了 ${SystemClock.uptimeMillis() - stallStart}ms"
                 Log.w(TAG, recovered)
                 DebugLog.log(TAG, recovered)
             }
@@ -468,20 +478,49 @@ private object MainThreadWatch {
     @Volatile
     private var installed = false
 
-    fun install() {
+    fun install(context: Context) {
         if (installed) return
         installed = true
+        (context.applicationContext as? Application)?.registerActivityLifecycleCallbacks(
+            object : Application.ActivityLifecycleCallbacks {
+                // 前后台切换都重设基线：切走那一刻起就不该再算「界面没在动」，切回来也不该
+                // 拿后台这段时间去顶。回调本身跑在主线程上，等于顺手确认了一次「主线程还活着」。
+                override fun onActivityResumed(activity: Activity) {
+                    resumed.incrementAndGet()
+                    rebase()
+                }
+
+                override fun onActivityPaused(activity: Activity) {
+                    resumed.decrementAndGet()
+                    rebase()
+                }
+
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+                override fun onActivityStarted(activity: Activity) = Unit
+                override fun onActivityStopped(activity: Activity) = Unit
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+                override fun onActivityDestroyed(activity: Activity) = Unit
+            },
+        )
         mainHandler.post(beat)
         Thread({
             while (true) {
                 Thread.sleep(BEAT_MILLIS)
-                val silentFor = SystemClock.elapsedRealtime() - beatAt.get()
+                if (resumed.get() <= 0) continue
+                val silentFor = SystemClock.uptimeMillis() - beatAt.get()
                 if (silentFor < STALL_MILLIS) continue
                 val seq = beatSeq.get()
                 if (reportedSeq.getAndSet(seq) == seq) continue
                 report(silentFor)
             }
         }, "TallyMainWatch").apply { isDaemon = true }.start()
+    }
+
+    /** 重设基准：把「刚才那一下」当成最新心跳，别把切前后台前后的空档算进卡死时长。 */
+    private fun rebase() {
+        beatAt.set(SystemClock.uptimeMillis())
+        reportedSeq.set(beatSeq.get())
+        stalledAt.set(0L)
     }
 
     private fun report(silentFor: Long) {

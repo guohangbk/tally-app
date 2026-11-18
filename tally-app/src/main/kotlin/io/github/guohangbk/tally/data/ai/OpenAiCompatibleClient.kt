@@ -14,6 +14,7 @@ import io.github.guohangbk.tally.domain.ai.AiTurn
 import io.github.guohangbk.tally.domain.ai.AiUsage
 import java.io.IOException
 import java.io.InterruptedIOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,17 @@ class OpenAiCompatibleClient(
     private val client: OkHttpClient = OkHttpClient(),
     private val json: Json = AiWire.json,
 ) : AiClient {
+
+    /** 上次实测可用的结构化形态，按「服务地址 + 模型」记；只在内存里，进程重启后重新探。 */
+    private val structuredModes = ConcurrentHashMap<String, StructuredMode>()
+
+    private enum class StructuredMode { TOOLS_STRICT, TOOLS_RELAXED, SCHEMA, SCHEMA_EMBEDDED, TEXT }
+
+    private data class StructuredAttempt(
+        val mode: StructuredMode,
+        val request: AiRequest,
+        val responseFormat: JsonElement?,
+    )
 
     /**
      * 连通性探测：能不能鉴权、能不能路由到模型，与「这次有没有吐出文字」是两件事。
@@ -101,15 +113,15 @@ class OpenAiCompatibleClient(
         runCatching {
             call.execute().use { response ->
                 if (!response.isSuccessful) {
-                    DebugLog.log("小莉探测", "GET models → HTTP ${response.code}，退回 chat/completions 探测")
+                    DebugLog.log("AI 探测", "GET models → HTTP ${response.code}，退回 chat/completions 探测")
                     return@use false
                 }
                 val listed = response.body?.string().orEmpty().contains("\"${target.model}\"")
-                DebugLog.log("小莉探测", "GET models → 200 · 列表含「${target.model}」=$listed")
+                DebugLog.log("AI 探测", "GET models → 200 · 列表含「${target.model}」=$listed")
                 listed
             }
         }.getOrElse {
-            DebugLog.log("小莉探测", "GET models 失败 ${it.javaClass.simpleName}，退回 chat/completions 探测")
+            DebugLog.log("AI 探测", "GET models 失败 ${it.javaClass.simpleName}，退回 chat/completions 探测")
             false
         }
     }
@@ -171,45 +183,73 @@ class OpenAiCompatibleClient(
      * tools → json_schema → json_object + schema 写进提示 → 纯文本（由 AiDraftSchema 剥围栏）。
      * 只有网关明确拒绝（400 → SCHEMA）才继续降级，其余错误直接返回；
      * 四条路输出的是同一份字段定义，调用方拿到的校验结果因此不依赖网关支持哪一种。
+     *
+     * 上次成功的形态会按「服务地址 + 模型」记住，下次直接从那一档开始：不支持某个字段的网关
+     * 不必每次都先撞一遍 400。只缓存在内存里，重启后重新探一次，代价只是第一条请求。
      */
     private suspend fun sendStructuredFallbacks(
         target: AiTarget,
         request: AiRequest,
     ): AiResult<AiCompletion> {
+        val attempts = structuredAttempts(request)
+        if (attempts.size == 1) {
+            return send(target, attempts.single().request, attempts.single().responseFormat)
+        }
+        val key = structuredModeKey(target)
+        val remembered = structuredModes[key]
+        val start = attempts.indexOfFirst { it.mode == remembered }.takeIf { it >= 0 } ?: 0
+        if (start > 0) {
+            DebugLog.log("AI 请求", "沿用上次可用的结构化形态 ${attempts[start].mode}，不再先试上一档")
+        }
+        var last: AiResult<AiCompletion>? = null
+        for (index in start until attempts.size) {
+            val attempt = attempts[index]
+            val result = send(target, attempt.request, attempt.responseFormat)
+            // 只有网关明确拒绝（400）才继续降级；网络/鉴权/额度错误直接交回调用方。
+            if (result is AiResult.Failure && result.kind == AiErrorKind.SCHEMA) {
+                last = result
+                continue
+            }
+            if (result is AiResult.Success) {
+                if (structuredModes.size > STRUCTURED_MODE_CACHE_LIMIT) structuredModes.clear()
+                structuredModes[key] = attempt.mode
+            }
+            return result
+        }
+        // 记住的那一档这次也不行了：忘掉它，下一条请求从头再探一遍，别把一次临时故障当成长期能力。
+        if (remembered != null) structuredModes.remove(key)
+        return last ?: AiResult.failed(AiErrorKind.SCHEMA, "请求构造失败")
+    }
+
+    /** 四档形态的完整降级链；当前请求用不上的档位直接不出现。 */
+    private fun structuredAttempts(request: AiRequest): List<StructuredAttempt> {
+        val attempts = mutableListOf<StructuredAttempt>()
         if (request.tools.isNotEmpty()) {
-            val viaTools = send(target, request, responseFormat = null)
-            if (viaTools !is AiResult.Failure || viaTools.kind != AiErrorKind.SCHEMA) return viaTools
+            attempts += StructuredAttempt(StructuredMode.TOOLS_STRICT, request, null)
             // 最先被网关拒掉的往往是 tool_choice:"required" 和 parallel_tool_calls 这两个字段，
             // 不是 tools 本身。先摘掉它们再走下一级：一步跳到 JSON Schema 就只能返回一个对象，
             // "一句话三笔"当场被压成一张卡——那正是卡片少一笔的来处。
             val relaxed = request.copy(toolChoice = AiToolChoice.Auto, allowParallelTools = false)
-            val viaRelaxed = send(target, relaxed, responseFormat = null)
-            if (viaRelaxed !is AiResult.Failure || viaRelaxed.kind != AiErrorKind.SCHEMA) return viaRelaxed
-            if (request.jsonSchema == null) return viaRelaxed
-            return sendSchemaFallbacks(target, relaxed.copy(tools = emptyList()))
+            if (relaxed != request) attempts += StructuredAttempt(StructuredMode.TOOLS_RELAXED, relaxed, null)
         }
-        return sendSchemaFallbacks(target, request)
-    }
-
-    private suspend fun sendSchemaFallbacks(
-        target: AiTarget,
-        request: AiRequest,
-    ): AiResult<AiCompletion> {
+        val withoutTools = request.copy(tools = emptyList(), toolChoice = AiToolChoice.Auto, allowParallelTools = false)
         val schema = request.jsonSchema
-        if (schema == null) return send(target, request)
-
-        val plain = request.copy(jsonSchema = null)
-        val first = send(target, plain, responseFormat = jsonSchemaFormat(schema))
-        if (first !is AiResult.Failure || first.kind != AiErrorKind.SCHEMA) return first
-
+        if (schema == null) {
+            attempts += StructuredAttempt(StructuredMode.TEXT, withoutTools, null)
+            return attempts
+        }
+        val plain = withoutTools.copy(jsonSchema = null)
+        attempts += StructuredAttempt(StructuredMode.SCHEMA, plain, jsonSchemaFormat(schema))
         val embedded = plain.copy(
             instruction = request.instruction + "\n\n只按以下 JSON Schema 输出，不要输出别的内容：\n" + schema,
         )
-        val second = send(target, embedded, responseFormat = jsonObjectFormat())
-        if (second !is AiResult.Failure || second.kind != AiErrorKind.SCHEMA) return second
-
-        return send(target, embedded, responseFormat = null)
+        attempts += StructuredAttempt(StructuredMode.SCHEMA_EMBEDDED, embedded, jsonObjectFormat())
+        attempts += StructuredAttempt(StructuredMode.TEXT, embedded, null)
+        return attempts
     }
+
+    private fun structuredModeKey(target: AiTarget): String =
+        target.baseUrl.trimEnd('/') + "|" + target.model
 
     private suspend fun send(
         target: AiTarget,
@@ -257,7 +297,7 @@ class OpenAiCompatibleClient(
             val body = runCatching { AiWire.bodyOf(request, target.model, responseFormat) }
                 .getOrElse { return@withContext AiResult.failed(AiErrorKind.SCHEMA, "请求构造失败") }
             DebugLog.log(
-                "小莉请求",
+                "AI 请求",
                 "→ ${target.model} · ${request.turns.size} 轮 · tokens=${request.maxTokens ?: "-"} · " +
                     "tools=${request.tools.size} · format=${responseFormat?.let { shapeOf(it) } ?: "-"} · ${body.length}B",
             )
@@ -273,7 +313,7 @@ class OpenAiCompatibleClient(
                 call.execute().use { response ->
                     val text = response.body?.string().orEmpty()
                     if (!response.isSuccessful) {
-                        DebugLog.log("小莉请求", "← HTTP ${response.code} ${text.take(MAX_ERROR_DETAIL)}")
+                        DebugLog.log("AI 请求", "← HTTP ${response.code} ${text.take(MAX_ERROR_DETAIL)}")
                         return@withContext classify(response.code, text)
                     }
                     val elapsed = (System.nanoTime() - startedAt) / 1_000_000L
@@ -285,7 +325,7 @@ class OpenAiCompatibleClient(
                 // callTimeout 到点是「取消这次 call」实现的，抛出来的也是 IOException("canceled")。
                 // 这一条链路上没有任何地方 call.cancel()（协程 Job 取消传不进阻塞的 execute()），
                 // 所以到这里只可能是超时——以前按 isCanceled 判成「已取消」，用户就以为是自己点了停止。
-                DebugLog.log("小莉请求", "网络失败 ${io.javaClass.simpleName} ${io.message}")
+                DebugLog.log("AI 请求", "网络失败 ${io.javaClass.simpleName} ${io.message}")
                 if (io.isTimeout()) {
                     AiResult.failed(AiErrorKind.NETWORK, TIMEOUT_MESSAGE)
                 } else {
@@ -304,7 +344,7 @@ class OpenAiCompatibleClient(
             feedSse(state, body.lineSequence().iterator(), onPiece = {})
             val toolCalls = stitchToolCalls(state.fragments)
             DebugLog.log(
-                "小莉请求",
+                "AI 请求",
                 "← 收到的是流式分片，已合并 · content=${state.content.length}字 · " +
                     "tools=${toolCalls.size} · 分片=${state.chunks}个",
             )
@@ -319,7 +359,7 @@ class OpenAiCompatibleClient(
             )
         }
         val response = runCatching { json.decodeFromString<ChatResponse>(body) }.getOrNull()
-            ?: return AiResult.failed(AiErrorKind.SCHEMA, "返回不是合法 JSON").also { DebugLog.log("小莉请求", "← JSON 解析失败 ${text.take(MAX_ERROR_DETAIL)}") }
+            ?: return AiResult.failed(AiErrorKind.SCHEMA, "返回不是合法 JSON").also { DebugLog.log("AI 请求", "← JSON 解析失败 ${text.take(MAX_ERROR_DETAIL)}") }
         response.error?.message?.let { return AiResult.failed(AiErrorKind.SCHEMA, it) }
         val choice = response.choices.firstOrNull()
         return replyOf(
@@ -344,19 +384,19 @@ class OpenAiCompatibleClient(
         rawForLog: String,
     ): AiResult<AiCompletion> {
         DebugLog.log(
-            "小莉请求",
+            "AI 请求",
             "← ${latencyMillis}ms · finish=${finishReason ?: "-"} · content=${text.length}字 · " +
                 "tools=${toolCalls.size} · prompt=${usage?.promptTokens ?: "-"}/out=${usage?.completionTokens ?: "-"}",
         )
         if (text.isBlank() && toolCalls.isEmpty()) {
             // 探测能容忍空内容；真正要答案的调用仍然是错误，界面才会提示重试。
             if (tolerant) {
-                DebugLog.log("小莉请求", "内容为空但链路正常，按连通成功处理 · 原文 ${rawForLog.take(MAX_EMPTY_BODY)}")
+                DebugLog.log("AI 请求", "内容为空但链路正常，按连通成功处理 · 原文 ${rawForLog.take(MAX_EMPTY_BODY)}")
                 return AiResult.success(
                     AiCompletion(text = "", usage = AiUsage(usage?.promptTokens, usage?.completionTokens), latencyMillis = latencyMillis, finishReason = finishReason),
                 )
             }
-            DebugLog.log("小莉请求", "没有内容，原文 ${rawForLog.take(MAX_EMPTY_BODY)}")
+            DebugLog.log("AI 请求", "没有内容，原文 ${rawForLog.take(MAX_EMPTY_BODY)}")
             return AiResult.failed(AiErrorKind.SCHEMA, "返回里没有内容")
         }
         return AiResult.success(
@@ -463,6 +503,7 @@ class OpenAiCompatibleClient(
         private const val SSE_DONE = "[DONE]"
         private const val SERVER_RETRY = 2
         private const val MAX_ERROR_DETAIL = 240
+        private const val STRUCTURED_MODE_CACHE_LIMIT = 64
 
         /** 空内容时打进调试控制台的原文长度——只够看形状，不放大段用户数据。 */
         private const val MAX_EMPTY_BODY = 400

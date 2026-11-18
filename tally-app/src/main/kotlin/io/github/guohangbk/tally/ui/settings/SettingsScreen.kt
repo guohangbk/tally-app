@@ -102,8 +102,10 @@ fun SettingsScreen(
     onOpenImport: () -> Unit,
     onOpenExport: () -> Unit,
     onOpenBackup: () -> Unit = {},
-    /** 「小莉配置」的去向：独立配置页，不是小莉对话页。这一条不给默认值，接错就编译不过。 */
+    /** 「服务商配置」的去向：独立配置页，不是小莉对话页。这一条不给默认值，接错就编译不过。 */
     onOpenAssistantConfig: () -> Unit,
+    /** 「自动记账」的去向：机器记账那一块的总开关页（AI 提取、账单图片，以后还有更多自动入口）。 */
+    onOpenAutoBooking: () -> Unit,
     onOpenKeywordRules: () -> Unit,
     /** 标签管理：全局跨账本的胶囊墙，与关键词规则同在「归类」组。 */
     onOpenTags: () -> Unit,
@@ -137,7 +139,7 @@ fun SettingsScreen(
             val outcome = runCatching { withContext(Dispatchers.IO) { Diagnostics.export(context, graph) } }
             exporting = false
             outcome.onSuccess { file ->
-                TallyToast.show("诊断包已生成 · ${file.name}", ToastTone.INFO)
+                TallyToast.show("诊断包已生成：${file.name}", ToastTone.INFO)
                 context.startActivity(
                     Intent.createChooser(
                         Intent(Intent.ACTION_SEND).apply {
@@ -182,89 +184,6 @@ fun SettingsScreen(
         ) {
             Spacer(Modifier.height(4.dp))
 
-            SettingsSection(title = "记账偏好") {
-                SettingsSwitchRow(
-                    checked = settings.quickOpenEnabled,
-                    onCheckedChange = viewModel::setQuickOpenEnabled,
-                    label = "秒开模式",
-                    description = if (settings.quickOpenEnabled) {
-                        "已开启 · 打开应用直接进记账页"
-                    } else {
-                        "已关闭 · 打开应用先进首页"
-                    },
-                )
-                SettingsDivider()
-                // 记账页备注下面那排 chip 的开关都收进这一页（图片 / 账单时间 / 报销 / 排除 / 标签），
-                // 主页面不再一条一条铺开。
-                SettingsNavRow(
-                    title = "记账键盘",
-                    // 不再把四个开关的名字铺在这里：点进去就是那四个，重复一遍只是把副标题撑成两行。
-                    // 留一句说清「控的是哪一排」，也顺带和 4×4 金额键盘区分开。
-                    subtitle = "备注下面那排按钮的开关",
-                    iconKey = "switch",
-                    onClick = onOpenBillKeypad,
-                )
-                SettingsDivider()
-                // 发薪日不是 1 号时，首页与统计的「本月」必须一起挪，否则两边对不上。
-                SettingsNavRow(
-                    title = "每月起始日",
-                    subtitle = "${state.monthStartDay} 号 · 可选 1–28",
-                    iconKey = "cal",
-                    onClick = { monthStartPicker = true },
-                )
-            }
-
-            // 标签与关键词规则都是「账目怎么归类」的配置：低频、不挂某一本账，
-            // 所以不跟导入导出混在「数据」里，单独一小段。
-            SettingsSection(title = "归类") {
-                // 标签是全局的，不挂在某一本账下面；入口放这里，不占抽屉「管理」那一排高频对象。
-                SettingsNavRow(
-                    title = "标签",
-                    subtitle = "跨账本通用 · 点胶囊出操作，长按拖动排序",
-                    iconKey = "tag",
-                    onClick = onOpenTags,
-                )
-                SettingsDivider()
-                // 关键词规则是语音与截图共用的那一张表，属于「怎么落成账单」而不是数据。
-                SettingsNavRow(
-                    title = "关键词规则",
-                    subtitle = "内置词只读 · 我的规则优先",
-                    iconKey = "search",
-                    onClick = onOpenKeywordRules,
-                )
-            }
-
-            // 小莉分组：只有开启后才有金色触点；＋ 右臂那三个字常驻，但没开时只是去设置的路口。
-            SettingsSection(title = "小莉（AI）", gold = assistantOn) {
-                SettingsSwitchRow(
-                    checked = assistantOn,
-                    onCheckedChange = viewModel::setAssistantEnabled,
-                    label = "小莉（AI）",
-                    description = if (assistantOn) {
-                        "已开启 · 长按 ＋ 右滑，配好就能聊"
-                    } else {
-                        "已关闭 · 右滑仍会带你到这里的开关"
-                    },
-                    gold = assistantOn,
-                )
-                SettingsDivider()
-                SettingsNavRow(
-                    title = "小莉配置",
-                    subtitle = "服务商、模型与连接测试",
-                    iconKey = "ai",
-                    onClick = onOpenAssistantConfig,
-                )
-            }
-
-            SettingsSection(title = "提醒") {
-                SettingsNavRow(
-                    title = "提醒与通知",
-                    subtitle = "未记账 · 周期与分期到期 · 执行失败",
-                    iconKey = "clock",
-                    onClick = onOpenNotifications,
-                )
-            }
-
             SettingsSection(title = "外观") {
                 SettingsChoiceRow(
                     label = "主题",
@@ -292,21 +211,106 @@ fun SettingsScreen(
                     description = "金额每三位加逗号，例如 2,780.45",
                 )
                 SettingsDivider()
-                SettingsInfoRow(label = "默认货币", value = "${state.defaultCurrency} · 固定人民币")
+                SettingsInfoRow(label = "默认货币", value = "${state.defaultCurrency}，固定人民币")
+            }
+
+            SettingsSection(title = "记账偏好") {
+                SettingsSwitchRow(
+                    checked = settings.quickOpenEnabled,
+                    onCheckedChange = viewModel::setQuickOpenEnabled,
+                    label = "秒开模式",
+                    description = "打开应用直接进记账页，不经过首页",
+                )
+                SettingsDivider()
+                // 记账页备注下面那排 chip 的开关都收进这一页（图片 / 账单时间 / 报销 / 排除 / 标签），
+                // 主页面不再一条一条铺开。
+                SettingsNavRow(
+                    title = "记账键盘",
+                    // 不再把四个开关的名字铺在这里：点进去就是那四个，重复一遍只是把副标题撑成两行。
+                    // 留一句说清「控的是哪一排」，也顺带和 4×4 金额键盘区分开。
+                    subtitle = "备注下面那排按钮的开关",
+                    iconKey = "switch",
+                    onClick = onOpenBillKeypad,
+                )
+                SettingsDivider()
+                // 发薪日不是 1 号时，首页与统计的「本月」必须一起挪，否则两边对不上。
+                SettingsNavRow(
+                    title = "每月起始日",
+                    subtitle = "${state.monthStartDay} 号，可选 1–28",
+                    iconKey = "calendar",
+                    onClick = { monthStartPicker = true },
+                )
+            }
+
+            // 标签与关键词规则都是「账目怎么归类」的配置：低频、不挂某一本账，
+            // 所以不跟导入导出混在「数据」里，单独一小段。
+            SettingsSection(title = "归类") {
+                // 标签是全局的，不挂在某一本账下面；入口放这里，不占抽屉「管理」那一排高频对象。
+                SettingsNavRow(
+                    title = "标签",
+                    subtitle = "跨账本通用，点胶囊出操作，长按拖动排序",
+                    iconKey = "tag",
+                    onClick = onOpenTags,
+                )
+                SettingsDivider()
+                // 关键词规则是语音与截图共用的那一张表，属于「怎么落成账单」而不是数据。
+                SettingsNavRow(
+                    title = "关键词规则",
+                    subtitle = "内置词只读，我的规则优先",
+                    iconKey = "search",
+                    onClick = onOpenKeywordRules,
+                )
+            }
+
+            // AI 分组：只有开启后才点亮金色；＋ 右臂那三个字常驻，但没开时只是去设置的路口。
+            // 自动记账挂在这里而不是单独成组：它增强的是 AI 认账那一步，服务商没配好就没有意义。
+            SettingsSection(title = "AI", gold = assistantOn) {
+                SettingsSwitchRow(
+                    checked = assistantOn,
+                    onCheckedChange = viewModel::setAssistantEnabled,
+                    label = "问小莉",
+                    description = "开启后长按 ＋ 右滑直接进入对话",
+                    gold = assistantOn,
+                )
+                SettingsDivider()
+                SettingsNavRow(
+                    title = "服务商配置",
+                    subtitle = "服务商、模型与连接测试",
+                    iconKey = "key",
+                    onClick = onOpenAssistantConfig,
+                )
+                SettingsDivider()
+                SettingsNavRow(
+                    title = "自动记账",
+                    // 这一页以后还装无障碍记账、通知记账这类开关，副标题只讲「机器记账这一块」，
+                    // 不列举当前那几项，免得每加一个开关就要回来改一次。
+                    subtitle = "AI 提取、账单图片与各种自动入口",
+                    iconKey = "spark",
+                    onClick = onOpenAutoBooking,
+                )
+            }
+
+            SettingsSection(title = "提醒") {
+                SettingsNavRow(
+                    title = "提醒与通知",
+                    subtitle = "没记账、周期到期、分期到期、执行失败都会提醒",
+                    iconKey = "clock",
+                    onClick = onOpenNotifications,
+                )
             }
 
             // 数据分组只留「这里才有」的东西：账本、分类、周期、分期在侧边栏「管理」组里已经有入口。
             SettingsSection(title = "数据") {
                 SettingsNavRow(
                     title = "导入账单",
-                    subtitle = "模板 / 钱迹 / 支付宝 · 选文件后预览与对账",
+                    subtitle = "模板、钱迹、支付宝，选文件后预览与对账",
                     iconKey = "import",
                     onClick = onOpenImport,
                 )
                 SettingsDivider()
                 SettingsNavRow(
                     title = "导出账单",
-                    subtitle = "14 列 CSV / XLSX · 可原样读回",
+                    subtitle = "14 列 CSV 或 XLSX，可原样读回",
                     iconKey = "export",
                     onClick = onOpenExport,
                 )
@@ -320,7 +324,7 @@ fun SettingsScreen(
                 SettingsDivider()
                 SettingsNavRow(
                     title = "回收站",
-                    subtitle = "删掉的账单先留着 · 可恢复或彻底删除",
+                    subtitle = "删掉的账单先留着，可恢复或彻底删除",
                     iconKey = "recycle",
                     onClick = onOpenRecycle,
                 )
@@ -365,7 +369,7 @@ fun SettingsScreen(
                 // 诊断包是给作者排障用的，跟版本、机型同一语境；它不是账单数据，不进「数据」组。
                 TallyListRow(
                     title = "导出诊断包",
-                    subtitle = if (exporting) "正在生成…" else "版本 · 机型 · 日志尾巴 · 不含任何账单内容",
+                    subtitle = if (exporting) "正在生成…" else "版本、机型、日志尾巴，不含任何账单内容",
                     iconKey = "note",
                     iconSize = 30,
                     onClick = ::exportDiagnostics,
@@ -373,7 +377,7 @@ fun SettingsScreen(
                 SettingsDivider()
                 SettingsNavRow(
                     title = "许可与依赖",
-                    subtitle = "BUSL-1.1 · 源码可用许可 · 第三方依赖清单",
+                    subtitle = "BUSL-1.1 源码可用许可，附第三方依赖清单",
                     iconKey = "shield",
                     onClick = onOpenLicense,
                 )
@@ -388,7 +392,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "Tally 塔莉 · 数据只存在这台手机里",
+                text = "Tally 塔莉，数据只存在这台手机里",
                 style = TallyType.helper,
                 color = colors.ink3,
                 textAlign = TextAlign.Center,
@@ -434,7 +438,7 @@ private fun SettingsDialogHost(
     if (state.dialog == SettingsDialogKind.RESET_PREFERENCES) {
         TallyConfirmDialog(
             title = "恢复默认偏好？",
-            message = "记账键盘（图片 / 账单时间 / 报销 / 排除 / 标签）、主题与显示会回到出厂默认，小莉保持关闭。账单、账本、分类和图片附件都不受影响。",
+            message = "记账键盘（图片 / 账单时间 / 报销 / 排除 / 标签）、主题与显示会回到出厂默认，问小莉保持关闭。账单、账本、分类和图片附件都不受影响。",
             confirmLabel = "恢复默认",
             dismissLabel = "取消",
             destructive = true,

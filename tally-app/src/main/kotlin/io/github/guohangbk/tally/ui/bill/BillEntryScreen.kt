@@ -101,6 +101,8 @@ fun BillEntryScreen(
     prefillSourceKind: String? = null,
     prefillOccurredAt: Long? = null,
     prefillKeyword: String? = null,
+    /** 带进来的备注是 AI 写的：保存时沉淀成 `LEARNED_AI`，其余一样。 */
+    prefillNoteFromAi: Boolean = false,
     onBack: () -> Unit,
     onSaved: (String) -> Unit,
     onAddSubCategory: (String) -> Unit = {},
@@ -119,6 +121,7 @@ fun BillEntryScreen(
             prefillSourceKind = prefillSourceKind,
             prefillOccurredAt = prefillOccurredAt,
             prefillKeyword = prefillKeyword,
+            noteFromAi = prefillNoteFromAi,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -197,9 +200,15 @@ fun BillEntryScreen(
 
             // .srcbar：识别来源条。撤销只清掉机器填的三项，页面不关，仍可手填。
             state.sourceText?.let { heard ->
+                val fromShot = state.sourceKind == "shot"
+                val fromAssistant = state.sourceKind == "assistant"
                 SourceBar(
-                    iconKey = if (state.sourceKind == "shot") "image" else "mic",
-                    label = if (state.sourceKind == "shot") "截图识别 · 已填充" else "语音识别 · 已填充",
+                    iconKey = if (fromShot) "image" else if (fromAssistant) "ai" else "mic",
+                    label = when {
+                        fromShot -> "截图识别 · 已填充"
+                        fromAssistant -> "AI 提取 · 已填充"
+                        else -> "语音识别 · 已填充"
+                    },
                     heard = heard,
                     onUndo = viewModel::undoSource,
                 )

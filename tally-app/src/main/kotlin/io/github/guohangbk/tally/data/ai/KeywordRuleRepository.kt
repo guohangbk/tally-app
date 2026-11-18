@@ -85,6 +85,23 @@ class KeywordRuleRepository(
         insert(trimmed, categoryId, KeywordSource.LEARNED)
     }
 
+    /**
+     * 静默沉淀：同名规则已经存在就跳过，**不改绑**——改绑是 [learn] 那条要人点头的路。
+     * 只有真的插了一条才返回 true。
+     */
+    suspend fun addIfAbsent(
+        keyword: String,
+        categoryId: String,
+        source: String = KeywordSource.LEARNED,
+    ): Boolean {
+        val trimmed = keyword.trim()
+        if (trimmed.isEmpty()) return false
+        categoryDao.findById(categoryId) ?: return false
+        if (dao.findKeyword(trimmed) != null) return false
+        insert(trimmed, categoryId, source)
+        return true
+    }
+
     suspend fun updateCategory(id: String, categoryId: String) {
         categoryDao.findById(categoryId) ?: throw TallyError.CategoryNotFound
         dao.updateCategory(id, categoryId, now())
@@ -193,5 +210,7 @@ data class AddKeywordsResult(
 object KeywordSource {
     const val MANUAL = "MANUAL"
     const val LEARNED = "LEARNED"
+    /** 同样是人保存时学的，但备注是 AI 写的：留个来源，规则页上也能分开看。 */
+    const val LEARNED_AI = "LEARNED_AI"
     const val BUILTIN = "BUILTIN"
 }

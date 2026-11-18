@@ -175,17 +175,20 @@ data class BudgetCategoryDigest(
 )
 
 object MonthlyDigestBuilder {
-    private const val LARGE_EXPENSE_MULTIPLES = 8
+    const val LARGE_EXPENSE_MULTIPLES = 8
     private const val TOP_CATEGORY_COUNT = 8
-    private const val TOP_LARGE_COUNT = 3
+    const val TOP_LARGE_COUNT = 3
 
     /**
      * [excludePendingReimburse] 必须与统计页那个开关同步：口径不同的两份数字，
      * 一份在屏上一份在报告里，用户第一眼就会发现对不上。
+     *
+     * [largeExpenses] 只用来挑大额支出那三条，调用方已按金额门槛筛过；
+     * 分类笔数直接取统计结果里的 `billCount`，不再为它拉一遍整期账单。
      */
     fun build(
         statistics: StatisticsSnapshot,
-        bills: List<BillListItem>,
+        largeExpenses: List<BillListItem>,
         ledgerName: String,
         excludePendingReimburse: Boolean,
         budget: BudgetDigest?,
@@ -196,7 +199,6 @@ object MonthlyDigestBuilder {
         val range = statistics.granularity == StatsGranularity.RANGE
         val average = statistics.averageExpenseMinor
 
-        val counts = bills.groupingBy { it.bill.categoryL1Id }.eachCount()
         val categories = statistics.categoryRanking.asSequence()
             .filter { it.categoryId != null }
             .take(TOP_CATEGORY_COUNT)
@@ -204,13 +206,13 @@ object MonthlyDigestBuilder {
                 DigestCategory(
                     name = total.name,
                     amountMinor = total.amountMinor,
-                    count = counts[total.categoryId] ?: 0,
+                    count = total.billCount,
                     percentOfExpense = if (statistics.summary.expenseMinor == 0L) 0 else (total.amountMinor * 100 / statistics.summary.expenseMinor).toInt(),
                 )
             }
             .toList()
 
-        val large = bills.asSequence()
+        val large = largeExpenses.asSequence()
             .filter { it.bill.type == BillType.EXPENSE.name && !it.bill.excludedFromStats }
             .filterNot { excludePendingReimburse && it.bill.reimbursed == ReimburseStatus.PENDING.name }
             .filter { average > 0 && it.bill.amountMinor >= average * LARGE_EXPENSE_MULTIPLES }

@@ -227,8 +227,13 @@ fun SearchScreen(
                             FilterLabel("来源")
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                                 FilterButton("全部", filter.source == null, { viewModel.setSource(null) })
-                                FilterButton("手动", filter.source == BillSource.MANUAL, { viewModel.setSource(BillSource.MANUAL) })
-                                FilterButton("导入", filter.source == BillSource.IMPORT, { viewModel.setSource(BillSource.IMPORT) })
+                                sourceFilterOptions.forEach { source ->
+                                    FilterButton(
+                                        label = sourceFilterLabel(source),
+                                        selected = filter.source == source,
+                                        onClick = { viewModel.setSource(source) },
+                                    )
+                                }
                             }
                             Spacer(Modifier.height(9.dp))
                             FilterLabel("排序")
@@ -603,7 +608,7 @@ private fun activeFilterChips(
         }
     }
     categoryLabel?.let { chips += it }
-    filter.source?.let { chips += if (it == BillSource.IMPORT) "导入" else "手动" }
+    filter.source?.let { chips += sourceFilterLabel(it) }
     if (filter.sort != BillSort.TIME_DESC) chips += "排序 · ${sortLabel(filter.sort)}"
     val min = filter.amountMinMinor?.let(::trimMoney)
     val max = filter.amountMaxMinor?.let(::trimMoney)
@@ -613,6 +618,23 @@ private fun activeFilterChips(
         max != null -> chips += "金额 ≤$max"
     }
     return chips
+}
+
+/**
+ * 来源筛选目前只放「手动」和「导入」两档：其余来源（速记 / 小莉 / 周期 / 分期）在
+ * 真实账本里占比很小，为它们各占一枚 chip 会让这一行换成两行。
+ * 名字统一走 [sourceFilterLabel]，免得 chip 与折叠态摘要各写一套、对不上。
+ */
+private val sourceFilterOptions = listOf(BillSource.MANUAL, BillSource.IMPORT)
+
+/** 与账单行角标同一套口径，别让「速记」在筛选里被叫成「手动」。 */
+private fun sourceFilterLabel(source: BillSource): String = when (source) {
+    BillSource.MANUAL -> "手动"
+    BillSource.IMPORT -> "导入"
+    BillSource.VOICE, BillSource.SCREENSHOT -> "速记"
+    BillSource.ASSISTANT -> "小莉"
+    BillSource.RECURRING -> "周期"
+    BillSource.INSTALLMENT -> "分期"
 }
 
 private fun sortLabel(sort: BillSort): String = when (sort) {

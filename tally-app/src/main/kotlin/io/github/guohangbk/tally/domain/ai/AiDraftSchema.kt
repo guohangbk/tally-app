@@ -6,6 +6,7 @@ import io.github.guohangbk.tally.domain.model.CategoryType
 import io.github.guohangbk.tally.domain.model.DraftField
 import io.github.guohangbk.tally.domain.model.TimePrecision
 import io.github.guohangbk.tally.domain.parseAmount
+import io.github.guohangbk.tally.domain.parser.ChineseNumber
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -43,6 +44,10 @@ data class AiBillFields(
     val paymentMethod: String?,
     val orderNo: String?,
     val confidence: Double?,
+    /** 批量补缺时这笔属于第几张图；单张与对话为 null。 */
+    val materialIndex: Int? = null,
+    /** 同一张图里的第几笔订单；单笔/对话为 null。 */
+    val itemIndex: Int? = null,
 )
 
 sealed interface AiDraftVerdict {
@@ -70,8 +75,8 @@ sealed interface AiDraftVerdict {
 object AiDraftSchema {
     const val MAX_NOTE_LENGTH: Int = 200
 
-    /** 一次抽账最多认几笔：说十几笔的场景本该走导入，卡片不兜批量数据。 */
-    const val MAX_BILLS: Int = 6
+    /** 一次抽账最多认几笔：多张素材、单图多订单都要装得下。 */
+    const val MAX_BILLS: Int = 18
     private const val MAX_LABEL_LENGTH = 60
     private const val INVALID = "返回的字段不合格"
 
@@ -84,7 +89,7 @@ object AiDraftSchema {
      * 降级到 `response_format` 更是结构上就只有一个格子。所以根上就是数组：
      * 「早20 中5 地铁30」和一张里两单订单的截图，都是一次调用带两笔。
      */
-    val billsJsonSchema: String = """
+    fun billsJsonSchema(): String = """
         {
           "type": "object",
           "additionalProperties": false,
@@ -112,6 +117,8 @@ object AiDraftSchema {
             add("\"category_id\": {\"type\": [\"string\", \"null\"], \"description\": \"必须逐字复制给定分类表里的 id；选得出二级就填二级，选不出填一级；表里没有对应分类就填 null\"}")
             add("\"note\": {\"type\": [\"string\", \"null\"], \"description\": \"这笔账的名字，20 字以内，用原文里剩下的词；商户、支付方式这类信息也并到这里；没有就填 null\"}")
             add("\"confidence\": {\"type\": [\"number\", \"null\"], \"description\": \"0 到 1 的自评把握\"}")
+            add("\"material_index\": {\"type\": [\"integer\", \"null\"], \"minimum\": 0, \"description\": \"多条素材分段时这笔属于第几张，从 0 开始；单张或对话填 null\"}")
+            add("\"item_index\": {\"type\": [\"integer\", \"null\"], \"minimum\": 0, \"description\": \"同一张图里有多笔订单时这笔的顺序，从 0 开始；只有一笔或对话填 null\"}")
         }
         return """
             {
@@ -216,6 +223,8 @@ object AiDraftSchema {
                 paymentMethod = root.field("payment_method", "paymentMethod").asLabel(MAX_LABEL_LENGTH),
                 orderNo = root.field("order_no", "orderNo").asLabel(MAX_LABEL_LENGTH),
                 confidence = root.field("confidence").asDouble(),
+                materialIndex = root.field("material_index", "materialIndex").asInt(),
+                itemIndex = root.field("item_index", "itemIndex").asInt(),
             ),
             // 单个字段读不出来只标成「待确认」，不整条作废：卡片上补一格比重新说一遍便宜。
             needsConfirmation = buildSet {
@@ -235,7 +244,10 @@ object AiDraftSchema {
     private fun JsonElement?.asAmount(): Long? {
         val primitive = this as? JsonPrimitive ?: return null
         primitive.longOrNull?.let { return if (it.inRange()) it * 100 else null }
-        return primitive.contentOrNull?.let { parseAmount(it) }?.takeIf { it.inRange() }
+        val content = primitive.contentOrNull ?: return null
+        // 模型偶尔把原话抄回来（「128块5」「两块五」）：定点写法解析不出来就退回中文数字。
+        // 少了这一步，整笔会被当成「没带金额」丢掉，而人正等着它记账。
+        return (parseAmount(content) ?: ChineseNumber.parseMinor(content))?.takeIf { it.inRange() }
     }
 
     private fun JsonElement?.asBillType(): BillType? {
@@ -276,6 +288,9 @@ object AiDraftSchema {
 
     private fun JsonElement?.asDouble(): Double? =
         (this as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+
+    private fun JsonElement?.asInt(): Int? =
+        (this as? JsonPrimitive)?.contentOrNull?.toIntOrNull()?.takeIf { it >= 0 }
 
     private fun JsonElement?.asLabel(maxLength: Int = MAX_NOTE_LENGTH): String? =
         (this as? JsonPrimitive)?.contentOrNull

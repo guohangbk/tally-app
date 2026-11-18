@@ -24,6 +24,8 @@ import kotlinx.coroutines.launch
 data class AssistantAnalysisUiState(
     val report: AiReport? = null,
     val working: Boolean = false,
+    /** 流式生成中的半截正文；完成或被取消后清空。 */
+    val streamed: String = "",
     val availability: AiAvailability? = null,
     val notice: String? = null,
     val error: String? = null,
@@ -73,27 +75,32 @@ class AssistantAnalysisViewModel(private val graph: AppGraph) : ViewModel() {
     fun cancel() {
         job?.cancel()
         job = null
-        state.update { it.copy(working = false) }
+        state.update { it.copy(working = false, streamed = "") }
     }
 
     private suspend fun runAnalysis(force: Boolean) {
-        state.update { it.copy(working = true, error = null, notice = null) }
+        state.update { it.copy(working = true, streamed = "", error = null, notice = null) }
         try {
             val outcome = graph.aiAnalysisService.analyze(
                 request = request,
                 includeNotes = false,
                 force = force,
+                onDelta = { piece -> state.update { it.copy(streamed = it.streamed + piece) } },
             )
             when (outcome) {
-                is AiAnalysisOutcome.Generated -> state.update { it.copy(working = false, report = outcome.report) }
-                is AiAnalysisOutcome.FromCache -> state.update { it.copy(working = false, report = outcome.report) }
-                is AiAnalysisOutcome.NothingToAnalyze -> state.update { it.copy(working = false, notice = outcome.reason) }
-                is AiAnalysisOutcome.Failed -> state.update { it.copy(working = false, error = outcome.reason) }
+                is AiAnalysisOutcome.Generated ->
+                    state.update { it.copy(working = false, streamed = "", report = outcome.report) }
+                is AiAnalysisOutcome.FromCache ->
+                    state.update { it.copy(working = false, streamed = "", report = outcome.report) }
+                is AiAnalysisOutcome.NothingToAnalyze ->
+                    state.update { it.copy(working = false, streamed = "", notice = outcome.reason) }
+                is AiAnalysisOutcome.Failed ->
+                    state.update { it.copy(working = false, streamed = "", error = outcome.reason) }
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (failure: Exception) {
-            state.update { it.copy(working = false, error = failure.message ?: "小莉暂时联系不上") }
+            state.update { it.copy(working = false, streamed = "", error = failure.message ?: "小莉暂时联系不上") }
         }
     }
 }

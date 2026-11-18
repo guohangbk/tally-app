@@ -11,6 +11,8 @@ enum class BillSource {
     MANUAL,
     VOICE,
     SCREENSHOT,
+    /** 小莉记的账：不管她接收的是文字、语音还是图片，都算「小莉」。 */
+    ASSISTANT,
     RECURRING,
     INSTALLMENT,
     IMPORT,

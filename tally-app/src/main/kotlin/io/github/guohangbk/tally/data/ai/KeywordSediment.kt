@@ -20,4 +20,19 @@ class KeywordSediment(
         if (trimmed.isEmpty()) return
         scope.launch { runCatching { rules.learn(trimmed, categoryId) } }
     }
+
+    /**
+     * 静默沉淀：语音/截图进记账页、人保存了、备注像个词。同名已存在就不动它，
+     * 不弹任何提示；写规则要活过这次页面出栈，所以同样走应用级作用域。
+     * [source] 区分备注是本机规则抽的还是 AI 写的，其余完全一样。
+     */
+    fun rememberIfAbsent(
+        keyword: String,
+        categoryId: String,
+        source: String = KeywordSource.LEARNED,
+    ) {
+        val trimmed = keyword.trim()
+        if (trimmed.isEmpty()) return
+        scope.launch { runCatching { rules.addIfAbsent(trimmed, categoryId, source) } }
+    }
 }

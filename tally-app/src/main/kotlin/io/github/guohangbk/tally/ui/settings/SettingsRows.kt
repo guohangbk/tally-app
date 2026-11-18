@@ -76,6 +76,8 @@ internal fun SettingsSwitchRow(
     description: String?,
     gold: Boolean = false,
     descriptionAction: (@Composable () -> Unit)? = null,
+    /** 依赖别的开关时才置灰：关着的行仍然看得见，说明行写清为什么点不动。 */
+    enabled: Boolean = true,
 ) {
     TallyLabeledSwitch(
         checked = checked,
@@ -84,6 +86,7 @@ internal fun SettingsSwitchRow(
         description = description,
         descriptionAction = descriptionAction,
         gold = gold,
+        enabled = enabled,
     )
 }
 
@@ -184,7 +187,7 @@ internal fun MonthStartDayDialog(
         ) {
             Text("每月起始日", style = TallyType.listTitle, color = colors.ink)
             Spacer(Modifier.height(2.dp))
-            Text("1–28 号 · 首页与统计按这一天切分月份", style = TallyType.helper, color = colors.ink3)
+            Text("1 到 28 号，首页与统计按这一天切分月份", style = TallyType.helper, color = colors.ink3)
             Spacer(Modifier.height(10.dp))
             (1..28).chunked(7).forEach { row ->
                 Row(

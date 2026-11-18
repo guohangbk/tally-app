@@ -9,11 +9,15 @@ import io.github.guohangbk.tally.domain.ai.AiResult
 import io.github.guohangbk.tally.domain.ai.toOutcome
 import io.github.guohangbk.tally.domain.model.AiStatus
 
-/** 小莉当前能不能用，以及为什么不能用。页面只认这一层，不自己拼开关与状态。 */
+/**
+ * 小莉当前能不能用，以及为什么不能用。页面只认这一层，不自己拼开关与状态。
+ * 文案一律说「服务商」：全系统只有这一个称呼，别再造第二个词。
+ */
 enum class AiUnavailable(val reason: String) {
-    NotConfigured("还没有配置小莉"),
-    SwitchedOff("小莉开关已关闭"),
-    Disconnected("小莉暂时联系不上"),
+    NotConfigured("还没配置服务商"),
+    /** 同一句话也会出现在小莉对话页，所以写「AI 开关」而不是只属于自动记账的「AI 提取」。 */
+    SwitchedOff("AI 开关没打开"),
+    Disconnected("服务商暂时连不上"),
 }
 
 data class AiAvailability(
@@ -40,6 +44,10 @@ data class AiAvailability(
             status == AiStatus.UNCONFIGURED -> AssistantEntry.Configure
             else -> AssistantEntry.Chat
         }
+
+    /** 用不了时该说哪一句：总开关关着和没配服务商是两件事，别都说成「没配」。 */
+    fun blockedReason(): String =
+        if (enabled) AiUnavailable.NotConfigured.reason else AiUnavailable.SwitchedOff.reason
 }
 
 /** 右滑小莉的三种去向，导航与右臂文案共用。 */
@@ -78,7 +86,7 @@ class AiGateway(
     suspend fun call(request: AiRequest): AiResult<AiCompletion> {
         val availability = availability()
         if (!availability.showsEntry) {
-            return AiResult.failed(AiErrorKind.SCHEMA, AiUnavailable.NotConfigured.reason)
+            return AiResult.failed(AiErrorKind.SCHEMA, availability.blockedReason())
         }
         return when (val outcome = invoke(request)) {
             is AiEnhancement.Applied -> AiResult.success(outcome.completion)
@@ -90,7 +98,7 @@ class AiGateway(
     suspend fun stream(request: AiRequest, onDelta: (String) -> Unit): AiResult<AiCompletion> {
         val availability = availability()
         if (!availability.showsEntry) {
-            return AiResult.failed(AiErrorKind.SCHEMA, AiUnavailable.NotConfigured.reason)
+            return AiResult.failed(AiErrorKind.SCHEMA, availability.blockedReason())
         }
         if (!availability.usableQuietly) {
             return AiResult.failed(AiErrorKind.NETWORK, AiUnavailable.Disconnected.reason)

@@ -25,6 +25,8 @@ data class KeywordMapping(
     val keyword: String,
     val categoryId: String,
     val priority: Int = 0,
+    /** 内置常用词：本机规则要用，但不外发给模型（模型只该看到用户自己定的说法）。 */
+    val builtin: Boolean = false,
 )
 
 /**
@@ -114,7 +116,7 @@ data class QuickNoteCatalog(
         fun of(categories: List<AiCategoryRef>, userKeywords: List<KeywordMapping>): QuickNoteCatalog {
             val builtIn = builtinGroups(categories).flatMap { group ->
                 val categoryId = group.categoryId ?: return@flatMap emptyList()
-                group.words.map { KeywordMapping(keyword = it, categoryId = categoryId, priority = 10) }
+                group.words.map { KeywordMapping(keyword = it, categoryId = categoryId, priority = 10, builtin = true) }
             }
             // 用户自己维护的词表优先于内置表：他知道「楼下的面馆」该算哪一类。
             return QuickNoteCatalog(categories = categories, keywords = builtIn + userKeywords)

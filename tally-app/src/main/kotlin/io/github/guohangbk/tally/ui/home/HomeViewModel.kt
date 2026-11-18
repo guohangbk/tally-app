@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.ui.home
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
@@ -57,8 +58,9 @@ data class HomeUiState(
 
 class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     // 性能打点基准：VM 创建即零点，所有 Perf 日志都相对它报「第几毫秒」，并带上绝对时刻方便对齐 SQL 回调。
-    private val vmStart = System.currentTimeMillis()
-    private fun since(tag: String): String = "$tag +${System.currentTimeMillis() - vmStart}ms"
+    // 只用 uptime：这个数里没有睡眠/后台冻结的时间，否则放一夜回来会报出「本月查询 +4505128ms」。
+    private val vmStart = SystemClock.uptimeMillis()
+    private fun since(tag: String): String = "$tag +${SystemClock.uptimeMillis() - vmStart}ms"
 
     /**
      * 用户手动翻走的那一段；null 代表没翻过，首页跟着「今天」走。

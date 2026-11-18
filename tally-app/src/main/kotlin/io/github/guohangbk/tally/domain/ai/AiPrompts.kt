@@ -34,6 +34,8 @@ object AiPrompts {
         timeAnchor: String,
         categoryTable: String,
         historyNote: String = "",
+        /** 用户自己沉淀过的说法 → 分类短柄。可空，空了就整段不出现。 */
+        keywordTable: String = "",
     ): String = """
         $BASE
         你现在的唯一任务：把这段内容里**每一笔**要记的账一次装进 propose_bills 的 bills 数组。
@@ -49,9 +51,11 @@ object AiPrompts {
         7. 这条消息可能是在**补充或追问上一轮**（「第二笔记一下」「把打车那笔改成收入」）。
            这种情况下按下面给出的最近对话与上一张待确认卡来判断要记哪一笔；
            能确定就调 propose_bills，实在对不上才 not_a_bill。
+        8. 截图是订单页时，页面底部还印着商家推荐、猜你喜欢、优惠明细、商品原价——那些数字都不算这一笔。
+           金额优先取「实付款 / 实付 / 实际支付 / 支付金额」旁边的那一个；这些标签一个都没有，才取商品明细里真正结算的数。
         $historyNote$timeAnchor
         $categoryTable
-    """.trimIndent()
+    """.trimIndent() + if (keywordTable.isBlank()) "" else "\n\n$keywordTable"
 
     /**
      * 「今天」的绝对锚点。少了它，模型只能猜年份，「10 号」「上周三」这类说法就会落到错的那月；

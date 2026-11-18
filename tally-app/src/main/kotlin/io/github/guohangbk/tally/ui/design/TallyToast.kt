@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.ui.design
 
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -58,6 +59,9 @@ data class TallyToastMessage(
     val tone: ToastTone = ToastTone.SUCCESS,
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
+    /** 次要动作（撤销之外的「看一下」）：同色文字，不另做按钮。 */
+    val secondaryActionLabel: String? = null,
+    val onSecondaryAction: (() -> Unit)? = null,
     /** 带动作的气泡要留够反应时间（例如 8 秒撤销窗口），按 [durationOf] 那套默认值收得太快。 */
     val durationMillis: Long? = null,
 )
@@ -66,6 +70,15 @@ object TallyToast {
     private val counter = AtomicLong(0L)
     private val mutable = MutableStateFlow<TallyToastMessage?>(null)
     val current = mutable.asStateFlow()
+
+    /**
+     * 这一条是**什么时候**弹出来的。
+     *
+     * 气泡宿主挂在根布局上，页面来回切换时会重组；以前宿主只记住文案、不记住起点，
+     * 重建后会用同一条文案重新计一遍时长——看起来就是「从设置返回，刚才那条又弹了一次」。
+     * 记下起点，宿主无论重建几次都只补剩下的那点时间，过期就直接收掉。
+     */
+    private val shownAt = AtomicLong(0L)
 
     /** 时长按内容量给：错误通常比成功长一句，需要更多时间读完。 */
     fun durationOf(tone: ToastTone): Long = when (tone) {
@@ -79,16 +92,21 @@ object TallyToast {
         tone: ToastTone = ToastTone.SUCCESS,
         actionLabel: String? = null,
         onAction: (() -> Unit)? = null,
+        secondaryActionLabel: String? = null,
+        onSecondaryAction: (() -> Unit)? = null,
         durationMillis: Long? = null,
     ) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
+        shownAt.set(SystemClock.elapsedRealtime())
         mutable.value = TallyToastMessage(
             sequence = counter.incrementAndGet(),
             text = trimmed,
             tone = tone,
             actionLabel = actionLabel,
             onAction = onAction,
+            secondaryActionLabel = secondaryActionLabel,
+            onSecondaryAction = onSecondaryAction,
             durationMillis = durationMillis,
         )
     }
@@ -96,6 +114,12 @@ object TallyToast {
     /** 只收回自己那一条：迟到的 dismiss 不能把刚弹出的新提示带走。 */
     fun dismiss(sequence: Long) {
         if (mutable.value?.sequence == sequence) mutable.value = null
+    }
+
+    /** 还该显示多久：负数按 0 收，调用方据此决定「接着显示」还是「直接收掉」。 */
+    fun remainingMillis(message: TallyToastMessage): Long {
+        val duration = message.durationMillis ?: durationOf(message.tone)
+        return (duration - (SystemClock.elapsedRealtime() - shownAt.get())).coerceAtLeast(0L)
     }
 }
 
@@ -122,7 +146,13 @@ fun TallyToastEffects(
 ) {
     LaunchedEffect(notice) {
         if (!notice.isNullOrBlank()) {
-            TallyToast.show(notice, ToastTone.SUCCESS, noticeActionLabel, onNoticeAction, noticeDurationMillis)
+            TallyToast.show(
+                notice,
+                ToastTone.SUCCESS,
+                noticeActionLabel,
+                onNoticeAction,
+                durationMillis = noticeDurationMillis,
+            )
             onNoticeShown()
         }
     }
@@ -143,13 +173,23 @@ fun TallyToastEffects(
 fun TallyToastHost(contentBottomPadding: PaddingValues = PaddingValues(bottom = 96.dp, start = 20.dp, end = 20.dp)) {
     val message by TallyToast.current.collectAsStateWithLifecycle()
     // 退出动画期间 current 已经是 null，留一份最后的文案才收得出那一下淡出。
-    var shown by remember { mutableStateOf<TallyToastMessage?>(null) }
+    // 初始化就按「还没过期」直接摆出来：宿主重建时不该先空一帧再淡入，
+    // 那一下正是「返回后又弹了一次」的观感来源。
+    var shown by remember(message?.sequence) {
+        mutableStateOf(message?.takeIf { TallyToast.remainingMillis(it) > 0 })
+    }
 
     LaunchedEffect(message?.sequence) {
         val incoming = message
         if (incoming == null) return@LaunchedEffect
+        val remaining = TallyToast.remainingMillis(incoming)
+        if (remaining <= 0L) {
+            shown = null
+            TallyToast.dismiss(incoming.sequence)
+            return@LaunchedEffect
+        }
         shown = incoming
-        delay(incoming.durationMillis ?: TallyToast.durationOf(incoming.tone))
+        delay(remaining)
         TallyToast.dismiss(incoming.sequence)
     }
 
@@ -201,7 +241,14 @@ private fun ToastBubble(message: TallyToastMessage) {
         // 少数错误需要就地给一个动作（重新测试、重新准备），其余靠文案自己说清楚。
         // 动作靠**色号**与正文分开（正文 ink，动作取该 tone 的强调色），不做形状：
         // 试过实心药丸，气泡本来就不大，塞一枚按钮进去整条都脏了。
-        message.actionLabel?.takeIf { message.onAction != null }?.let { label ->
+        listOf(
+            message.secondaryActionLabel?.takeIf { message.onSecondaryAction != null }?.let {
+                it to message.onSecondaryAction
+            },
+            message.actionLabel?.takeIf { message.onAction != null }?.let {
+                it to message.onAction
+            },
+        ).filterNotNull().forEach { (label, action) ->
             Text(
                 text = label,
                 style = TallyType.helper,
@@ -209,7 +256,7 @@ private fun ToastBubble(message: TallyToastMessage) {
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable {
-                        message.onAction?.invoke()
+                        action?.invoke()
                         TallyToast.dismiss(message.sequence)
                     }
                     .padding(horizontal = 6.dp, vertical = 3.dp),

@@ -42,6 +42,7 @@ import io.github.guohangbk.tally.data.preferences.ThemeMode
 import io.github.guohangbk.tally.di.AppGraphProvider
 import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.domain.model.BillType
+import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.Period
 import io.github.guohangbk.tally.domain.model.StatsBucket
 import io.github.guohangbk.tally.domain.model.StatsGranularity
@@ -60,9 +61,7 @@ import io.github.guohangbk.tally.ui.design.TallyTheme
 import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.WarmIconPainters
 import io.github.guohangbk.tally.ui.design.IconLibrary
-import io.github.guohangbk.tally.ui.design.TallyToast
 import io.github.guohangbk.tally.ui.design.TallyToastHost
-import io.github.guohangbk.tally.ui.design.ToastTone
 import io.github.guohangbk.tally.ui.home.TallyHomeScreen
 import io.github.guohangbk.tally.ui.share.PosterScreen
 import io.github.guohangbk.tally.ui.importexport.ExportScreen
@@ -89,6 +88,7 @@ import io.github.guohangbk.tally.ui.settings.SettingsScreen
 import io.github.guohangbk.tally.ui.stats.TallyStatsScreen
 import io.github.guohangbk.tally.ui.tag.TagDetailScreen
 import io.github.guohangbk.tally.ui.tag.TagsScreen
+import kotlinx.coroutines.launch
 
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -111,7 +111,8 @@ object Routes {
     /** 结算长图：只认这一本账，走同一套海报渲染管线，不带周期维度。 */
     const val SETTLE_POSTER = "ledger/settle/poster/{ledgerId}"
     const val CATEGORIES = "categories"
-    const val BILL_NEW = "bill/new?l1={l1}&l2={l2}&type={type}&amount={amount}&note={note}&source={source}&sk={sk}&at={at}&kw={kw}"
+    const val BILL_NEW = "bill/new?l1={l1}&l2={l2}&type={type}&amount={amount}&note={note}" +
+        "&source={source}&sk={sk}&at={at}&kw={kw}&na={na}"
     const val SEARCH = "search?ledgerId={ledgerId}&categoryL1={categoryL1}&categoryL2={categoryL2}&tags={tags}"
     /** 标签管理：胶囊墙，点胶囊出操作单，长按胶囊就地拖动排序。 */
     const val TAGS = "tags"
@@ -133,8 +134,10 @@ object Routes {
     const val BUDGET_HISTORY = "budget/history"
     const val ASSISTANT = "assistant"
     const val ASSISTANT_CHAT = "assistant/chat?prompt={prompt}"
-    /** 小莉配置独立成一页：从 app 设置里的「小莉配置」进，不再是对话页右上角压出来的弹层。 */
+    /** 服务商配置独立成一页：从 app 设置里的「服务商配置」进，不再是对话页右上角压出来的弹层。 */
     const val ASSISTANT_CONFIG = "assistant/config"
+    /** 自动记账：三条机器记账入口的 AI 提取与账单图片，挂在「小莉（AI）」下面。 */
+    const val ASSISTANT_AUTO = "assistant/auto"
     /** 海报页只带那一段账的口径（账本 / 维度 / 锚点 / 区间），不带别的——口径换了就重画。 */
     const val POSTER = "poster?ledgerId={ledgerId}&granularity={granularity}&anchor={anchor}" +
         "&rangeEnd={rangeEnd}&bucket={bucket}&excludePending={excludePending}"
@@ -194,6 +197,7 @@ object Routes {
      * [occurredAt] 只在机器已经认出落账日（「昨天打车 30」）时带上，否则记账页会把它写回今天。
      * [keyword] 是这次命中分类的那个词：保存时若分类被改掉，才问「以后都记到新的分类？」
      * （LN-01）。没有命中词的纯手动记账不带它，也就不会冒出沉淀提示。
+     * [noteFromAi] 只在备注是 AI 写的时候为真：静默沉淀标成 `LEARNED_AI`。
      */
     fun billNew(
         l1Id: String?,
@@ -205,6 +209,7 @@ object Routes {
         sourceKind: String? = null,
         occurredAt: Long? = null,
         keyword: String? = null,
+        noteFromAi: Boolean = false,
     ): String {
         val base = "bill/new"
         val query = listOfNotNull(
@@ -217,6 +222,7 @@ object Routes {
             sourceKind?.takeIf { it.isNotBlank() }?.let { "sk=$it" },
             occurredAt?.let { "at=$it" },
             keyword?.takeIf { it.isNotBlank() }?.let { "kw=" + android.net.Uri.encode(it) },
+            if (noteFromAi) "na=1" else null,
         )
         return if (query.isEmpty()) base else "$base?" + query.joinToString("&")
     }
@@ -250,7 +256,6 @@ fun TallyAppRoot() {
                 } else {
                     TallyAppShell(
                         onboardingDone = loaded.onboardingCompleted,
-                        assistantEnabled = loaded.assistantEnabled,
                         quickOpen = loaded.quickOpenEnabled,
                         debugMode = loaded.debugMode,
                     )
@@ -270,7 +275,6 @@ private fun isDark(mode: ThemeMode): Boolean = when (mode) {
 @Composable
 private fun TallyAppShell(
     onboardingDone: Boolean,
-    assistantEnabled: Boolean,
     quickOpen: Boolean,
     debugMode: Boolean = false,
 ) {
@@ -292,7 +296,7 @@ private fun TallyAppShell(
         }
     }
 
-    // 系统分享进来的截图只负责把用户送到草稿页；uri 由那一页自己取用并清空。
+    // 系统分享进来的截图只负责把用户送回首页；素材由首页的截图链路消费并清空。
     // 二级独立图标第二轮：先改子级再改「零食」这一级，避免父级先换掉后认不出继承关系。
     LaunchedEffect(graph) {
         if (!graph.preferences.childIconsMigratedV2()) {
@@ -302,23 +306,27 @@ private fun TallyAppShell(
         }
     }
 
-    // 系统分享进来的截图只有一个去处：小莉。没开启或没配好就先去设置 / 配置页，
-    // 不把图静默丢掉——否则人会以为分享成功了。
+    // 系统分享进来的截图是素材，不是对话：回首页走截图确认卡，小莉开关不参与分流。
+    // 已经在首页时不能再 navigate 一次：popUpTo 会把首页这个 entry 弹掉重建，
+    // 首页的截图 ViewModel 跟着被清空，正在跑的取图 / 识别被取消，卡就一直不出来。
     LaunchedEffect(graph) {
-        graph.sharedImage.collect { uri ->
-            if (uri == null) return@collect
-            when (graph.aiGateway.availability().entry) {
-                AssistantEntry.Chat -> navController.navigate(Routes.ASSISTANT) { launchSingleTop = true }
-                AssistantEntry.Configure -> {
-                    graph.sharedImage.value = null
-                    TallyToast.show("先配置小莉，再分享截图", ToastTone.INFO)
-                    navController.navigate(Routes.ASSISTANT_CONFIG)
-                }
-                AssistantEntry.Settings -> {
-                    graph.sharedImage.value = null
-                    TallyToast.show("小莉开关已关闭，这张截图没有识别", ToastTone.INFO)
-                    navController.navigate(Routes.SETTINGS)
-                }
+        graph.sharedMaterial.collect { material ->
+            if (material == null) return@collect
+            if (navController.currentDestination?.route == Routes.HOME) return@collect
+            navController.navigate(Routes.HOME) {
+                popUpTo(navController.graph.id) { inclusive = false }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // 记账页保存成功后由依赖图统一回写卡状态；导航层不再带 draft/di 参数。
+    LaunchedEffect(graph) {
+        graph.ingestDrafts.billSaved.collect { event ->
+            if (graph.ingestDrafts.takeMaterialEdit()) {
+                graph.ingestDrafts.emitMaterialSaved(event)
+            } else {
+                graph.ingestDrafts.recordManualSave(event)
             }
         }
     }
@@ -433,6 +441,7 @@ private fun TallyAppShell(
                             onOpenStats = { ledgerId, anchor -> navController.navigate(Routes.stats(ledgerId, anchor)) },
                             onOpenBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
                             onOpenShotDraft = { bill ->
+                                graph.ingestDrafts.beginMaterialEdit()
                                 navController.navigate(
                                     Routes.billNew(
                                         l1Id = bill.categoryL1Id,
@@ -444,21 +453,7 @@ private fun TallyAppShell(
                                         sourceKind = "shot",
                                         occurredAt = bill.occurredAt,
                                         keyword = bill.keyword,
-                                    ),
-                                )
-                            },
-                            onOpenDraftBill = { capture ->
-                                navController.navigate(
-                                    Routes.billNew(
-                                        l1Id = capture.categoryL1Id,
-                                        l2Id = capture.categoryL2Id,
-                                        type = capture.type,
-                                        amountMinor = capture.amountMinor,
-                                        note = capture.note,
-                                        source = capture.heard,
-                                        sourceKind = "voice",
-                                        occurredAt = capture.occurredAt,
-                                        keyword = capture.matchedKeyword,
+                                        noteFromAi = bill.noteFromAi,
                                     ),
                                 )
                             },
@@ -578,6 +573,7 @@ private fun TallyAppShell(
                             onOpenExport = { navController.navigate(Routes.EXPORT) },
                             onOpenBackup = { navController.navigate(Routes.BACKUP) },
                             onOpenAssistantConfig = { navController.navigate(Routes.ASSISTANT_CONFIG) },
+                            onOpenAutoBooking = { navController.navigate(Routes.ASSISTANT_AUTO) },
                             onOpenKeywordRules = { navController.navigate(Routes.KEYWORD_RULES) },
                             onOpenTags = { navController.navigate(Routes.TAGS) },
                             onOpenBillKeypad = { navController.navigate(Routes.BILL_KEYPAD) },
@@ -613,7 +609,12 @@ private fun TallyAppShell(
                         // 秒开模式把记账页当起点时栈里没有上一页：页内返回、系统返回、保存都落到首页。
                         // 不能只靠 popBackStack()——它会连唯一这一页一起弹掉，Activity 随即结束退回桌面。
                         val isRoot = remember(entry) { navController.previousBackStackEntry == null }
-                        BackHandler(enabled = isRoot) { goHome() }
+                        // 系统返回与顶栏返回走同一套收尾：从素材卡的某一笔进来时，没保存就得把那一行
+                        // 解除编辑态，否则回到首页那一笔再也点不动（只修顶栏那条路是不够的）。
+                        BackHandler {
+                            graph.ingestDrafts.cancelMaterialEdit()
+                            if (isRoot) goHome() else navController.popBackStack()
+                        }
                         BillEntryScreen(
                             prefillL1Id = entry.arguments?.getString("l1")?.ifEmpty { null },
                             prefillL2Id = entry.arguments?.getString("l2")?.ifEmpty { null },
@@ -624,10 +625,12 @@ private fun TallyAppShell(
                             prefillSourceKind = entry.arguments?.getString("sk")?.ifEmpty { null },
                             prefillOccurredAt = entry.arguments?.getString("at")?.toLongOrNull(),
                             prefillKeyword = entry.arguments?.getString("kw")?.ifEmpty { null },
+                            prefillNoteFromAi = entry.arguments?.getString("na") == "1",
                             onBack = {
+                                graph.ingestDrafts.cancelMaterialEdit()
                                 if (isRoot) goHome() else navController.popBackStack()
                             },
-                            onSaved = {
+                            onSaved = { _ ->
                                 if (isRoot) goHome() else navController.popBackStack()
                             },
                             onAddSubCategory = { parentId -> navController.navigate(Routes.categoryNewL2(parentId)) },
@@ -735,20 +738,26 @@ private fun TallyAppShell(
                     composable(Routes.BUDGET_HISTORY) {
                         BudgetHistoryScreen(onBack = { navController.popBackStack() })
                     }
-                    composable(Routes.ASSISTANT) {
+                    composable(Routes.ASSISTANT) { entry ->
                         AssistantChatScreen(
                             onBack = { navController.popBackStack() },
-                            onOpenDraft = { draft -> navController.openChatDraft(draft) },
+                            onOpenDraft = { draft, index -> navController.openChatDraft(draft, graph, entry.id, index) },
                         )
                     }
                     composable(Routes.ASSISTANT_CONFIG) {
                         AssistantConfigScreen(onBack = { navController.popBackStack() })
                     }
+                    composable(Routes.ASSISTANT_AUTO) {
+                        io.github.guohangbk.tally.ui.settings.AutoBookingSettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpenProviderConfig = { navController.navigate(Routes.ASSISTANT_CONFIG) },
+                        )
+                    }
                     composable(Routes.ASSISTANT_CHAT) { entry ->
                         AssistantChatScreen(
                             initialPrompt = entry.arguments?.getString("prompt")?.ifEmpty { null },
                             onBack = { navController.popBackStack() },
-                            onOpenDraft = { draft -> navController.openChatDraft(draft) },
+                            onOpenDraft = { draft, index -> navController.openChatDraft(draft, graph, entry.id, index) },
                         )
                     }
                 }
@@ -773,8 +782,20 @@ private fun TallyAppShell(
     }
 }
 
-/** 记账卡上「补分类 / 改一下」：把已识别的字段带进记账页，落库仍由人在那里确认。 */
-private fun NavHostController.openChatDraft(draft: io.github.guohangbk.tally.ui.assistant.ChatBillDraft) {
+/** 记账卡上「补分类 / 改一下」：把已识别的字段带进记账页，卡状态由保存成功事件回写。 */
+private fun NavHostController.openChatDraft(
+    draft: io.github.guohangbk.tally.ui.assistant.ChatBillDraft,
+    graph: io.github.guohangbk.tally.di.AppGraph,
+    messageId: String,
+    index: Int,
+) {
+    graph.ingestDrafts.beginEdit(
+        messageId,
+        index,
+        draft.amountMinor,
+        externalId = draft.externalId.takeIf { !draft.duplicate },
+        imageSha = draft.imageSha,
+    )
     navigate(
         Routes.billNew(
             l1Id = draft.categoryL1Id,
@@ -783,7 +804,12 @@ private fun NavHostController.openChatDraft(draft: io.github.guohangbk.tally.ui.
             amountMinor = draft.amountMinor,
             note = draft.note ?: draft.merchant,
             source = draft.merchant,
-            sourceKind = if (draft.source == io.github.guohangbk.tally.domain.model.BillSource.SCREENSHOT) "shot" else "voice",
+            // 记账页顶部那条来源条按它选文案与图标；关键词沉淀只认 voice / shot（见 KeywordLearning）。
+            sourceKind = when (draft.source) {
+                BillSource.SCREENSHOT -> "shot"
+                BillSource.VOICE -> "voice"
+                else -> "assistant"
+            },
             // 卡上写着「昨天」，跳进记账页却落回今天，等于把人刚确认的那一格又抹掉。
             occurredAt = draft.occurredAt,
         ),

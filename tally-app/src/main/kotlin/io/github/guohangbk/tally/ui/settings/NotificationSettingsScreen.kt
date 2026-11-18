@@ -107,9 +107,9 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                     onCheckedChange = viewModel::setNotificationsEnabled,
                     label = "通知总开关",
                     description = if (settings.notificationsEnabled) {
-                        "已开启 · 下面四类各自可关"
+                        "已开启，下面四类各自可关"
                     } else {
-                        "已关闭 · 四类全部不发，补执行照常在后台跑"
+                        "已关闭，四类全部不发，补执行照常在后台跑"
                     },
                 )
             }
@@ -120,7 +120,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                     checked = settings.notifyUnlogged,
                     onCheckedChange = viewModel::setNotifyUnlogged,
                     label = "当日未记账",
-                    description = "每天 ${hourLabel(settings.dailyReminderHour)} · 当天没有任何账单才发",
+                    description = "每天 ${hourLabel(settings.dailyReminderHour)}，当天没有任何账单才发",
                 )
                 SettingsDivider()
                 SettingsSwitchRow(
@@ -141,7 +141,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                     checked = settings.notifyFailure,
                     onCheckedChange = viewModel::setNotifyFailure,
                     label = "执行失败",
-                    description = "聚合为一条 · 每条任务每日一发",
+                    description = "聚合成一条，每条任务每日一发",
                 )
             }
 
@@ -149,7 +149,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
             SettingsSection(title = "其他") {
                 SettingsNavRow(
                     title = "每日提醒时刻",
-                    subtitle = "${hourLabel(settings.dailyReminderHour)} · 错过则进 App 补发",
+                    subtitle = "${hourLabel(settings.dailyReminderHour)}，错过则进 App 补发",
                     iconKey = "clock",
                     onClick = { hourPicker = true },
                 )

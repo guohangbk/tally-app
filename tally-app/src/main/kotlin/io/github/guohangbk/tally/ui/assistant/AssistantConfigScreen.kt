@@ -59,7 +59,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * 小莉配置页（从 app 设置里的「小莉配置」进来）。
+ * 服务商配置页（从 app 设置里的「服务商配置」进来）。
  *
  * 只维护「小莉当前用哪一家服务商」：服务商从预置列表里选，地址与模型一起带出来；
  * 自定义服务商才手填。是否支持图片由保存前的勾选决定：不勾选时对话里不发图，
@@ -79,7 +79,7 @@ fun AssistantConfigScreen(onBack: () -> Unit) {
 
     Column(modifier = Modifier.fillMaxSize().background(colors.paper)) {
         TallyTopBar(
-            title = "小莉配置",
+            title = "服务商配置",
             onBack = onBack,
             trailing = {
                 TallyIconAction(iconKey = "plus", contentDescription = "新增配置", onClick = viewModel::addNew)
@@ -292,7 +292,7 @@ private fun ConfigSheet(
             Text(if (isNew) "新增配置" else "修改配置", style = TallyType.sectionTitle, color = colors.ink)
             Spacer(Modifier.height(4.dp))
             Text(
-                if (isNew) "填一家服务商，测试通过后小莉就能用了" else "改地址或模型；Key 留空就沿用已存的那把",
+                if (isNew) "填一家服务商，测试通过后 AI 就能用了" else "改地址或模型；Key 留空就沿用已存的那把",
                 style = TallyType.helper,
                 color = colors.ink3,
             )

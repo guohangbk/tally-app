@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.data.ai
 
+import io.github.guohangbk.tally.data.debug.DebugLog
 import io.github.guohangbk.tally.data.db.dao.AiReportDao
 import io.github.guohangbk.tally.data.db.dao.LedgerDao
 import io.github.guohangbk.tally.data.db.entity.AiReportEntity
@@ -10,6 +11,7 @@ import io.github.guohangbk.tally.domain.PeriodRange
 import io.github.guohangbk.tally.domain.ai.BudgetCategoryDigest
 import io.github.guohangbk.tally.domain.ai.BudgetDigest
 import io.github.guohangbk.tally.domain.ai.MonthlyDigest
+import io.github.guohangbk.tally.domain.ai.AiErrorKind
 import io.github.guohangbk.tally.domain.ai.AiPrompts
 import io.github.guohangbk.tally.domain.ai.assistantPlainText
 import io.github.guohangbk.tally.domain.ai.AiRequest
@@ -20,6 +22,8 @@ import io.github.guohangbk.tally.domain.model.AiReport
 import io.github.guohangbk.tally.domain.model.BillFilter
 import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.BillRepositoryContract
+import io.github.guohangbk.tally.domain.model.BillSort
+import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.BudgetPeriod
 import io.github.guohangbk.tally.domain.model.StatsGranularity
 import io.github.guohangbk.tally.domain.model.StatsRequest
@@ -27,6 +31,8 @@ import io.github.guohangbk.tally.domain.model.StatisticsSnapshot
 import io.github.guohangbk.tally.domain.sha256Hex
 import java.time.ZoneId
 import java.util.UUID
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 
 /** 分析结果分三种：命中缓存、真的生成了一张新报告、小莉不可用。 */
@@ -86,8 +92,12 @@ class AiAnalysisService(
         request: StatsRequest,
         includeNotes: Boolean = false,
         force: Boolean = false,
+        /** 非空时走流式：模型每吐一段就回调一次，界面边收边显示。 */
+        onDelta: ((String) -> Unit)? = null,
     ): AiAnalysisOutcome {
+        val startedAt = System.nanoTime()
         val statistics = bills.observeStatistics(request).first()
+        val statisticsAt = System.nanoTime()
         if (statistics.summary.billCount == 0) {
             return AiAnalysisOutcome.NothingToAnalyze(
                 when (request.granularity) {
@@ -98,20 +108,43 @@ class AiAnalysisService(
             )
         }
         val digest = digestOf(request, statistics)
+        val preparedAt = System.nanoTime()
         val digestHash = sha256Hex(digest.canonical)
 
         if (!force) {
-            reports.findByDigest(digestHash)?.let { return AiAnalysisOutcome.FromCache(it.toDomain()) }
+            reports.findByDigest(digestHash)?.let {
+                DebugLog.log("AI 分析", "缓存命中 · 准备 ${(preparedAt - startedAt) / 1_000_000}ms")
+                return AiAnalysisOutcome.FromCache(it.toDomain())
+            }
         }
 
-        val result = gateway.call(
-            AiRequest(
-                instruction = AiPrompts.analysisInstruction(request.granularity),
-                turns = listOf(AiTurn.user(digest.promptBlock(includeNotes))),
-            ),
+        val aiRequest = AiRequest(
+            instruction = AiPrompts.analysisInstruction(request.granularity),
+            turns = listOf(AiTurn.user(digest.promptBlock(includeNotes))),
         )
+        var emitted = false
+        // 流式优先：网关不认流式（SCHEMA）且一个字都没吐时，退回一次性请求，界面不会因此拿不到结果。
+        val result = if (onDelta == null) {
+            gateway.call(aiRequest)
+        } else {
+            val streamed = gateway.stream(aiRequest) { piece ->
+                emitted = true
+                onDelta(piece)
+            }
+            if (streamed is AiResult.Failure && streamed.kind == AiErrorKind.SCHEMA && !emitted) {
+                gateway.call(aiRequest)
+            } else {
+                streamed
+            }
+        }
         return when (result) {
             is AiResult.Success -> {
+                DebugLog.log(
+                    "AI 分析",
+                    "完成 · 准备 ${(preparedAt - startedAt) / 1_000_000}ms" +
+                        "（统计 ${(statisticsAt - startedAt) / 1_000_000}ms）· " +
+                        "生成 ${result.value.latencyMillis}ms · 合计 ${(System.nanoTime() - startedAt) / 1_000_000}ms",
+                )
                 val entity = AiReportEntity(
                     id = newId(),
                     ledgerId = ledgerKey(request.ledgerId),
@@ -128,20 +161,33 @@ class AiAnalysisService(
                 AiAnalysisOutcome.Generated(entity.toDomain(), result.value.usage.totalTokens, result.value.latencyMillis)
             }
 
-            is AiResult.Failure -> AiAnalysisOutcome.Failed(result.failure.detail ?: result.kind?.userMessage ?: "小莉暂时联系不上")
+            is AiResult.Failure -> {
+                DebugLog.log("AI 分析", "失败 ${result.kind?.name ?: "-"} ${result.failure.detail.orEmpty().take(160)}")
+                AiAnalysisOutcome.Failed(result.failure.detail ?: result.kind?.userMessage ?: "小莉暂时联系不上")
+            }
         }
     }
 
-    /** 明细行取整段周期：年维度若只取锚点那个月，报告就会拿 1 月的数字解释一整年。 */
-    private suspend fun periodBills(request: StatsRequest): List<BillListItem> {
+    /**
+     * 大额支出候选：只取过了金额门槛的支出，按金额倒序；分类笔数走统计结果，
+     * 不再为「这一期有哪些分类」整段拉一遍账单。
+     */
+    private suspend fun largeExpensesOf(
+        request: StatsRequest,
+        averageExpenseMinor: Long,
+    ): List<BillListItem> {
+        if (averageExpenseMinor <= 0L) return emptyList()
         val bounds = boundsOf(request)
         return bills.observeSearch(
             BillFilter(
                 startAt = bounds.startAt,
                 endAtExclusive = bounds.endAtExclusive,
+                type = BillType.EXPENSE,
                 ledgerId = request.ledgerId,
+                amountMinMinor = averageExpenseMinor * MonthlyDigestBuilder.LARGE_EXPENSE_MULTIPLES,
+                sort = BillSort.AMOUNT_DESC,
             ),
-        ).first().bills
+        ).first().bills.take(MonthlyDigestBuilder.TOP_LARGE_COUNT * 4)
     }
 
     /** 与 BillRepository 同一套边界：月维度按月起止日，区间用调用方给的右边界。 */
@@ -159,15 +205,18 @@ class AiAnalysisService(
     private suspend fun digestOf(
         request: StatsRequest,
         statistics: StatisticsSnapshot,
-    ): MonthlyDigest {
-        val ledgerName = request.ledgerId?.let { ledgers.findById(it)?.name } ?: "全部账本"
-        return MonthlyDigestBuilder.build(
+    ): MonthlyDigest = coroutineScope {
+        // 账本名、预算、大额支出互不依赖，并发取；统计结果已经在手上。
+        val ledgerName = async { request.ledgerId?.let { ledgers.findById(it)?.name } ?: "全部账本" }
+        val budget = async { budgetOf(request) }
+        val largeExpenses = async { largeExpensesOf(request, statistics.averageExpenseMinor) }
+        MonthlyDigestBuilder.build(
             statistics = statistics,
-            bills = periodBills(request),
+            largeExpenses = largeExpenses.await(),
             periodKey = periodKey(request),
-            ledgerName = ledgerName,
+            ledgerName = ledgerName.await(),
             excludePendingReimburse = request.excludePendingReimburse,
-            budget = budgetOf(request),
+            budget = budget.await(),
             zone = zone,
         )
     }

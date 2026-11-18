@@ -2,7 +2,6 @@ package io.github.guohangbk.tally
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -63,9 +62,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun intakeSharedImage(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_SEND) return
-        val uri = sendStream(intent) ?: return
-        TallyApplication.from(this).graph.sharedImage.value = uri
+        val uris = sendStreams(intent) ?: return
+        uris.forEach(::retainReadPermission)
+        TallyApplication.from(this).graph.emitSharedMaterial(uris)
     }
 
     /** 通知里的落点只带了两段字符串，还原成对象后交给导航图消费（T-04）。 */
@@ -93,13 +92,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Suppress("DEPRECATION")
-    private fun sendStream(intent: Intent): Uri? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-        } else {
-            intent.getParcelableExtra(Intent.EXTRA_STREAM)
+    /**
+     * 分享进来的图：单张（ACTION_SEND）与多张（ACTION_SEND_MULTIPLE）都走这里。
+     * EXTRA_STREAM 有两种常见形状（单张是一个 Uri、多张是 Uri 列表），两种都按整批读；
+     * 再兜那些只塞 clipData 的分享方——图库一次选好几张分享过来才不会被截成一张。
+     */
+    private fun sendStreams(intent: Intent?): List<Uri>? {
+        val action = intent?.action
+        if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return null
+        val fromExtra = when (val stream = intent.extras?.get(Intent.EXTRA_STREAM)) {
+            is Uri -> listOf(stream)
+            is ArrayList<*> -> stream.filterIsInstance<Uri>()
+            else -> emptyList()
         }
+        val fromClip = intent.clipData?.let { data -> (0 until data.itemCount).map { data.getItemAt(it).uri } }.orEmpty()
+        val uris = fromExtra.ifEmpty { fromClip }
+        if (uris.isEmpty()) {
+            // 声明了分享动作却一张图都取不到：留一条日志，别静默什么都不做。
+            io.github.guohangbk.tally.data.debug.DebugLog.log("分享", "收到 $action，但没有可读的图片 uri")
+            return null
+        }
+        return uris
+    }
+
+    private fun retainReadPermission(uri: Uri) {
+        runCatching {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
 
     private companion object {
         /** 与 `res/xml/shortcuts.xml` 里两条 `<intent android:action>` 保持一致。 */

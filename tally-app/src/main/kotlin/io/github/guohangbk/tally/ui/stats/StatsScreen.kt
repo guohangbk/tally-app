@@ -1855,16 +1855,28 @@ private fun StatsAnalysisSheet(
 
             when {
                 state.working -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(0.dp, 12.dp, 36.dp).forEach { tail ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(9.dp)
-                                    .padding(end = tail)
-                                    .clip(RoundedCornerShape(5.dp))
-                                    .background(colors.glow),
-                            )
+                    // 流式先到：已经闭合的字段立刻按正式排版显示，不再让用户对着骨架屏等整段。
+                    val partial = AnalysisSummaryParser.parsePartial(state.streamed)
+                    if (partial.isNotEmpty()) {
+                        analysisLabels.forEach { (field, label) -> partial[field]?.let { AnalysisLine(label, it) } }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "正在继续分析…",
+                            fontSize = 10.5.sp, lineHeight = 13.1.sp,
+                            color = colors.ink3,
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(0.dp, 12.dp, 36.dp).forEach { tail ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(9.dp)
+                                        .padding(end = tail)
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(colors.glow),
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
