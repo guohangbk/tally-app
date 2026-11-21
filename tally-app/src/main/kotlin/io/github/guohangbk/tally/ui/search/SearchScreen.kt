@@ -633,6 +633,8 @@ private fun sourceFilterLabel(source: BillSource): String = when (source) {
     BillSource.IMPORT -> "导入"
     BillSource.VOICE, BillSource.SCREENSHOT -> "速记"
     BillSource.ASSISTANT -> "小莉"
+    BillSource.NOTIFICATION -> "通知"
+    BillSource.PAYMENT -> "支付页"
     BillSource.RECURRING -> "周期"
     BillSource.INSTALLMENT -> "分期"
 }

@@ -99,6 +99,8 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun setBillImageEnabled(enabled: Boolean) = persist { graph.preferences.setBillImageEnabled(enabled) }
 
+    fun setAutoSaveBillImage(enabled: Boolean) = persist { graph.preferences.setAutoSaveBillImage(enabled) }
+
     fun setQuickOpenEnabled(enabled: Boolean) = persist(
         notice = if (enabled) "秒开模式已开启，下次打开应用直接进记账页" else "秒开模式已关闭，打开应用先进首页",
     ) {

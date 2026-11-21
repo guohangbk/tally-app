@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI 环境准备（两个 job 共用）
+# CI 环境准备（只装 SDK、换 Gradle 源；依赖缓存交给 setup-gradle）
 #
 # 不用 android-actions/setup-android@v3：它会去装早已下架的 `tools` 包，
 # 在 runner 自带的 cmdline-tools 16 上直接报 "Failed to find package 'tools'" 并退出 1。

@@ -8,425 +8,689 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta name="description" content="Tally 塔莉：只存在手机里的记账本。本地优先的 Android 应用，没有账号、没有服务端、一条数据都不上传。手打 / 语音 / 截图 / 小莉四种录入只出草稿等人确认，周期、分期与房贷到期自动入账；有预算、多账本与「全部账本」合并视角，统计一页四段同源。Kotlin + Jetpack Compose 原生实现，源码可用（BUSL-1.1），Release 上提供编好的 APK 下载。">
+<meta name="description" content="Tally 塔莉：只存在手机里的记账本。手打、语音、识图、系统分享、付款通知、小莉 AI 对话六种记法，先跑本机关键词规则，认不全也不丢，一律汇成待确认卡等你点确认。AI 提取是可选增强，默认关闭，外发前先脱敏。没有账号、没有服务端，OCR 与金额解析都在本机跑。Kotlin + Jetpack Compose 原生实现，源码可用，本站直接提供 APK 下载。">
 <meta property="og:title" content="Tally 塔莉 · 只存在手机里的记账本">
-<meta property="og:description" content="本地优先的 Android 记账应用：周期与房贷自动入账、预算、多账本合并视角，数据一条都不上传。">
+<meta property="og:description" content="六种记法先跑本机规则，认不全也不丢，一律等你点确认才落账。没有账号，也没有服务器。">
 <style>
-/* ============ Ink & Jasmine · 与 App 同一套令牌 ============ */
+/* ============ Ink & Jasmine：与 App 同一套令牌 ============ */
 :root{
   --paper:#F6F3EB; --card:#FFFDF8; --ink:#16211D; --ink2:#4C5A53; --ink3:#8D978F;
   --line:rgba(22,33,29,.10); --brand:#1F4A38; --brand-soft:rgba(31,74,56,.08);
   --exp:#BF4E3B; --exp-soft:#F6E4DF; --slate:#5E7A8A;
   --gold:#B98A34; --gold-hi:#E8C57A; --glow:#F5E3BE; --on-glow:#7A5A18;
+  --band:#FAF6EC;
   --serif:Georgia,"Times New Roman","Songti SC","Noto Serif SC","Source Han Serif SC",SimSun,serif;
   --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",-apple-system,sans-serif;
-  --max:1120px;
+  --max:1280px; --r:16px;
 }
 body:has(#ink:checked){
   --paper:#131A17; --card:#1A2320; --ink:#E9E5DA; --ink2:#B9C2BB; --ink3:#93A09A;
   --line:rgba(233,229,218,.13); --brand:#7ECBA9; --brand-soft:rgba(126,203,169,.12);
   --exp:#E8917B; --exp-soft:rgba(232,145,123,.14); --slate:#8FA8B6;
   --gold:#D7B263; --gold-hi:#F0D49A; --glow:rgba(185,138,52,.16); --on-glow:#F0D49A;
+  --band:#18211D;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{
-  margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
-  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;
-}
-/* 骨白纸面上的纸纹：只有这一层点阵，透明度 2.8%，不用渐变造氛围 */
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-  opacity:.03;background-image:radial-gradient(var(--ink) .6px,transparent .7px);background-size:5px 5px}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.03;
+  background-image:radial-gradient(var(--ink) .6px,transparent .7px);background-size:5px 5px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-a{color:inherit;text-decoration:none}
-.wrap{max-width:var(--max);margin:0 auto;padding:0 28px;position:relative;z-index:1}
-
-/* ---------- 顶栏 ---------- */
-header.top{position:sticky;top:0;z-index:9;background:var(--paper);background:color-mix(in srgb,var(--paper) 92%,transparent);
-  backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
-.topin{display:flex;align-items:center;gap:16px;height:58px;max-width:var(--max);margin:0 auto;padding:0 28px}
-.mark{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-size:17px;letter-spacing:.02em}
-.mark svg{width:19px;height:19px}
-nav.tn{margin-left:auto;display:flex;gap:19px;font-size:12.5px;color:var(--ink2)}
-nav.tn a{padding-bottom:2px;border-bottom:1px solid transparent;transition:.18s}
-nav.tn a:hover{color:var(--ink);border-color:var(--ink)}
-.gh{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);flex:none}
-.gh:hover{border-color:var(--ink)}
-.gh svg{width:15px;height:15px;stroke:var(--ink2);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.gh:hover svg{stroke:var(--ink)}
-.theme{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);cursor:pointer;user-select:none}
-.theme i{width:30px;height:16px;border-radius:16px;border:1px solid var(--line);position:relative;background:var(--card)}
-.theme i::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--ink);transition:.2s}
-#ink:checked ~ * .theme i::after,.theme i::after{}
-body:has(#ink:checked) .theme i::after{left:16px;background:var(--gold-hi)}
-
-/* ---------- 首屏 ---------- */
-.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:56px;align-items:start;padding:56px 0 62px;border-bottom:1px solid var(--line)}
-.eyebrow{font-family:var(--serif);font-size:11px;letter-spacing:.34em;color:var(--ink3);text-transform:uppercase}
-h1{font-family:var(--serif);font-weight:400;font-size:clamp(34px,5.6vw,58px);line-height:1.14;margin:16px 0 0;letter-spacing:-.01em}
-h1 em{font-style:normal;color:var(--brand)}
-.sub{margin:20px 0 0;max-width:47ch;color:var(--ink2);font-size:15.5px}
-.factline{display:flex;flex-wrap:wrap;gap:0;margin:34px 0 0;border-top:1px solid var(--line)}
-.fact{padding:15px 26px 3px 0;margin-right:26px;border-right:1px solid var(--line)}
-.fact:last-child{border-right:0}
-.fact b{display:block;font-family:var(--serif);font-size:30px;font-weight:400;line-height:1.1;font-variant-numeric:tabular-nums}
-.fact span{font-size:11.5px;color:var(--ink3);letter-spacing:.06em}
-.acts{display:flex;gap:11px;flex-wrap:wrap;margin-top:30px}
-.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:11px;
-  font-size:13.5px;font-weight:600;border:1px solid var(--line);transition:.18s}
-.btn.solid{background:var(--brand);border-color:var(--brand);color:var(--paper)}
-.btn.solid:hover{filter:brightness(1.14)}
-.btn.ghost:hover{border-color:var(--ink)}
-.btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
-
-/* ---------- 模块清单：一行一件，不写 bullet ---------- */
-.milist{display:grid;grid-template-columns:1fr;gap:0 58px;margin-top:26px}
-@media(min-width:800px){.milist{grid-template-columns:1fr 1fr}}
-.mi{display:grid;grid-template-columns:24px 1fr;gap:0 13px;padding:16px 0;border-top:1px solid var(--line)}
-.milist>.mi:nth-child(-n+2){border-top:0}
-@media(max-width:799px){.milist>.mi:nth-child(2){border-top:0}}
-.mi .n{font-family:var(--serif);font-size:11px;color:var(--ink3);letter-spacing:.1em;padding-top:4px}
-.mi h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 4px;letter-spacing:.01em}
-.mi p{font-size:13.5px;color:var(--ink2);margin:0;line-height:1.8}
-.mi p b{color:var(--ink);font-weight:600}
-
-/* ---------- 三屏真机截图 ---------- */
-.shots{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;align-items:flex-start;margin-top:38px}
-.shot{width:min(302px,100%)}
-.shot .phone{margin:0;width:100%;border-radius:40px;padding:10px;background:#12191C;
-  box-shadow:0 30px 60px rgba(18,25,28,.28),inset 0 1px 0 rgba(255,255,255,.07);
-  transition:transform .25s ease,box-shadow .25s ease}
-.shot .phone:hover{transform:translateY(-4px);box-shadow:0 38px 72px rgba(18,25,28,.34),inset 0 1px 0 rgba(255,255,255,.07)}
-.shot .phone img{display:block;width:100%;height:auto;border-radius:30px}
-.shot .cap{margin-top:16px;text-align:center;font-size:12.5px;color:var(--ink2);line-height:1.75}
-.shot .cap b{display:block;font-family:var(--serif);font-size:14.5px;color:var(--ink);font-weight:600;margin-bottom:3px}
-@media(max-width:720px){.shots{gap:26px}}
-.more{display:grid;grid-template-columns:repeat(2,minmax(0,302px));justify-content:center;gap:38px 44px;margin-top:38px}
-.more .shot{width:100%}
-@media(max-width:720px){.more{grid-template-columns:minmax(0,302px);gap:30px}}
-.stage{display:flex;justify-content:flex-end;padding-top:4px}
-.stage .phone{margin:0;width:min(322px,100%);border-radius:44px;padding:10px;background:#12191C;
-  box-shadow:0 34px 64px rgba(18,25,28,.3),inset 0 1px 0 rgba(255,255,255,.07)}
-.stage .phone img{display:block;width:100%;height:auto;border-radius:34px}
-
-/* ---------- 通用节 ---------- */
-section.blk{padding:66px 0;border-bottom:1px solid var(--line)}
-.sh{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
-.sh .no{font-family:var(--serif);font-size:11px;letter-spacing:.24em;color:var(--ink3)}
-.sh h2{font-family:var(--serif);font-weight:400;font-size:clamp(23px,3.4vw,31px);margin:0;letter-spacing:-.005em}
-.sh .tag{font-size:11px;color:var(--ink3);letter-spacing:.06em;margin-left:auto}
-.lead{max-width:70ch;margin:16px 0 0;color:var(--ink2);font-size:15.5px}
-.lead b{color:var(--ink);font-weight:600}
-
-/* 三张主张卡 */
-.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:32px}
-.three>div{background:var(--card);padding:20px 19px 22px}
-.three h3{font-family:var(--serif);font-weight:400;font-size:17px;margin:0 0 8px}
-.three p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.72}
-.three .k{font-family:var(--serif);font-size:10px;letter-spacing:.2em;color:var(--ink3);display:block;margin-bottom:11px}
-
-/* 功能六格 */
-.grid6{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:34px}
-.cell{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:17px 17px 18px;transition:.2s}
-.cell:hover{border-color:var(--ink3);transform:translateY(-2px)}
-.cell .hd{display:flex;align-items:center;gap:9px;margin-bottom:9px}
-.cell .hd svg{width:16px;height:16px;stroke:var(--ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.cell h3{font-size:14.5px;margin:0;font-weight:600;letter-spacing:.01em}
-.cell p{margin:0;font-size:13px;color:var(--ink2);line-height:1.72}
-.cell ul{margin:9px 0 0;padding:0;list-style:none;font-size:12px;color:var(--ink3)}
-.cell li{padding:3px 0 3px 13px;position:relative}
-.cell li::before{content:"";position:absolute;left:2px;top:11px;width:4px;height:1px;background:var(--ink3)}
-.cell li b{color:var(--ink2);font-weight:600}
-
-/* 数据表 */
-table.spec{width:100%;border-collapse:collapse;margin-top:30px;font-size:13.5px}
-table.spec th{text-align:left;font-family:var(--serif);font-weight:400;font-size:11px;letter-spacing:.16em;
-  color:var(--ink3);text-transform:uppercase;padding:0 12px 9px 0;border-bottom:1px solid var(--ink)}
-table.spec td{padding:13px 12px 13px 0;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink2)}
-table.spec td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
-table.spec td b{color:var(--ink);font-weight:600}
-
-/* 小莉：全站唯一一处金晕 */
-.jasmine{position:relative;overflow:hidden;border:1px solid rgba(185,138,52,.34);border-radius:16px;background:var(--card);padding:24px 24px 25px;margin-top:30px}
-.jasmine::before{content:"";position:absolute;inset:-40% -10% auto auto;width:60%;height:150%;
-  background:radial-gradient(closest-side,var(--glow),transparent 72%);opacity:.85;pointer-events:none}
-.jasmine>*{position:relative}
-.jasmine h3{font-family:var(--serif);font-weight:400;font-size:19px;margin:0 0 10px;display:flex;align-items:center;gap:9px}
-.jasmine svg.petal{width:17px;height:17px}
-.jasmine p{margin:0;font-size:13.5px;color:var(--ink2);max-width:62ch}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px}
-.chips span{font-size:11.5px;padding:4px 10px;border-radius:20px;border:1px solid rgba(185,138,52,.34);color:var(--on-glow);background:var(--glow)}
-
-/* 代码块 */
-pre{margin:26px 0 0;background:var(--ink);color:#EFEDE4;border-radius:13px;padding:16px 18px;overflow-x:auto;
-  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;line-height:1.85}
-pre .c{color:#93A09A}
-pre .p{color:var(--gold-hi)}
-.tech{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:28px}
-.tech div{background:var(--card);padding:14px 15px}
-.tech b{display:block;font-family:var(--serif);font-size:15px;font-weight:400}
-.tech span{font-size:11.5px;color:var(--ink3)}
-
-/* 路线 */
-.steps{margin-top:30px;border-top:1px solid var(--line)}
-.step{display:grid;grid-template-columns:132px minmax(0,1fr) auto;gap:18px;padding:17px 0;border-bottom:1px solid var(--line);align-items:baseline}
-.step .when{font-family:var(--serif);font-size:13px;letter-spacing:.04em}
-.step .what{color:var(--ink2);font-size:13.5px}
-.step .what b{color:var(--ink);font-weight:600}
-.step .st{font-size:11px;color:var(--ink3);letter-spacing:.1em;white-space:nowrap}
-.step.now .st{color:var(--brand)}
-
-/* 文档列表 */
-.docs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 34px;margin-top:26px}
-.docs a{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:baseline;transition:.16s}
-.docs a:hover{padding-left:6px}
-.docs a .u{font-family:var(--serif);font-size:11px;color:var(--ink3);min-width:38px;font-variant-numeric:tabular-nums}
-.docs a .n{color:var(--ink);font-size:14px;font-weight:600}
-.docs a .d{color:var(--ink3);font-size:12px;margin-left:auto;text-align:right}
-
-footer.ft{padding:44px 0 66px;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end}
-footer.ft .big{font-family:var(--serif);font-size:22px}
-footer.ft .rt{margin-left:auto;font-size:12px;color:var(--ink3);text-align:right;line-height:1.9}
-.note{font-size:12.5px;color:var(--ink3);margin-top:14px}
-
-@media (max-width:900px){
-  .hero{grid-template-columns:1fr;gap:40px}
-  .stage{justify-content:center}
-  .three,.grid6,.tech{grid-template-columns:1fr 1fr}
-  .docs{grid-template-columns:1fr}
-  .step{grid-template-columns:1fr;gap:4px}
-}
-@media (max-width:560px){
-  .three,.grid6,.tech{grid-template-columns:1fr}
-  nav.tn{display:none}
-}
+main,header,footer{position:relative;z-index:1}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(30px,6vw,48px);line-height:1.18}
+h2{font-size:clamp(22px,3.6vw,30px);line-height:1.3}
+h3{font-size:17px;line-height:1.45}
+p{margin:0}
+ol,ul{margin:0;padding:0}
+.eyebrow{font:600 11px/1 var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.lead{color:var(--ink2);font-size:clamp(16px,2.2vw,18px);line-height:1.75}
+.hero .lead,.sub{text-wrap:balance}
+.note{color:var(--ink3);font-size:14px}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;
+  background:var(--brand-soft);border-radius:5px;padding:1px 5px}
+/* ============ 顶栏 ============ */
+.bar{position:sticky;top:0;z-index:9;background:var(--paper);
+  background:color-mix(in srgb,var(--paper) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:18px;height:60px}
+.mark{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-size:18px;font-weight:600;
+  text-decoration:none;white-space:nowrap}
+.mark svg{width:22px;height:22px}
+.nav{display:flex;gap:17px;margin-left:auto;font-size:14.5px}
+.nav a{text-decoration:none;color:var(--ink2);padding:4px 0;border-bottom:2px solid transparent}
+.nav a:hover{color:var(--ink);border-bottom-color:var(--gold)}
+.switch{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink3);cursor:pointer;
+  margin-left:4px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;user-select:none}
+.switch:hover{border-color:var(--gold);color:var(--ink2)}
+.switch::before{content:"";width:9px;height:9px;border-radius:50%;border:1.5px solid var(--gold)}
+body:has(#ink:checked) .switch::before{background:var(--gold)}
+/* ============ 按钮 ============ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;
+  border-radius:11px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease;border:1px solid transparent}
+.btn svg{width:15px;height:15px}
+.btn.solid{background:var(--brand);color:#fff;box-shadow:0 6px 18px rgba(22,33,29,.16)}
+.btn.solid:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(22,33,29,.2)}
+.btn.ghost{border-color:var(--line);color:var(--ink);background:var(--card)}
+.btn.ghost:hover{border-color:var(--gold);color:var(--brand)}
+body:has(#ink:checked) .btn.solid{color:#0B1512}
+/* ============ 进场动效：只对初始在视口内的元素，不藏首屏内容 ============ */
+.reveal{transform:translateY(14px);transition:transform .5s ease}
+.reveal.on{transform:none}
+.stagger>*{transform:translateY(12px);transition:transform .45s ease}
+.stagger.on>*{transform:none}
+.stagger.on>*:nth-child(2){transition-delay:.06s}
+.stagger.on>*:nth-child(3){transition-delay:.12s}
+.stagger.on>*:nth-child(4){transition-delay:.18s}
+.stagger.on>*:nth-child(5){transition-delay:.24s}
+.stagger.on>*:nth-child(6){transition-delay:.3s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes drift{0%,100%{transform:translateY(0) rotate(-.6deg)}50%{transform:translateY(-9px) rotate(.6deg)}}
+@keyframes breathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-11px) scale(1.035)}}
+@keyframes stageBreathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-13px) scale(1.03)}}
 @media (prefers-reduced-motion:no-preference){
-  .fade>*{animation:up .62s cubic-bezier(.2,.7,.3,1) both}
-  .fade>*:nth-child(2){animation-delay:.06s}.fade>*:nth-child(3){animation-delay:.12s}
-  .fade>*:nth-child(4){animation-delay:.18s}.fade>*:nth-child(5){animation-delay:.24s}
-  @keyframes up{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  .hero .stage{animation:float 7s ease-in-out infinite}
+  .shots img:hover{animation:breathe 1.9s ease-in-out infinite}
+  .stage img{animation:stageBreathe 3.2s ease-in-out infinite}
+  .stage figure:nth-child(2) img{animation-delay:.4s}
+  .stage figure:nth-child(3) img{animation-delay:.8s}
+  .stage figure:nth-child(4) img{animation-delay:1.2s}
+  .split .shots img:nth-child(even){animation:drift 7s ease-in-out infinite}
+}
+/* ============ 首屏 ============ */
+.hero{padding:clamp(34px,7vw,72px) 0 clamp(28px,5vw,48px)}
+.hero .wrap{text-align:center;display:flex;flex-direction:column;align-items:center}
+.hero h1{margin:14px auto 8px;max-width:18em;font-size:clamp(28px,5vw,42px)}
+.hero .lead{max-width:46em;margin:0 auto;font-size:clamp(15px,1.9vw,17px);color:var(--ink2);font-weight:400}
+.cta{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:20px 0 10px}
+.meta{color:var(--ink3);font-size:12.5px}
+.stage.cta-stage{margin-top:20px}
+.stage.cta-stage + .stage{margin-top:20px}
+.stage{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;width:100%;
+  max-width:1040px;margin:clamp(30px,5vw,48px) auto 0;align-items:end}
+.stage figure{margin:0;min-width:0;transition:transform .25s ease}
+.stage figure:nth-child(1),.stage figure:nth-child(3){transform:translateY(12px)}
+.stage figure:hover{transform:translateY(-6px)}
+.stage img{width:100%;height:auto;border-radius:18px;border:1px solid var(--line);
+  box-shadow:0 14px 30px rgba(22,33,29,.16);display:block;background:var(--card)}
+.stage figcaption{font-size:12px;color:var(--ink3);margin-top:7px;text-align:center;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+/* ============ 流程带 ============ */
+.flow{display:grid;gap:12px;grid-template-columns:repeat(6,minmax(0,1fr));list-style:none}
+.flow li{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px 15px}
+.flow li::before{content:attr(data-n);font:600 11px/1 var(--sans);letter-spacing:.14em;color:var(--gold)}
+.flow b{display:block;font-size:15.5px;margin:8px 0 4px}
+.flow p{font-size:13.5px;color:var(--ink2);line-height:1.6}
+.flow li:not(:last-child)::after{content:"";position:absolute;top:50%;right:-9px;width:7px;height:7px;
+  border-right:1.6px solid var(--gold);border-top:1.6px solid var(--gold);
+  transform:translateY(-50%) rotate(45deg);z-index:2}
+.flow .opt{border-color:var(--gold);border-style:dashed}
+/* ============ 章节：编号 + 标题 + 一句话导语，隔章换底色 ============ */
+section.pad{padding:clamp(40px,7vw,76px) 0;border-top:1px solid var(--line)}
+section.pad.alt{background:var(--band)}
+.sh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.sh .no{font:600 13px/1 var(--sans);letter-spacing:.16em;color:var(--gold)}
+.sh .tag{margin-left:auto;font-size:13px;color:var(--ink3)}
+.sub{color:var(--ink2);max-width:38em;margin-bottom:clamp(20px,3vw,30px)}
+/* 六种记法：六瓣扇区，静置看名字，悬浮看说明 */
+.ways{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);gap:clamp(24px,5vw,56px);align-items:center}
+.pie{position:relative;width:min(100%,460px);aspect-ratio:1;margin:auto}
+.pie svg{width:100%;height:100%;display:block;overflow:visible}
+.petal path{fill:var(--brand-soft);stroke:var(--gold);stroke-width:1.1;
+  transition:fill .2s ease,filter .2s ease}
+.petal:nth-child(2) path{fill:color-mix(in srgb,var(--brand-soft) 82%,var(--glow))}
+.petal:nth-child(4) path{fill:color-mix(in srgb,var(--brand-soft) 65%,var(--glow))}
+.petal:hover path,.petal:focus path{fill:var(--glow);filter:drop-shadow(0 8px 12px rgba(22,33,29,.14))}
+.petal text{font:600 19px var(--sans);fill:var(--ink);text-anchor:middle;pointer-events:none}
+.petal .em{font:500 10px var(--sans);fill:var(--gold)}
+.petal .hint{font:500 10.5px var(--sans);fill:var(--ink3);text-anchor:middle}
+.petal{cursor:pointer;outline:none}
+.petal:focus,.petal:focus-visible{outline:none}
+.petal,.petal *{user-select:none;-webkit-tap-highlight-color:transparent}
+.petal path{pointer-events:visiblePainted}
+.petal path::selection,.petal text::selection{background:transparent}
+.pie-core{font:600 20px var(--sans);fill:var(--ink);text-anchor:middle;pointer-events:none}
+.pie-tip{position:absolute;left:50%;bottom:-6px;transform:translate(-50%,10px);width:min(90%,360px);
+  background:var(--card);border:1px solid var(--gold);border-radius:12px;padding:10px 14px;
+  box-shadow:0 14px 32px rgba(22,33,29,.18);opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease,visibility .18s;z-index:4;text-align:left}
+.pie-tip.on{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.pie-tip b{display:block;font:600 14px var(--sans);color:var(--ink);margin-bottom:3px}
+.pie-tip span{display:block;font-size:12.5px;color:var(--ink2);line-height:1.55}
+/* 确认清单 */
+.proof{display:grid;gap:10px;list-style:none}
+.proof li{display:grid;grid-template-columns:26px 1fr;gap:12px;align-items:start;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+.proof li svg{width:20px;height:20px;margin-top:3px}
+.proof b{display:block;font-size:15.5px}
+.proof small{display:block;color:var(--ink3);font-size:13.5px;margin-top:3px}
+/* 图文两栏 */
+.split{display:grid;gap:clamp(22px,5vw,46px);grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center}
+.split.top{align-items:start}
+.split.rev>*:first-child{order:2}
+.shots{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(170px,230px));justify-content:center;list-style:none}
+.shots figure{margin:0;max-width:250px}
+.shots img{width:100%;height:auto;border-radius:18px;border:1px solid var(--line);display:block;
+  box-shadow:0 12px 26px rgba(22,33,29,.12);
+  transition:transform .25s ease,box-shadow .25s ease;cursor:zoom-in}
+.shots figure:hover img,.stage figure:hover img{transform:translateY(-7px) scale(1.04);
+  box-shadow:0 24px 48px rgba(22,33,29,.26);animation:none}
+.stage img{cursor:zoom-in;transition:transform .25s ease,box-shadow .25s ease}
+.lightbox{position:fixed;inset:0;z-index:99;display:none;place-items:center;padding:clamp(12px,4vw,40px);
+  background:rgba(10,16,13,.74);backdrop-filter:blur(8px);cursor:zoom-out}
+.lightbox.on{display:grid}
+.lightbox img{max-width:min(100%,1100px);max-height:92vh;width:auto;height:auto;object-fit:contain;
+  border-radius:18px;border:1px solid rgba(255,255,255,.22);box-shadow:0 30px 80px rgba(0,0,0,.4)}
+.shots figcaption{font-size:12.5px;color:var(--ink3);margin-top:7px;text-align:center}
+.rows{display:grid;gap:2px}
+.row{display:grid;grid-template-columns:112px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row dt{font-weight:600;font-size:14.5px}
+.row dd{margin:0;color:var(--ink2);font-size:14.5px}
+.row dd b{color:var(--ink)}
+/* 标记 */
+.marks{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));list-style:none}
+.marks li{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 15px;
+  font-size:14px;color:var(--ink2);line-height:1.6}
+.marks b{display:block;color:var(--ink);font-size:15px;margin:7px 0 3px}
+.marks i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);vertical-align:2px}
+.marks i.brand{background:var(--brand)}
+.marks i.exp{background:var(--exp)}
+.marks i.slate{background:var(--slate)}
+.marks i.dim{background:var(--ink3)}
+/* 下载卡 */
+.get{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:clamp(20px,4vw,32px)}
+.get .req{display:grid;gap:10px 22px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin:18px 0}
+.get .req div{font-size:14px;color:var(--ink2);border-left:2px solid var(--gold);padding-left:11px}
+.get .req b{color:var(--ink);margin-right:6px}
+.perm{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.perm.block{gap:9px;margin:0}
+.perm.block .chip{font-size:13px;padding:7px 12px;border:1px solid var(--line);border-radius:9px;
+  display:flex;align-items:center;gap:7px}
+.perm.block .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.chip{font-size:12.5px;color:var(--ink2);background:var(--brand-soft);border-radius:999px;padding:5px 11px}
+.bound{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));list-style:none}
+.bound li{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;font-size:14.5px;color:var(--ink2)}
+.bound b{display:block;color:var(--ink);font-size:15px;margin-bottom:3px}
+/* 文档 */
+.docs{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.docs a{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);
+  border-radius:13px;padding:14px 15px;transition:border-color .2s ease}
+.docs a:hover{border-color:var(--gold)}
+.docs b{display:block;font-size:15px}
+.docs span{font-size:13px;color:var(--ink3)}
+footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--ink3);font-size:13.5px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+footer a{text-decoration:none}
+footer a:hover{color:var(--brand)}
+/* ============ 响应式 ============ */
+@media (max-width:1000px){.flow{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:1100px){
+  .stage{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:800px}
+  .stage figure:nth-child(1),.stage figure:nth-child(3){transform:none}
+  .ways{grid-template-columns:1fr}
+}
+@media (max-width:900px){
+  .hero .wrap,.split{grid-template-columns:1fr}
+  .split.rev>*:first-child{order:0}
+  .nav{display:none}
+  .flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .flow li:not(:last-child)::after{display:none}
+  .ways{grid-template-columns:1fr}
+  .lightbox{padding:10px}
+  .lightbox img{max-height:94vh}
+  .pie-tip{position:static;transform:none;width:auto;opacity:1;visibility:visible;margin-top:10px}
+}
+@media (max-width:520px){
+  body{font-size:15.5px}
+  .row{grid-template-columns:1fr;gap:3px}
+  .flow{grid-template-columns:1fr}
+  .stage{gap:16px}
+  .stage figcaption{font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition:none!important;animation:none!important}
+  .reveal,.stagger>*{opacity:1;transform:none}
 }
 </style>
 </head>
 <body>
-<svg class="svgsym" width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-signal" viewBox="0 0 24 24"><path d="M3 20h2.5M8 20V14M12.5 20V10M17 20V6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
-<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3 9.5a14 14 0 0118 0M6 13a9 9 0 0112 0M9 16.4a4.4 4.4 0 016 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="19.4" r="1" fill="currentColor"/></symbol>
-<symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
-<symbol id="i-food" viewBox="0 0 24 24"><path d="M6 3.5v7.5a2.5 2.5 0 005 0V3.5M8.5 11v9.5M17.5 3.5c-1.7 1.5-2.5 3.5-2.5 6s.8 3 2.5 3v8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-snack" viewBox="0 0 24 24"><path d="M7 8.5h10l-.9 12H7.9z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 8.5l1.3-3h7.4l1.3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 11.6l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
-<symbol id="i-shirt" viewBox="0 0 24 24"><path d="M9 4.5L4.5 7 6 11l2-.8V20h8v-9.8l2 .8 1.5-4L15 4.5a3 3 0 01-6 0z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
-<symbol id="i-bus" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 10.5h14M8 17v2.5M16 17v2.5M8.5 14h.01M15.5 14h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-plane" viewBox="0 0 24 24"><path d="M3 12.5l18-7.5-6 16-3.2-6.4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
-<symbol id="i-tea" viewBox="0 0 24 24"><path d="M5.5 8.5h11v6a5.5 5.5 0 01-11 0z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M16.5 10h1.6a2.2 2.2 0 010 4.4h-1.6M3.5 20.5h15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-cup" viewBox="0 0 24 24"><path d="M4.5 6.5h12v7a4.5 4.5 0 01-9 0z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M16.5 8h1.8a2.2 2.2 0 010 4.5h-1.8M4 20h13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-water" viewBox="0 0 24 24"><path d="M9.5 3.5h5v2.6l1.6 2.9a5 5 0 01-4.1 7.8 5 5 0 01-4.1-7.8L9.5 6.1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7.6 14.5c1.6 1 3.2 1 4.8 0s3.2-1 4.2.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 20.5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-fruit" viewBox="0 0 24 24"><path d="M12 8.5c3.6 0 6.5 2.7 6.5 6.2S15.6 21 12 21s-6.5-2.8-6.5-6.3S8.4 8.5 12 8.5z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8.5c0-2.6 1.6-4.6 4.4-5.2-.3 2.7-1.7 4.5-4.4 5.2zM5.8 13.4l4.6 4.4M10.4 12.2l5.6 5.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
-<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-soda" viewBox="0 0 24 24"><path d="M6.5 6.5h11l-1.2 13a1.6 1.6 0 01-1.6 1.5H9.3a1.6 1.6 0 01-1.6-1.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M6.9 11.6h10.2M14.5 6.5l1.6-3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
-<symbol id="i-pet" viewBox="0 0 24 24"><circle cx="12" cy="15" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="6.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="6.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="10" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 18h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-book" viewBox="0 0 24 24"><path d="M4.5 5.5A2 2 0 016.5 4H19v14.5H6.5a2 2 0 00-2 2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4.5 19.5a2 2 0 012-2h12.5M9 8h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
-<symbol id="i-cart" viewBox="0 0 24 24"><path d="M3.5 4.5h2.6l2.4 11h9.2l2.3-8H7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="19.4" r="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="19.4" r="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-house-yen" viewBox="0 0 24 24"><path d="M4 10.5L12 5l8 5.5V19a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 19z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.4 12.5l2.6 3 2.6-3M12 15.5v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-brush" viewBox="0 0 24 24"><path d="M15.5 4.5l4 4-8 8-4-1.5.5-4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 15c-2 .5-3 2-3.2 4.2 2.4-.2 3.8-1.4 4.2-3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
-<symbol id="i-med" viewBox="0 0 24 24"><path d="M3.5 12.5h4l2-4.5 3 9 2.2-4.5h5.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 5.5h-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-hongbao" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 8.5c2.6 2 4.6 3 7 3s4.4-1 7-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="13.4" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-fuel" viewBox="0 0 24 24"><path d="M5 20.5V5.5A2 2 0 017 3.5h5a2 2 0 012 2v15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 20.5h11M5 11h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 8.5h2.5a2 2 0 012 2v5a1.6 1.6 0 003.2 0V9l-2.2-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-game" viewBox="0 0 24 24"><path d="M7.5 8.5h9a4.5 4.5 0 014.4 5.4l-.7 3A3 3 0 0117 18l-1.5-2h-7L7 18a3 3 0 01-3.2-1.1l-.7-3A4.5 4.5 0 017.5 8.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 12.5h.01M16 12.5h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
-<symbol id="i-note" viewBox="0 0 24 24"><path d="M5 5.5h14v9l-4.5 4.5H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 9.5h7M8.5 13h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
-<symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15.5V4.5M8.5 8L12 4.5 15.5 8M5.5 13.5v5a1 1 0 001 1h11a1 1 0 001-1v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 11v5.2M12 7.9h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h11M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
-<symbol id="i-chevd" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-5M13 16V8M18 16v-8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15 15l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol></defs></svg>
 <input type="checkbox" id="ink" class="sr">
 
-<header class="top">
-  <div class="topin">
-    <a class="mark" href="#hero">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#B98A34" stroke-width="1.5" stroke-linejoin="round">
-        <path d="M12 12c0-3.4 1.1-5.3 3.3-5.7 1.9-.3 3 1 3 2.7 0 2-1.6 3-3.6 3.1"/><path d="M12 12c-3.4 0-5.3-1.1-5.7-3.3-.3-1.9 1-3 2.7-3 2 0 3 1.6 3.1 3.6"/>
-        <path d="M12 12c0 3.4-1.1 5.3-3.3 5.7-1.9.3-3-1-3-2.7 0-2 1.6-3 3.6-3.1"/><path d="M12 12c3.4 0 5.3 1.1 5.7 3.3.3 1.9-1 3-2.7 3-2 0-3-1.6-3.1-3.6"/>
-      </g><circle cx="12" cy="12" r="1.5" fill="#B98A34"/></svg>
+<header class="bar">
+  <div class="wrap">
+    <a class="mark" href="#top">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#B98A34" stroke-width="1.6" stroke-linejoin="round"><path d="M12 12c0-3.4 1.1-5.3 3.3-5.7 1.9-.3 3 1 3 2.7 0 2-1.6 3-3.6 3.1"/><path d="M12 12c-3.4 0-5.3-1.1-5.7-3.3-.3-1.9 1-3 2.7-3 2 0 3 1.6 3.1 3.6"/><path d="M12 12c0 3.4-1.1 5.3-3.3 5.7-1.9.3-3-1-3-2.7 0-2 1.6-1.6 3.6-3.1"/><path d="M12 12c3.4 0 5.3 1.1 5.7 3.3.3 1.9 1 3-2.7 3-2 0-3-1.6-3.1-3.6"/></g></svg>
       Tally 塔莉
     </a>
-    <nav class="tn">
-      <a class="gh" href="https://github.com/guohangbk/tally-app" title="GitHub"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a9.5 9.5 0 0 0-5 0C7.5 2.8 6.4 3.1 6.4 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 5 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a>
-      <a class="gh" href="https://github.com/guohangbk/tally-app/releases" title="下载 APK"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></a>
+    <nav class="nav" aria-label="页面导航">
+      <a href="#flow">六步</a>
+      <a href="#entry">怎么记</a>
+      <a href="#confirm">确认</a>
+      <a href="#ai">AI</a>
+      <a href="#view">看账</a>
+      <a href="#books">账本</a>
+      <a href="#data">数据</a>
+      <a href="guide.html">使用指南</a>
+      <a href="#get">下载</a>
     </nav>
-    <label class="theme" for="ink" title="纸面 / 墨纸"><i></i>墨纸</label>
+    <label class="switch" for="ink" role="button" tabindex="0">墨色</label>
   </div>
 </header>
 
-<main class="wrap">
+<main id="top">
 
-<section class="hero fade" id="hero">
-  <div>
-    <div class="eyebrow">Local-first &middot; Android &middot; No account</div>
-    <h1>一本<em>只存在手机里</em><br>的账本。</h1>
-    <p class="sub">记账、看账、备份，全部在这台手机里完成。没有账号，没有服务器，<b style="color:var(--ink)">一条数据都不上传</b>。</p>
-    <div class="acts">
-      <a class="btn solid" href="https://github.com/guohangbk/tally-app/releases"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>下载 APK</a>
-      <a class="btn ghost" href="https://github.com/guohangbk/tally-app"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a9.5 9.5 0 0 0-5 0C7.5 2.8 6.4 3.1 6.4 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 5 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>GitHub</a>
-      <a class="btn ghost" href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/界面设计图.html">界面设计图</a>
+  <section class="hero">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">Local-first ledger</span>
+        <h1>纯离线、功能多、AI赋能</h1>
+        <p class="lead">小莉帮你管好每一笔收支</p>
+        <div class="cta cta-stage">
+          <a class="btn solid" href="https://tally.guohang.asia/download-apk">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            下载 APK
+          </a>
+          <a class="btn ghost" href="https://github.com/guohangbk/tally-app">看源码</a>
+          <a class="btn ghost" href="guide.html">使用指南</a>
+        </div>
+        <p class="meta">只含 arm64-v8a，Android 9 起，BUSL-1.1 源码可用</p>
+      </div>
+      <div class="stage stagger">
+        <figure><img src="assets/shot-home.jpg" width="720" height="1600" alt="首页：本月收支、69% 的预算进度条和 4 笔待确认入口"></figure>
+        <figure><img src="assets/shot-stats.jpg" width="720" height="1600" alt="统计页：本月收支、每日统计、星期分布与分类报表"></figure>
+        <figure><img src="assets/shot-ledgers.jpg" width="720" height="1600" alt="我的账本：日常、装修、买车、旅行、家庭共用五本账并列"></figure>
+        <figure><img src="assets/shot-chat.jpg" width="720" height="1600" alt="小莉对话：一句话返回两张账单草稿，仍要确认才落账"></figure>
+      </div>
     </div>
-    <div class="factline">
-      <div class="fact"><b>6</b><span>种记账方式</span></div>
-      <div class="fact"><b>自动</b><span>周期 · 分期 · 房贷入账</span></div>
-      <div class="fact"><b>多账本</b><span>也能合起来看</span></div>
-      <div class="fact"><b>0</b><span>上传的字节</span></div>
+  </section>
+
+  <!-- 01 主线：一笔账从哪来、经过什么、什么时候才算数 -->
+  <section class="pad" id="flow">
+    <div class="wrap">
+      <div class="sh reveal"><span class="no">01</span><h2>一笔账的六步</h2><span class="tag">整个 App 只有这一条主线</span></div>
+      <p class="sub">先跑本机规则，认不全也不丢；AI 只在缺字段那一步补一把，而且默认关着。</p>
+      <ol class="flow stagger">
+        <li data-n="STEP 1"><b>送到面前</b><p>手打、语音、识图、分享、付款通知、问小莉。</p></li>
+        <li data-n="STEP 2"><b>本机规则</b><p>先查你自己的关键词规则，命中就填好。</p></li>
+        <li data-n="STEP 3"><b>认不全也不丢</b><p>缺哪项标红留空，不猜也不扔。</p></li>
+        <li class="opt" data-n="STEP 4"><b>AI 提取（可选）</b><p>开了且缺金额或缺分类才走，先脱敏。</p></li>
+        <li data-n="STEP 5"><b>待确认卡</b><p>几条来路汇成一张卡，逐笔勾选。</p></li>
+        <li data-n="STEP 6"><b>你点存入</b><p>这之后才进账本、才参与统计。</p></li>
+      </ol>
     </div>
-  </div>
-  <div class="stage">
-    <figure class="phone"><img src="assets/shot-home.jpg" width="720" height="1600" alt="首页：本月支出与收入、预算已用 86%，下方是当天的账单"></figure>
-  </div>
-</section>
+  </section>
 
-<section class="blk" id="modules">
-  <div class="sh"><span class="no">01</span><h2>它替你做的八件事</h2><span class="tag">一件一句</span></div>
-  <div class="milist">
-    <div class="mi"><span class="n">01</span><div><h3>记一笔很快</h3><p>点 <b>＋</b>，输金额，选分类。键盘支持 <b>38+12</b> 这样直接算，按保存就是等号。</p></div></div>
-    <div class="mi"><span class="n">02</span><div><h3>说一句就行</h3><p>长按 ＋ 上滑，说「二十九块八毛五」就出 29.85。<b>手机自己解析，不联网也能用。</b></p></div></div>
-    <div class="mi"><span class="n">03</span><div><h3>截图也能记</h3><p>从相册挑几张支付截图，手机自己认出金额和商户，一次最多 9 张。<b>图片不出这台手机。</b></p></div></div>
-    <div class="mi"><span class="n">04</span><div><h3>到期自动入账</h3><p>房租、订阅、工资设一次就好；大额分期、<b>房贷</b>也替你按期记，到点和没记上都提醒一声。</p></div></div>
-    <div class="mi"><span class="n">05</span><div><h3>预算心里有数</h3><p>给这个月或这年设个上限，可以细到分类。快用完时提醒你，<b>但不会满屏红字骂你</b>。</p></div></div>
-    <div class="mi"><span class="n">06</span><div><h3>几个本子，也能合起来看</h3><p>日常、装修、买车各记各的；顶栏切到<b>「全部账本」</b>，看的就是总账。</p></div></div>
-    <div class="mi"><span class="n">07</span><div><h3>统计看得懂</h3><p>任意选一段时间，趋势、分类、星期分布一次给全。<b>每个数字怎么算的，设置里逐条写着。</b></p></div></div>
-    <div class="mi"><span class="n">08</span><div><h3>删错了能找回</h3><p>删除先进<b>回收站</b>，按删除日期分组，保留期你自己定；桌面还能直接看今天和本月。</p></div></div>
-  </div>
-</section>
-
-<section class="blk" id="shots">
-  <div class="sh"><span class="no">02</span><h2>界面长这样</h2><span class="tag">纸与墨 · 一处金晕</span></div>
-  <p class="lead">纸面底色、墨绿主操作、支出陶土、收入墨绿。全站只有一处金色，留给可选的小莉。下面三屏是手机上的真实截图，示例账本记了 2025 到 2026 的每一笔；137 屏（含组件卡）完整设计图在文档那一节。</p>
-  <div class="shots">
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-entry.jpg" width="720" height="1600" alt="记账页：选中零食与咖啡，键盘上方显示 18.00 加 12.00 等于 30.00"></figure>
-      <div class="cap"><b>记账页</b>分类在上，金额与键盘固定在下。按「再记」清掉金额留下分类，连着记不用退出。</div>
+  <!-- 02 六种记法 -->
+  <section class="pad alt" id="entry">
+    <div class="wrap">
+      <div class="sh reveal"><span class="no">02</span><h2>六种记法</h2><span class="tag">手打、语音、识图、分享、通知、问小莉</span></div>
+      <p class="sub">六种入口各管一种场景，最后都汇到同一张确认卡。</p>
+      <div class="ways reveal">
+        <div class="pie" aria-label="六种记账入口：手打、语音、识图、分享、通知、问小莉">
+          <svg viewBox="0 0 400 400" role="img" aria-hidden="true">
+            <g class="petal" tabindex="0" data-tip="手打 · 4×4 键盘｜点 ＋，输金额，选分类。支持 38+12 这类算式，按保存就是等号，备注、日期、凭证图都在同一页。">
+              <path d="M114.6 32.5 A188 188 0 0 1 285.4 32.5 L235.4 130.5 A78 78 0 0 0 164.6 130.5 Z"/>
+              <text x="200" y="62">手打</text><text class="em" x="200" y="76">4×4 键盘</text><text class="hint" x="200" y="90">点＋输金额</text></g>
+            <g class="petal" tabindex="0" data-tip="语音 · 说一句｜长按 ＋ 上滑，按住说完松手；「二十九块八毛五」在本机解析成 29.85，说满 20 秒先提示再收尾。">
+              <path d="M302.4 42.3 A188 188 0 0 1 387.7 190.2 L277.9 195.9 A78 78 0 0 0 242.5 134.6 Z"/>
+              <text x="314" y="128">语音</text><text class="em" x="314" y="142">说一句</text><text class="hint" x="314" y="156">松手出草稿</text></g>
+            <g class="petal" tabindex="0" data-tip="识图 · 支付截图｜长按 ＋ 左滑，从相册挑，一次最多 9 张。端侧 OCR 加本机规则先抽字段，图片不出手机。">
+              <path d="M387.7 209.8 A188 188 0 0 1 302.4 357.7 L242.5 265.4 A78 78 0 0 0 277.9 204.1 Z"/>
+              <text x="314" y="260">识图</text><text class="em" x="314" y="274">支付截图</text><text class="hint" x="314" y="288">最多 9 张</text></g>
+            <g class="petal" tabindex="0" data-tip="分享 · 塔莉速记｜相册或文件里选图，系统分享里点「塔莉速记」，回首页走同一张确认卡。">
+              <path d="M285.4 367.5 A188 188 0 0 1 114.6 367.5 L164.6 269.5 A78 78 0 0 0 235.4 269.5 Z"/>
+              <text x="200" y="326">分享</text><text class="em" x="200" y="340">塔莉速记</text><text class="hint" x="200" y="354">分享即识别</text></g>
+            <g class="petal" tabindex="0" data-tip="通知 · 什么都不用做｜照常付款，通知自己进来；按内容认支付成功，推广和汇总不入账。">
+              <path d="M97.6 357.7 A188 188 0 0 1 12.3 209.8 L122.1 204.1 A78 78 0 0 0 157.5 265.4 Z"/>
+              <text x="86" y="260">通知</text><text class="em" x="86" y="274">什么都不用做</text><text class="hint" x="86" y="288">支付才入账</text></g>
+            <g class="petal" tabindex="0" data-tip="问小莉 · 直接说｜长按 ＋ 右滑打开对话，说话、打字、发图都行；小莉给出的账单仍要你点确认。">
+              <path d="M12.3 190.2 A188 188 0 0 1 97.6 42.3 L157.5 134.6 A78 78 0 0 0 122.1 195.9 Z"/>
+              <text x="86" y="128">问小莉</text><text class="em" x="86" y="142">AI 对话</text><text class="hint" x="86" y="156">说完出账单卡</text></g>
+            <text class="pie-core" x="200" y="205">六种方式</text>
+          </svg>
+          <div class="pie-tip" aria-live="polite"><b></b><span></span></div>
+        </div>
+        <ul class="shots stagger">
+          <li><figure><img src="assets/shot-entry.jpg" width="720" height="1600" alt="记账页：分类、金额、备注、标签与数字键盘，金额写着 38.5"><figcaption>手打：所有字段都在同一页</figcaption></figure></li>
+        </ul>
+      </div>
     </div>
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-stats.jpg" width="720" height="1600" alt="统计页：年视图的收支总览、每月柱状、星期分布与分类环"></figure>
-      <div class="cap"><b>统计页</b>年视图的每月柱、星期分布与分类环来自同一次计算，不会出现两处对不上。</div>
+  </section>
+
+  <!-- 03 要你确认 -->
+  <section class="pad" id="confirm">
+    <div class="wrap split">
+      <div>
+      <div class="sh reveal"><span class="no">03</span><h2>落账前都要你确认</h2><span class="tag">没有静默写账</span></div>
+      <p class="sub">识别可以自动，落账不行。机器抓来的每一笔都先摆成草稿，等你点存入。</p>
+      <ul class="proof stagger">
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7L10 17l-6-6" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>确认卡是唯一入口</b><small>语音、识图、分享、通知都汇到这一张卡，点「存入」才写进账本。</small></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7L10 17l-6-6" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>缺分类就标红</b><small>认不出分类的行标红置顶，勾着它时存入按钮是灰的——宁可你选一次，不替你编一个。</small></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7L10 17l-6-6" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>没处理完不会丢</b><small>中途退出、进程被系统杀掉都算，这批账留在本机；下次打开首页，预算进度条下面出现「有 N 笔待确认」。</small></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7L10 17l-6-6" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>同一笔不会被记两次</b><small>后到的只补空字段，不覆盖你改过的值；已经入账的订单号再推一次直接丢弃。</small></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7L10 17l-6-6" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>放着不管会自己过期</b><small>机器抓来的草稿 30 天没人确认就退出待确认清单，不会哪天突然冒出来。</small></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7L10 17l-6-6" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>通知原文不留档</b><small>解析完就丢，不写数据库、不进日志；日志里只留「哪个应用、多少钱、认出了哪几个字段」。</small></div>
+        </li>
+      </ul>
+      </div>
+      <ul class="shots">
+        <li><figure><img src="assets/shot-confirm.jpg" width="720" height="1600" alt="待确认卡：标题待确认 4 笔，四行草稿可逐条确认，缺分类的行标红"><figcaption>待确认卡：四条草稿汇在一处，缺分类标红</figcaption></figure></li>
+        <li><figure><img src="assets/shot-batch.jpg" width="720" height="1600" alt="批量选择态：顶栏写着已选 116 笔，底栏汇总金额与已排除笔数，动作按钮有打标签、改分类、报销、不计入、删除、改日期、改备注、移至账本"><figcaption>已入账的账还能批量补标、改分类</figcaption></figure></li>
+      </ul>
     </div>
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-budget.jpg" width="720" height="1600" alt="预算页：总额预算与四条分类预算，超支的交通标红"></figure>
-      <div class="cap"><b>预算页</b>总额加若干分类，快用完的那条自己变颜色，超支的那条直接变红。</div>
+  </section>
+
+  <!-- 04 AI 提取 -->
+  <section class="pad alt" id="ai">
+    <div class="wrap split">
+      <div>
+        <div class="sh reveal"><span class="no">04</span><h2>AI 提取</h2><span class="tag">可选，默认全关</span></div>
+        <p class="sub">不配任何服务商，前面几章照样能用。开了只是让你少改几项，不开也不会把账扔掉。</p>
+        <dl class="rows reveal">
+          <div class="row"><dt>开了有什么不同</dt><dd>规则认不出的那一步交给 AI，金额、分类、日期、备注一次补全，你要改的更少。</dd></div>
+          <div class="row"><dt>什么时候找它</dt><dd>开关按入口分：语音、识图、塔莉速记、通知。开着且<b>缺金额或缺分类</b>才叫 AI，日期不触发；进了 AI 的那一笔以 AI 为准。</dd></div>
+          <div class="row"><dt>你的规则优先</dt><dd>提示词里带着你自己的关键词规则与分类表；命中你的规则就不惊动 AI。</dd></div>
+          <div class="row"><dt>发出去的是什么</dt><dd>截图、语音、通知都<b>先脱敏再外发</b>，AI 看到的是文字，不是原图。</dd></div>
+          <div class="row"><dt>它挂了不影响记账</dt><dd>失败或超时退回规则结果，照常出卡，不会变成「没识别」。</dd></div>
+          <div class="row"><dt>越用越少麻烦</dt><dd>保存过的备注会沉淀成关键词规则，AI 学来的单独标注、可删。</dd></div>
+          <div class="row"><dt>小莉对话</dt><dd>长按 ＋ 右滑，一句话或最多 3 张图变成待确认卡。落库那一步还是留给你。</dd></div>
+        </dl>
+      </div>
+      <ul class="shots stagger">
+        <li><figure><img src="assets/shot-ai-loading.jpg" width="720" height="1600" alt="首页浮层：中间是金色花瓣进度环，下面写着 AI 提取中和 1/1 张"><figcaption>AI 提取时首页给进度浮层，不离开当前页</figcaption></figure></li>
+        <li><figure><img src="assets/shot-auto.jpg" width="720" height="1600" alt="自动记账设置页：自动入口与 AI 提取分组，三个 AI 增强开关默认全关"><figcaption>AI 提取按入口分开，默认全关，规则先用</figcaption></figure></li>
+      </ul>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="blk" id="more">
-  <div class="sh"><span class="no">03</span><h2>还有这些</h2><span class="tag">分期 · 周期 · 多账本 · 小莉</span></div>
-  <p class="lead">一笔大额可以拆成每月一期，固定开销交给周期记账，装修和旅行各开一本；想少敲几下，就把一句话交给小莉。</p>
-  <div class="more">
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-installment.jpg" width="720" height="1600" alt="分期明细：100 万房贷按等额本金分 360 期，本金每期 2,777.77，利息逐月递减，已入账 5 期"></figure>
-      <div class="cap"><b>分期与房贷</b>100 万、30 年、年利率 3.0% 的房贷按等额本金排期：本金每期 2,777.77，利息按剩余本金逐月递减，每期金额自己就能核对。</div>
+  <!-- 05 周期与预算 -->
+  <section class="pad" id="auto">
+    <div class="wrap split">
+      <div>
+        <div class="sh reveal"><span class="no">05</span><h2>周期、分期与预算</h2><span class="tag">唯一会自己生成的账</span></div>
+        <p class="sub">这几类是你提前安排好的，到点就生成；其余一律先等确认。</p>
+        <dl class="rows reveal">
+          <div class="row"><dt>周期记账</dt><dd>房租、订阅、工资按执行日自动生成。错过的期数不静默补：页顶出现「检测到 N 笔待补账单」，按「全部补记」才入账。</dd></div>
+          <div class="row"><dt>分期</dt><dd>一笔大额拆成多期，<b>末期自动吃掉分币尾差</b>，合计恒等于总额。</dd></div>
+          <div class="row"><dt>房贷</dt><dd>LPR±BP、等额本息与等额本金。利率可改，金额、期数与首期入账日锁死。</dd></div>
+          <div class="row"><dt>预算</dt><dd>按月或按年设总额，也能细到分类；阈值默认 80%，可自动续期，往期看「预算历史」。</dd></div>
+          <div class="row"><dt>到期提醒</dt><dd>当日未记账、周期到期、分期到期、执行失败，四类各自可关，只承诺今天之内。</dd></div>
+        </dl>
+      </div>
+      <ul class="shots stagger">
+        <li><figure><img src="assets/shot-recurring.jpg" width="720" height="1600" alt="周期记账页：健身月卡 168 每月 1 日、视频会员 25 每月 3 日、物业费 320 每月 5 日、工资 15,600 每月 15 日、猫粮 189 每月 20 日，每行带明细、补记、编辑三个按钮"><figcaption>周期记账：每行都写着执行日与下次日期</figcaption></figure></li>
+        <li><figure><img src="assets/shot-installment.jpg" width="720" height="1600" alt="房贷明细：30 / 360 期，本期应还 5,683.07、剩余本金 1,189,413.17、下期本金 2,114.83，下面是每期到期日、本金、利息、金额与已入账状态"><figcaption>房贷：本金与利息逐期摊开</figcaption></figure></li>
+      </ul>
     </div>
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-recurring.jpg" width="720" height="1600" alt="周期记账：房租每月 5 日 3,800 元、保险每月 12 日 680 元、停车费每月 1 日 300 元"></figure>
-      <div class="cap"><b>周期记账</b>房租、保险、停车费各设一次，到点提醒入账；错过的执行日按原来的日期补记，不会把整段历史挪到今天。</div>
+  </section>
+
+  <!-- 06 看账 -->
+  <section class="pad alt" id="view">
+    <div class="wrap split rev">
+      <div>
+        <div class="sh reveal"><span class="no">06</span><h2>统计、搜索与批量</h2><span class="tag">钱去哪了</span></div>
+        <p class="sub">统计跟着首页选的账本走：切到「全部账本」，看的就是总账。</p>
+        <dl class="rows reveal">
+          <div class="row"><dt>统计</dt><dd>收支总览、预算段、每日与星期分布、分类报表、日报表；点一级看二级小计，点某天可就地补一笔。</dd></div>
+          <div class="row"><dt>区间</dt><dd>月、年、自定义区间随便切。62 天内按日分桶，更久按月，也能手动按周。</dd></div>
+          <div class="row"><dt>搜索</dt><dd>时间、账本、来源、金额区间、排序一起筛；合计算全部命中，列表先列 1000 笔。</dd></div>
+          <div class="row"><dt>批量</dt><dd>长按任意一行进选择态，八个动作：标签、分类、报销、不计入、删除、日期、备注、账本。</dd></div>
+          <div class="row"><dt>标签</dt><dd>跨账本通用：记账页挂标、搜索按标筛、批量补标，另有标签详情页。</dd></div>
+          <div class="row"><dt>回收站</dt><dd>删除是软删，按删除日分组；保留 7 / 30 / 90 天或永不清理，到期才物理删除。</dd></div>
+        </dl>
+      </div>
+      <ul class="shots stagger">
+        <li><figure><img src="assets/shot-stats.jpg" width="720" height="1600" alt="统计页：本月收支总览、本月预算三条进度、每日统计柱状、星期分布与分类报表，顶上可在月、年、区间之间切"><figcaption>统计一页，段段与首页同源</figcaption></figure></li>
+        <li><figure><img src="assets/shot-search.jpg" width="720" height="1600" alt="搜索账单页：筛出来源为导入的 42 笔，合计 3,582.37，已排除 0，每行带着「导入」小标与支付宝备注"><figcaption>按来源筛一把，导入的账单独看</figcaption></figure></li>
+      </ul>
     </div>
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-ledgers.jpg" width="720" height="1600" alt="我的账本：日常账本、装修 17,490 元、冰岛旅行 30,940 元三本并列"></figure>
-      <div class="cap"><b>多账本</b>装修、冰岛旅行各开一本，日常账本照旧。顶栏切到「全部账本」时，看的是三本合起来的数。</div>
+  </section>
+
+  <!-- 07 多账本与分类 -->
+  <section class="pad" id="books">
+    <div class="wrap split rev">
+      <div>
+        <div class="sh reveal"><span class="no">07</span><h2>多账本与分类</h2><span class="tag">各记各的，也能合起来看</span></div>
+        <p class="sub">一本日常、一本装修、一本买车：各记各的预算与结算，首页与统计随时切，也能选「全部账本」看总账。</p>
+        <dl class="rows reveal">
+          <div class="row"><dt>账本</dt><dd>新建、改名、换图标、排序、归档、删除都在「我的账本」。每本可出概览：支出合计、分类占比、最近几笔，页底生成结算长图。</dd></div>
+          <div class="row"><dt>默认账本</dt><dd>记账页顶部那枚账本名就是当前落点，长按 ＋ 记的每一笔都进默认那本，除非你当场换一个。</dd></div>
+          <div class="row"><dt>合并视角</dt><dd>首页与统计的账本选择里有「全部账本」，选它就是在算总账，预算仍按各本自己那条走。</dd></div>
+          <div class="row"><dt>分类</dt><dd>全机共用一套两级树，不随账本重复建。一级长按拖动排序，二级在展开的那一排里点。</dd></div>
+          <div class="row"><dt>删分类</dt><dd>还有账单的分类不能直接删，要先选去处：并进另一个分类或留在「其它」，一笔账都不会丢。</dd></div>
+          <div class="row"><dt>收入与支出分开</dt><dd>分类树分支出 25 组、收入 6 组两页，各自排序，工资与报销不会混进支出里。</dd></div>
+        </dl>
+      </div>
+      <ul class="shots stagger">
+        <li><figure><img src="assets/shot-ledgers.jpg" width="720" height="1600" alt="我的账本页：日常账本 213,525.67 标着默认，装修 111,472.27、买车 119,100.84、旅行 3,172.00、家庭共用 14,797.55，每本写着笔数与最近一笔，下面是概览、编辑、结算、删除四个按钮"><figcaption>五本账并列，各写各的合计与笔数</figcaption></figure></li>
+        <li><figure><img src="assets/shot-categories.jpg" width="720" height="1600" alt="分类管理页：支出 25 与收入 6 两页切换，列表里宠物 12 笔、旅行 11 笔、三餐 472 笔、交通 203 笔，每行可展开二级"><figcaption>两级分类树，行尾直接写着用了多少笔</figcaption></figure></li>
+      </ul>
     </div>
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-chat.jpg" width="720" height="1600" alt="小莉对话：说一句「火锅 168，打车 26」，返回一张两笔待确认的账单卡"></figure>
-      <div class="cap"><b>小莉记账</b>说一句「火锅 168，打车 26」，她先给一张待确认的卡；分类、金额、日期都能改，点「全部记入」才落账。</div>
+  </section>
+
+  <!-- 08 数字口径 -->
+  <section class="pad alt" id="marks">
+    <div class="wrap split">
+      <div>
+      <div class="sh reveal"><span class="no">08</span><h2>每个数字怎么算</h2><span class="tag">口径写在 App 里</span></div>
+      <p class="sub">同一笔可以同时带好几枚标记，互不覆盖。界面自己不做加减，数字全由这套规则推导。</p>
+      <ul class="marks stagger">
+        <li><i></i><b>未报销</b>照常计入支出合计。</li>
+        <li><i class="brand"></i><b>已报销</b>不再计入支出合计；统计页可临时「剔除未报销」。</li>
+        <li><i class="brand"></i><b>退款</b>关联原单按负数冲抵它所在分类；没关联只进列表与笔数。</li>
+        <li><i class="slate"></i><b>不计入收支</b>整笔剔除，汇成「已排除 N 笔」，仍在列表里。</li>
+        <li><i></i><b>周期 / 分期</b>只算已经生成的账单，未来期次不进数字。</li>
+        <li><i class="exp"></i><b>导入</b>与手打的账同口径，来源只决定能不能按来源筛到。</li>
+        <li><i class="dim"></i><b>每月起始日</b>可设 1 到 28 号，首页、统计、预算、日报表共用。</li>
+        <li><i class="dim"></i><b>回收站里的账</b>不参与统计，直到被恢复。</li>
+      </ul>
+      </div>
+      <ul class="shots">
+        <li><figure><img src="assets/shot-budget.jpg" width="720" height="1600" alt="预算管理页：本月总额预算 15,000 已用 69%，日均 493.71、还剩 9 天；分类预算三餐 74%、交通 42%、零食 37%，底部有预算历史入口"><figcaption>预算按各本自己的口径算，不跟着总账混</figcaption></figure></li>
+      </ul>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="blk" id="desk">
-  <div class="sh"><span class="no">04</span><h2>桌面上那一小块</h2><span class="tag">只看不动</span></div>
-  <p class="lead">提供八枚桌面小组件——近七日、收支速览（小 / 四格）、快速记账（小 / 八格）、预算环、消费节奏、记账连续记录。全部只读，点一下回到 App；长按图标还有「记一笔」和「查看统计」两条快捷方式。</p>
-  <div class="shots">
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-widgets.jpg" width="720" height="1600" alt="桌面小组件实景（一）：近七日支出柱状、收支速览四格与快速记账八格"></figure>
-      <div class="cap"><b>一眼看趋势</b>近七日支出、本月收支速览、常用分类的快速记账，三块拼在桌面上。</div>
+  <!-- 09 数据与权限 -->
+  <section class="pad" id="data">
+    <div class="wrap">
+      <div class="sh reveal"><span class="no">09</span><h2>数据与权限</h2><span class="tag">没有账号，也没有服务器</span></div>
+      <div class="perm block reveal" aria-label="申请的权限">
+        <span class="chip">网络</span>
+        <span class="chip">麦克风</span>
+        <span class="chip">通知</span>
+        <span class="chip">悬浮窗</span>
+        <span class="chip">通知使用权</span>
+      </div>
+      <div class="split top reveal">
+        <dl class="rows">
+          <div class="row"><dt>都在本机</dt><dd>账单、凭证图、偏好全存在这台手机的数据库里，App 没有账号体系。</dd></div>
+          <div class="row"><dt>换手机</dt><dd>导一个 <code>.tally</code> 加密包（ZIP + AES-256）出去，新机上恢复，可不含图片。</dd></div>
+          <div class="row"><dt>表格</dt><dd>14 列 CSV / XLSX，导出去的文件能原样导回，标记与图片引用都在列里。</dd></div>
+          <div class="row"><dt>导入</dt><dd>自己的模板、钱迹、支付宝账单。重复行在预览阶段就说破，默认跳过。</dd></div>
+          <div class="row"><dt>快照</dt><dd>WebDAV 只做手动快照，不做云同步，服务器是你自己的。</dd></div>
+          <div class="row"><dt>出问题了</dt><dd>导出诊断包：版本、机型、表行数、日志尾巴，<b>不含</b>金额、备注、分类名与 API Key。</dd></div>
+          <div class="row"><dt>自动记账的授权</dt><dd>权限与检查页把通知使用权、悬浮窗、电池优化、自启动的真实状态列出来，点一行跳到该开的开关。</dd></div>
+          <div class="row"><dt>备份这条路</dt><dd>导出、打包、校验、完成四步写在页顶，恢复先校验后替换，校验不过就不动现有数据。</dd></div>
+        </dl>
+        <ul class="shots stagger">
+          <li><figure><img src="assets/shot-backup.jpg" width="720" height="1600" alt="备份与同步页：顶部导出、打包、校验、完成四步进度，下面是导出本地数据库备份与从备份包恢复"><figcaption>备份四步：导出、打包、校验、完成</figcaption></figure></li>
+        </ul>
+      </div>
     </div>
-    <div class="shot">
-      <figure class="phone"><img src="assets/shot-widgets-2.jpg" width="720" height="1600" alt="桌面小组件实景（二）：消费节奏、今日速览、快速记账四格、预算环与连续记账"></figure>
-      <div class="cap"><b>一眼看节奏</b>消费节奏、今日速览、预算环与连续记账。八枚组件分两屏摆满，不打开 App 也能看一眼。</div>
+  </section>
+
+  <!-- 10 桌面与外观 -->
+  <section class="pad alt" id="desktop">
+    <div class="wrap split">
+      <div>
+        <div class="sh reveal"><span class="no">10</span><h2>桌面与外观</h2><span class="tag">不打开 App 也能看数</span></div>
+        <p class="sub">组件只读，点哪儿就进 App 对应的页；取不到数时显示「—」并标「未更新」，不会拿 ¥0.00 冒充。</p>
+        <dl class="rows reveal">
+          <div class="row"><dt>桌面组件</dt><dd>八枚：近七日、收支速览小 / 四格、快速记账小 / 八格、预算环、消费节奏、记账连续记录。</dd></div>
+          <div class="row"><dt>长按图标</dt><dd>两条快捷方式：记一笔、查看统计。</dd></div>
+          <div class="row"><dt>主题</dt><dd>跟随系统 / 浅色 / 深色，只做同一套配色换色，不改布局。</dd></div>
+          <div class="row"><dt>金额显示</dt><dd>货币符号、千分位各一行；账单时间可以精确到分钟。</dd></div>
+          <div class="row"><dt>秒开模式</dt><dd>打开应用直接落在记账页，保存一笔就回首页。</dd></div>
+          <div class="row"><dt>分享长图</dt><dd>把当前这一段画成竖长图，可一键脱敏，直接分享或存 Download/Tally。</dd></div>
+        </dl>
+      </div>
+      <ul class="shots stagger">
+        <li><figure><img src="assets/shot-widgets.jpg" width="720" height="1600" alt="桌面小组件：近七日、收支速览、快速记账、预算环等只读组件"><figcaption>桌面 8 枚只读组件</figcaption></figure></li>
+        <li><figure><img src="assets/shot-widgets-2.jpg" width="720" height="1600" alt="桌面小组件第二组：消费节奏、本月预算、记账连续记录"><figcaption>长按图标另有两条快捷方式</figcaption></figure></li>
+      </ul>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="blk" id="jasmine">
-  <div class="sh"><span class="no">05</span><h2>小莉（可选）</h2><span class="tag">你的AI财务</span></div>
-  <div class="jasmine">
-    <h3><svg class="petal" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#B98A34" stroke-width="1.6" stroke-linejoin="round"><path d="M12 12c0-3.4 1.1-5.3 3.3-5.7 1.9-.3 3 1 3 2.7 0 2-1.6 3-3.6 3.1"/><path d="M12 12c-3.4 0-5.3-1.1-5.7-3.3-.3-1.9 1-3 2.7-3 2 0 3 1.6 3.1 3.6"/><path d="M12 12c0 3.4-1.1 5.3-3.3 5.7-1.9.3-3-1-3-2.7 0-2 1.6-3 3.6-3.1"/><path d="M12 12c3.4 0 5.3 1.1 5.7 3.3.3 1.9-1 3-2.7 3-2 0-3-1.6-3.1-3.6"/></g></svg>智能靠「什么时候出现」表达</h3>
-    <p>不开小莉，她也不会藏起来：长按 ＋ 右滑只有一臂「问小莉」，落在设置里的开关；开了没配好落在配置页；配好才进对话。她只做两件事：对话里把一句话或几张图变成<b>等你确认的账单卡</b>，以及在统计页<b>点一下才算</b>一份分析。配置要自己填 Key，测通了才保存——不配置，前面那些功能照样用得完。</p>
-    <div class="chips"><span>服务商与模型自选</span><span>Key 只存在这台手机里</span><span>一次最多发 3 张图</span><span>不配置也不影响记账</span></div>
-  </div>
-</section>
+  <!-- 11 下载 -->
+  <section class="pad" id="get">
+    <div class="wrap">
+      <div class="get">
+        <div class="sh"><span class="no">11</span><h2>下载</h2><span class="tag">没有商店，源码公开</span></div>
+        <p class="sub">只有一个 APK，浏览器下完直接装。</p>
+        <div class="req">
+          <div><b>架构</b> 只含 arm64-v8a，2018 年后的主流机型都是它</div>
+          <div><b>系统</b> Android 9（API 28）及以上</div>
+          <div><b>装不上</b> 32 位老机器与 x86 模拟器</div>
+          <div><b>怎么装</b> 浏览器下好直接装，第一次允许「安装未知应用」</div>
+          <div><b>下载入口</b> 这个地址永远给当前版本，发新版不用换链接</div>
+        </div>
+        <div class="cta">
+          <a class="btn solid" href="https://tally.guohang.asia/download-apk">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            下载 APK
+          </a>
+          <a class="btn ghost" href="https://github.com/guohangbk/tally-app/releases">历史版本</a>
+          <a class="btn ghost" href="guide.html">使用指南</a>
+        </div>
+        <p class="note">服务器只留当前那一个安装包，旧版本号访问不到；要回看历史版本去 Release 页。仓库里带一把测试签名钥匙，克隆下来不用配任何东西就能出包。</p>
+      </div>
+    </div>
+  </section>
 
-<section class="blk" id="data">
-  <div class="sh"><span class="no">06</span><h2>数据只在你手里</h2><span class="tag">没有账号 · 没有服务器</span></div>
-  <div class="three">
-    <div><span class="k">STORAGE</span><h3>都在本机</h3><p>账单、凭证图、偏好全存在这台手机的数据库里。App 没有账号体系，也没有自己的服务器——<b>它想上传也没地方可传</b>。</p></div>
-    <div><span class="k">MOVE</span><h3>换手机是一个文件</h3><p>导一个加密备份包出来，到新机上恢复，账就过去了；也可以导出 CSV 或 Excel，日后原样导回。<b>备份包还能设置不含图片</b>，先说清楚里面有什么。</p></div>
-    <div><span class="k">PERMISSIONS</span><h3>只申请用得着的</h3><p>麦克风（语音记账）、通知（到期与失败提醒）、网络（只在你主动用小莉、WebDAV，或点「检查更新」时用）。<b>不申请存储、定位、通讯录。</b></p></div>
-  </div>
-</section>
+  <!-- 12 不做什么 -->
+  <section class="pad alt" id="bounds">
+    <div class="wrap">
+      <div class="sh reveal"><span class="no">12</span><h2>不做什么</h2><span class="tag">边界写死</span></div>
+      <p class="sub">这些不是没做完，是不做。</p>
+      <ul class="bound stagger">
+        <li><b>账号与云同步</b>不做注册、不做多端合并，数据不出这台手机。</li>
+        <li><b>账户与资产</b>不做银行卡余额、转账、投资与多币种，只记收支。</li>
+        <li><b>系统已有的事</b>应用锁、通知中心不在 App 里再做第二套。</li>
+        <li><b>iOS 与商店上架</b>只有 Android，只有这个下载入口。</li>
+      </ul>
+    </div>
+  </section>
 
-<section class="blk" id="get">
-  <div class="sh"><span class="no">07</span><h2>拿去用</h2><span class="tag">没有商店 · 源码公开</span></div>
-  <p class="lead">直接下载编好的 APK，装到 Android 9 及以上的手机；或者自己从这个仓库构建——签名文件随仓库带着，克隆下来就能出包，环境要求与构建命令写在 README 里。</p>
-  <p class="note">安装包只含 <b>arm64-v8a</b>：2018 年后的主流机型都是这个架构，32 位老机器与 x86 模拟器装不上。</p>
-  <div class="acts">
-    <a class="btn solid" href="https://github.com/guohangbk/tally-app/releases"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>下载 APK</a>
-    <a class="btn ghost" href="https://github.com/guohangbk/tally-app"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a9.5 9.5 0 0 0-5 0C7.5 2.8 6.4 3.1 6.4 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 5 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>GitHub</a>
-  </div>
-  <div class="chips"><span>无需注册</span><span>离线可记</span><span>无广告</span><span>无内购</span><span>数据不上传</span><span>源码可查</span></div>
-</section>
+  <!-- 13 文档 -->
+  <section class="pad" id="docs">
+    <div class="wrap">
+      <div class="sh reveal"><span class="no">13</span><h2>文档</h2><span class="tag">对外只有一份当前口径</span></div>
+      <p class="sub">需求、设计、库结构与隐私说明都在公开仓，历史版本靠 tag 取回。</p>
+      <div class="docs stagger">
+        <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/需求规格说明书.md"><b>需求与验收标准</b><span>功能清单、边界与判据</span></a>
+        <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/详细设计说明书.md"><b>详细设计</b><span>逐功能的处理逻辑与边界</span></a>
+        <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/数据库设计文档.md"><b>数据库设计</b><span>表结构、索引与统计口径</span></a>
+        <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/界面与交互规范.md"><b>界面与交互规范</b><span>设计语言与组件判据</span></a>
+        <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/设计决策.md"><b>设计决策</b><span>为什么这么设计、否决过什么</span></a>
+        <a href="https://github.com/guohangbk/tally-app/blob/HEAD/PRIVACY.md"><b>隐私说明</b><span>权限、AI 发什么、备份含什么</span></a>
+      </div>
+      <p class="note" style="margin-top:16px">许可：<a href="https://github.com/guohangbk/tally-app/blob/HEAD/LICENSE">BUSL-1.1</a>，源码可读、可改、可自行构建、可个人自用，不得作为商业产品或服务的替代品提供给第三方。</p>
+    </div>
+  </section>
+</main>
 
-<section class="blk" id="road">
-  <div class="sh"><span class="no">08</span><h2>不做什么</h2><span class="tag">边界写死</span></div>
-  <div class="steps">
-    <div class="step"><span class="when">不做</span><span class="what">账号体系、云同步、多端合并、账户与资产、转账、多币种、iOS、应用商店上架。系统已经提供的能力（如应用锁、通知中心）不在 App 里做第二套。</span><span class="st">至今</span></div>
-  </div>
-</section>
-
-<section class="blk" id="docs">
-  <div class="sh"><span class="no">09</span><h2>文档</h2><span class="tag">都在 docs/release/</span></div>
-  <div class="docs">
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/需求规格说明书.md"><span class="u">规格</span><span class="n">需求规格说明书</span><span class="d">FR / NFR / AC</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/概要设计说明书.md"><span class="u">架构</span><span class="n">概要设计说明书</span><span class="d">模块与构建基线</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/详细设计说明书.md"><span class="u">细节</span><span class="n">详细设计说明书</span><span class="d">逐模块处理与边界</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/数据库设计文档.md"><span class="u">数据</span><span class="n">数据库设计文档</span><span class="d">表结构 · 索引 · 口径</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/界面与交互规范.md"><span class="u">规范</span><span class="n">界面与交互规范</span><span class="d">设计语言 · 组件 · 判据</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/设计决策.md"><span class="u">取舍</span><span class="n">设计决策</span><span class="d">为什么这么设计</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/用户操作手册.md"><span class="u">用法</span><span class="n">用户操作手册</span><span class="d">给使用者看</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/docs/release/界面设计图.html"><span class="u">图</span><span class="n">界面设计图</span><span class="d">自包含 · 下载后本地打开</span></a>
-    <a href="https://github.com/guohangbk/tally-app/blob/HEAD/LICENSE"><span class="u">法律</span><span class="n">LICENSE</span><span class="d">BUSL-1.1 源码可用许可</span></a>
-  </div>
-</section>
-
-<section class="blk" id="license" style="border-bottom:0">
-  <div class="sh"><span class="no">10</span><h2>许可与可获得性</h2><span class="tag">说清楚，不藏着</span></div>
-  <p class="lead">本项目采用 <b>Business Source License 1.1</b>（BUSL-1.1）。它是 <b>Source-Available</b>——中文规范叫法是「源码可用许可 / 商业源码许可」，
-    <b>不是 OSI 定义的开源许可</b>：源码可以读、可以改、可以构建、可以装到自己手机上用；不能拿它做成商品或服务提供给第三方。
-    每个版本在 Change Date（最早 2030-11-01，或该版本首次公开分发满四年，取更早者）自动转为 GPL-2.0-or-later，届时它就是真正的开源软件。</p>
-  <p class="note">没有应用商店版本，Release 上提供编好的 APK，源码与构建方式都在这个仓库里。依赖全部 Apache-2.0，136 枚图标与界面图形都是本仓库手画的矢量，字体用系统字体族——App 内「设置 → 许可与依赖」有同一份清单。</p>
-</section>
-
-<footer class="ft">
-  <div>
-    <div class="big">小莉帮你管好每一笔收支</div>
-    <div class="note">Tally 塔莉 · 数据只存在这台手机里</div>
-  </div>
-  <div class="rt">
-    原生 Android · Kotlin + Jetpack Compose<br>
-    源码公开，许可见 <a href="https://github.com/guohangbk/tally-app/blob/HEAD/LICENSE" style="border-bottom:1px solid var(--line)">BUSL-1.1</a><br>
-    源码公开 · 也提供编好的 APK
+<footer>
+  <div class="wrap">
+    <span>Tally 塔莉 · 小莉帮你管好每一笔收支</span>
+    <span style="margin-left:auto">
+      <a href="https://github.com/guohangbk/tally-app">GitHub</a> /
+      <a href="https://github.com/guohangbk/tally-app/releases">Releases</a> /
+      <a href="mailto:guohangbk@gmail.com">反馈</a>
+    </span>
   </div>
 </footer>
+<div class="lightbox" role="dialog" aria-modal="true" aria-label="查看大图"><img alt=""></div>
+<script>
+(() => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const tip = document.querySelector('.pie-tip');
+  const tipTitle = tip.querySelector('b');
+  const tipText = tip.querySelector('span');
+  const petals = document.querySelectorAll('.petal');
+  const show = (petal) => {
+    const [title, ...text] = (petal.dataset.tip || '').split('｜');
+    tipTitle.textContent = title;
+    tipText.textContent = text.join('｜');
+    tip.classList.add('on');
+  };
+  const hide = () => tip.classList.remove('on');
+  petals.forEach((petal) => {
+    petal.addEventListener('mouseenter', () => show(petal));
+    petal.addEventListener('focus', () => show(petal));
+    petal.addEventListener('mouseleave', hide);
+    petal.addEventListener('blur', hide);
+    petal.addEventListener('click', (event) => {
+      event.preventDefault();
+      show(petal);
+    });
+  });
 
-</main>
+  const lightbox = document.querySelector('.lightbox');
+  const lightboxImg = lightbox.querySelector('img');
+  document.querySelectorAll('.shots img, .stage img').forEach((img) => {
+    img.addEventListener('click', () => {
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt;
+      lightbox.classList.add('on');
+    });
+  });
+  lightbox.addEventListener('click', () => lightbox.classList.remove('on'));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') lightbox.classList.remove('on');
+  });
+
+  const targets = document.querySelectorAll('.reveal, .stagger');
+  if (reduced || !('IntersectionObserver' in window)) {
+    targets.forEach((el) => el.classList.add('on'));
+    return;
+  }
+  let first = true;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting || entry.target.classList.contains('on')) return;
+      const delay = first ? 60 : 0;
+      first = false;
+      setTimeout(() => entry.target.classList.add('on'), delay);
+      io.unobserve(entry.target);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+  targets.forEach((el) => io.observe(el));
+})();
+</script>
 </body>
 </html>

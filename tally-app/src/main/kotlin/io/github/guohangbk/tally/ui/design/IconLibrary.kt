@@ -260,6 +260,7 @@ object IconLibrary {
         "jasmine" to R.drawable.ic_jasmine,
         "keyboard" to R.drawable.ic_keyboard,
         "menu" to R.drawable.ic_menu,
+        "notification" to R.drawable.ic_notification,
         "pencil" to R.drawable.ic_pencil,
         "mic" to R.drawable.ic_mic,
         "more" to R.drawable.ic_more,

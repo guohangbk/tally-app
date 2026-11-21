@@ -224,6 +224,16 @@ fun TallyHomeScreen(
     val materialState by materials.uiState.collectAsStateWithLifecycle()
     val pendingCount by materials.pendingCount.collectAsStateWithLifecycle()
     var showMaterialSheet by rememberSaveable { mutableStateOf(false) }
+
+    // 待确认角标点进来：先把文件里的清单摆回内存再开卡（与首页那枚入口同一条路）。
+    LaunchedEffect(Unit) {
+        graph.pendingLink.collect { link ->
+            if (link is NotificationLink.PendingIngest) {
+                materials.openPending { showMaterialSheet = true }
+                graph.pendingLink.value = null
+            }
+        }
+    }
     val materialPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MaterialBatchViewModel.MAX_IMAGES),
     ) { uris ->
@@ -828,6 +838,7 @@ fun TallyHomeScreen(
             onQueue = materials::requestQueue,
             // 存完立刻报一句；卡面上没有待处理的行时，上面那条 effect 会把弹窗收掉。
             onSave = { materials.saveChecked { count -> TallyToast.show("已存入 $count 笔", ToastTone.SUCCESS) } },
+            onRemove = materials::remove,
             onDiscard = {
                 materials.discard()
                 showMaterialSheet = false

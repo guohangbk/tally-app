@@ -162,6 +162,8 @@ private fun IngestSource.aiEnhanced(settings: TallySettings): Boolean = when (th
     IngestSource.VOICE -> settings.aiVoiceEnabled
     IngestSource.SCREENSHOT -> settings.aiImageEnabled
     IngestSource.SHARE -> settings.aiQuickNoteEnabled
+    IngestSource.NOTIFICATION -> settings.aiNotificationComplete
+    IngestSource.PAYMENT -> settings.aiPaymentComplete
     IngestSource.CHAT -> true
 }
 

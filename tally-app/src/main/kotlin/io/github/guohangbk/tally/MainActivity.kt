@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import io.github.guohangbk.tally.data.notify.NotificationLink
+import io.github.guohangbk.tally.data.notify.PendingBadgeOverlay
 import io.github.guohangbk.tally.data.notify.TallyNotifier
 import io.github.guohangbk.tally.ui.navigation.TallyAppRoot
 import io.github.guohangbk.tally.ui.widget.InsightWidgets
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
         setContent { TallyAppRoot() }
         intakeSharedImage(intent)
         intakeNotificationLink(intent)
+        intakePendingBadge(intent)
         intakeShortcut(intent)
     }
 
@@ -33,6 +35,7 @@ class MainActivity : ComponentActivity() {
         }
         intakeSharedImage(intent)
         intakeNotificationLink(intent)
+        intakePendingBadge(intent)
         intakeShortcut(intent)
     }
 
@@ -72,6 +75,13 @@ class MainActivity : ComponentActivity() {
         val key = intent?.getStringExtra(TallyNotifier.EXTRA_LINK_KEY) ?: return
         val arg = intent.getStringExtra(TallyNotifier.EXTRA_LINK_ARG)
         TallyApplication.from(this).graph.pendingLink.value = NotificationLink.decode(key, arg)
+    }
+
+    /** 待确认角标点进来：把落点交给导航图，首页会把卡摆出来。 */
+    private fun intakePendingBadge(intent: Intent?) {
+        if (intent?.getBooleanExtra(PendingBadgeOverlay.EXTRA_OPEN_PENDING, false) != true) return
+        intent.removeExtra(PendingBadgeOverlay.EXTRA_OPEN_PENDING)
+        TallyApplication.from(this).graph.pendingLink.value = NotificationLink.PendingIngest
     }
 
     /**

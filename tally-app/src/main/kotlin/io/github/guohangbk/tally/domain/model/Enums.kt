@@ -13,6 +13,10 @@ enum class BillSource {
     SCREENSHOT,
     /** 小莉记的账：不管她接收的是文字、语音还是图片，都算「小莉」。 */
     ASSISTANT,
+    /** 通知抓取记的账：支付通知解析出来、人逐条确认后落库。 */
+    NOTIFICATION,
+    /** 支付页确认记的账（无障碍取数已下线，来源枚举先留着）。 */
+    PAYMENT,
     RECURRING,
     INSTALLMENT,
     IMPORT,

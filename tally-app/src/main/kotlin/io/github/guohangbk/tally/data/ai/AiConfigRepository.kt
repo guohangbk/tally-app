@@ -192,6 +192,8 @@ private fun availabilityOf(config: AiConfiguration?, enabled: Boolean): AiAvaila
         enabled = enabled,
         consecutiveFailures = config?.consecutiveFailures ?: 0,
         visionCapable = config?.visionCapable ?: false,
+        lastError = config?.lastError,
+        lastTriedAt = config?.updatedAt ?: 0L,
     )
 
 private fun AiConfigEntity.toDomain(): AiConfiguration = AiConfiguration(

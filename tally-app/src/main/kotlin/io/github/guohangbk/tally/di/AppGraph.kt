@@ -22,11 +22,14 @@ import io.github.guohangbk.tally.data.backup.WebDavRepository
 import io.github.guohangbk.tally.data.db.DevSchemaHeal
 import io.github.guohangbk.tally.data.db.TallyDatabase
 import io.github.guohangbk.tally.data.notify.NotificationLink
+import io.github.guohangbk.tally.data.notify.NotificationIngestCoordinator
+import io.github.guohangbk.tally.data.notify.PendingBadgeOverlay
 import io.github.guohangbk.tally.data.notify.ReminderCoordinator
 import io.github.guohangbk.tally.data.notify.TallyNotifier
 import io.github.guohangbk.tally.data.preferences.TallyPreferences
 import io.github.guohangbk.tally.data.importexport.ExportService
 import io.github.guohangbk.tally.data.ingest.IngestDraftService
+import io.github.guohangbk.tally.data.ingest.IdempotencyLedger
 import io.github.guohangbk.tally.data.ingest.MaterialReader
 import io.github.guohangbk.tally.data.ingest.PendingIngestStore
 import io.github.guohangbk.tally.data.ingest.createBillIngestor
@@ -60,7 +63,7 @@ import java.util.concurrent.atomic.AtomicLong
  * UI 测试传入内存库，生产代码只用 context。
  */
 class AppGraph(
-    context: Context,
+    val context: Context,
     val database: TallyDatabase = fileDatabase(context.applicationContext),
     val preferences: TallyPreferences = TallyPreferences.from(context.applicationContext),
     /** 测试里塞 FakeAiClient，就能在没有网络的情况下跑完小莉的全部分支。 */
@@ -310,6 +313,20 @@ class AppGraph(
      * 放 filesDir 下的普通 JSON，不进数据库、不进备份——它是一次操作的中间状态，不是账。
      */
     val pendingIngestStore: PendingIngestStore = PendingIngestStore(context.applicationContext.filesDir)
+
+    /** 跨入口幂等台账：与待确认清单分开存，只记「认这笔的键」。 */
+    val idempotencyLedger: IdempotencyLedger = IdempotencyLedger(context.applicationContext.filesDir)
+
+    /** 通知抓取的收口：解析 → 幂等 → 识别管线 → 追加待确认。 */
+    val notificationCapture: NotificationIngestCoordinator = NotificationIngestCoordinator(
+        ingestor = billIngestor,
+        drafts = ingestDrafts,
+        pending = pendingIngestStore,
+        ledger = idempotencyLedger,
+        bills = billRepository,
+        preferences = preferences,
+        onPendingAdded = { total -> PendingBadgeOverlay.show(context, total) },
+    )
 
     /**
      * 系统分享进来的截图只是素材：不进对话、不进上下文，交给首页截图那条路出卡。

@@ -18,6 +18,10 @@ enum class IngestSource(val billSource: BillSource, val inputKind: InputKind) {
     SCREENSHOT(BillSource.SCREENSHOT, InputKind.IMAGE),
     SHARE(BillSource.SCREENSHOT, InputKind.IMAGE),
     CHAT(BillSource.ASSISTANT, InputKind.TEXT),
+    /** 支付通知：解析出的文本走同一条管线，落到待确认卡。 */
+    NOTIFICATION(BillSource.NOTIFICATION, InputKind.TEXT),
+    /** 支付页抓到的文本（无障碍取数已下线，来源枚举先留着，落点与通知同路）。 */
+    PAYMENT(BillSource.PAYMENT, InputKind.TEXT),
 }
 
 /** 每个字段从哪里来：本机规则抽的标 `RULE`，AI 全量覆盖过的标 `LLM`，没抽到标 `MISSING`。 */

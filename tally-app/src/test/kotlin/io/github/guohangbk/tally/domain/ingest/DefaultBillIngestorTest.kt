@@ -239,6 +239,32 @@ class DefaultBillIngestorTest {
         assertTrue(result.bills.single().verdict.dateUnresolved)
     }
 
+    /**
+     * 通知补全必须拿到原文：只给「2.90 元」这一句，模型认不出这是买菜还是打车，
+     * 分类和备注只能空着——待确认卡上就是一行「还没选分类」，这正是之前的 bug。
+     */
+    @Test
+    fun `通知补全拿到的是脱敏后的通知原文而不是只给金额`() = runBlocking {
+        val llm = StaticLlm()
+        val body = "支付成功2.9元 【火锅】手作猪肉小馄饨 126g 手机号 13812345678"
+        runIngestor(
+            rules = LlmRule(),
+            llm = llm,
+            request = IngestRequest(
+                source = IngestSource.NOTIFICATION,
+                ocrText = "2.90元",
+                redactedOcrText = IngestRedactor.redact(body).text,
+                nowMillis = now,
+                fallbackMillis = now,
+                singleMaterial = true,
+            ),
+        )
+        val outbound = llm.outboundText.orEmpty()
+        assertTrue(outbound.contains("手作猪肉小馄饨"))
+        assertTrue(outbound.contains("通知里的文字"))
+        assertFalse(outbound.contains("13812345678"))
+    }
+
     @Test
     fun `多图批量只向 AI 发送缺字段那几张`() = runBlocking {
         val llm = StaticLlm(listOf(ruleBill(amount = 1200L).copy(materialIndex = 1)))

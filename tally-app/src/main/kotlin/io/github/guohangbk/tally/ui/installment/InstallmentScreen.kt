@@ -205,7 +205,7 @@ private sealed interface InstallmentConfirm {
 }
 
 private val monthDayFormatter = DateTimeFormatter.ofPattern("M月d日", Locale.CHINA)
-private val shortDateFormatter = DateTimeFormatter.ofPattern("MM-dd", Locale.CHINA)
+private val shortDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.CHINA)
 private val zone: ZoneId get() = ZoneId.systemDefault()
 
 private fun monthDay(epochMillis: Long): String =
