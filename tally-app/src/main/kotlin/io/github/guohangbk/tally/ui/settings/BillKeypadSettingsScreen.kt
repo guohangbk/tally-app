@@ -107,6 +107,16 @@ fun BillKeypadSettingsScreen(
                     label = "账单图片",
                     description = "记账时可以为这一笔加一张图片",
                 )
+                // 子项只挂在主开关下面，不新起分组：它是「主开之后要不要连原图一起留」的细分。
+                // 主开关关着时整行隐藏，识别管线据此不存来源图（唯一读取口是 `billImageSaved`）。
+                if (settings.billImageEnabled) {
+                    SettingsNestedSwitchRow(
+                        checked = settings.autoSaveBillImage,
+                        onCheckedChange = viewModel::setAutoSaveBillImage,
+                        label = "识别时保留原图",
+                        description = "识别出的账单图也一并存进这一笔",
+                    )
+                }
                 SettingsDivider()
                 SettingsSwitchRow(
                     checked = withClock,

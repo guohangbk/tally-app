@@ -2,17 +2,18 @@
 # Tally 塔莉 · PR 门禁与「这个仓库真的能构建」的证明
 #
 # 这个 workflow **不发布任何东西**：不出 Release、不签正式包、不打 tag、不上传
-# 到任何应用商店。它跑两个**并行**的 job：
-#   1. 单元测试 —— `:tally-app:testDebugUnitTest`，纯 JVM（备份编解码契约、加密
-#      容器、分期排期与口径、账单编辑策略），不碰 Android framework；
-#   2. 构建 apk —— `:tally-app:build`，在干净的 Linux runner 上零配置跑全量：
-#      lint + 单测 + debug/release 两个变体打包。它同时证明「编得出来」和「lint 干净」，
-#      发布前那条本地门槛在 CI 上也有了一份。artifact 只挂 release APK（用户实际装的那份）。
+# 到任何应用商店。它只跑**一个**全量 job：
+#   `:tally-app:build` —— 在干净的 Linux runner 上零配置跑全量：lint + 单测 +
+#   debug/release 两个变体打包。它同时证明「编得出来」「lint 干净」「测试通过」，
+#   发布前那条本地门槛在 CI 上也有了一份。artifact 挂测试报告与 release APK。
+#
+# 为什么只有一个 job：`build` 依赖 `check`，而 `check` 里已经有 `test`
+#   （`testDebugUnitTest` + `testReleaseUnitTest`）。再单开一个测试 job 等于同一批
+#   用例跑两遍，还要各自预热一份 Gradle 缓存，纯属浪费 runner 时间。
 #
 # 触发：
-#   - PR 到 `master` → 两个 job 都跑，检查挂在 PR 上（门禁）；
-#   - push 到 `master` → 合并后再确认一次；
-#   - push 到公开仓 `main` → 发布提交落地的确认；
+#   - PR 到 `master` / `main` → 跑一次，检查挂在 PR 上（门禁）；
+#   - push 到 `master` / `main` → 合并后再确认一次（`main` 是公开仓的发布落地）；
 #   - workflow_dispatch → 手动指定 ref 跑一次。
 # PR 目标分支与 push 分支都收在 master，开发分支的 push 不重复触发。
 #
@@ -54,8 +55,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit-test:
-    name: 单元测试
+  build:
+    name: 构建与测试
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -73,42 +74,7 @@ jobs:
         run: bash .github/scripts/ci-env.sh
 
       # 换源之后再让 setup-gradle 接手：它读的就是 wrapper properties，
-      # 顺序反了会照着腾讯镜像去预热缓存。Gradle 发行包与依赖按 job 各缓存一份。
-      - name: Gradle 依赖缓存
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: 纯 JVM 单元测试
-        run: ./gradlew :tally-app:testDebugUnitTest --stacktrace
-
-      - name: 上传测试报告
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit-report-${{ github.event_name }}-${{ github.run_id }}
-          path: tally-app/build/reports/tests/testDebugUnitTest/**
-          if-no-files-found: warn
-          retention-days: 14
-
-  assemble-apk:
-    name: 构建 apk
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    steps:
-      - name: 取代码
-        uses: actions/checkout@v4
-
-      - name: 装 JDK 21（Temurin）
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: 准备环境（SDK + Gradle 源）
-        run: bash .github/scripts/ci-env.sh
-
-      # 换源之后再让 setup-gradle 接手：它读的就是 wrapper properties，
-      # 顺序反了会照着腾讯镜像去预热缓存。Gradle 发行包与依赖按 job 各缓存一份。
+      # 顺序反了会照着腾讯镜像去预热缓存。这也是本 workflow 唯一的缓存来源。
       - name: Gradle 依赖缓存
         uses: gradle/actions/setup-gradle@v4
 
@@ -124,6 +90,15 @@ jobs:
 
       - name: 全量构建（lint + 单测 + APK）
         run: ./gradlew :tally-app:build --stacktrace
+
+      - name: 上传测试报告
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report-${{ github.event_name }}-${{ github.run_id }}
+          path: tally-app/build/reports/tests/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: 上传 release APK
         uses: actions/upload-artifact@v4

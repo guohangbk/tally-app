@@ -103,8 +103,14 @@ sealed interface NotificationLink {
         override val arg: String? = null
     }
 
+    /** 待确认清单：角标点进来时落到首页那张卡。 */
+    data object PendingIngest : NotificationLink {
+        override val key = "pending_ingest"
+        override val arg: String? = null
+    }
+
     companion object {
-        private val fixed = listOf(NewBill, Home, Recurring, Installments, Recycle, Budget, NotificationSettings)
+        private val fixed = listOf(NewBill, Home, Recurring, Installments, Recycle, Budget, NotificationSettings, PendingIngest)
             .associateBy { it.key }
 
         /** intent 只能带字符串，所以按 key + arg 复原；认不出就当「打开 App」，不做跳转。 */

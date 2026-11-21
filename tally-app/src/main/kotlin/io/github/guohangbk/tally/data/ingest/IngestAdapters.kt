@@ -12,6 +12,7 @@ import io.github.guohangbk.tally.domain.ingest.ExtractedBill
 import io.github.guohangbk.tally.domain.ingest.IngestKeys
 import io.github.guohangbk.tally.domain.ingest.IngestRequest
 import io.github.guohangbk.tally.domain.ingest.IngestResult
+import io.github.guohangbk.tally.domain.ingest.IngestSource
 import io.github.guohangbk.tally.domain.ingest.LlmExtractor
 import io.github.guohangbk.tally.domain.ingest.RuleBill
 import io.github.guohangbk.tally.domain.ingest.RuleExtractor
@@ -28,7 +29,13 @@ class DefaultRuleExtractor(
 ) : RuleExtractor {
     override fun extract(request: IngestRequest, text: String): RuleBill {
         if (text.isBlank()) return RuleBill.None
-        return if (request.ocrText.isBlank()) quickNote(text, request) else screenshot(text, request)
+        // 通知是一条短句，不是一张截图：截图规则只认「实付款 / 支付金额」这类标签，
+        // 拿它去读「你有一笔 7.80 元的支出」永远抽不出账单，通知这条路会静默变成 0 笔。
+        return if (request.source == IngestSource.NOTIFICATION || request.ocrText.isBlank()) {
+            quickNote(text, request)
+        } else {
+            screenshot(text, request)
+        }
     }
 
     private fun quickNote(text: String, request: IngestRequest): RuleBill {
@@ -203,15 +210,15 @@ class RoomDuplicateLookup(private val bills: BillRepository) : DuplicateLookup {
 class IngestCoordinator(
     private val ingestor: BillIngestor,
     private val rules: DefaultRuleExtractor,
-) {
-    suspend fun ingest(request: IngestRequest): IngestResult {
+) : BillIngestor {
+    override suspend fun ingest(request: IngestRequest): IngestResult {
         rules.refreshCatalog()
         val result = ingestor.ingest(request)
         logResult(listOf(request), listOf(result))
         return result
     }
 
-    suspend fun ingestBatch(requests: List<IngestRequest>): List<IngestResult> {
+    override suspend fun ingestBatch(requests: List<IngestRequest>): List<IngestResult> {
         rules.refreshCatalog()
         val results = ingestor.ingestBatch(requests)
         logResult(requests, results)

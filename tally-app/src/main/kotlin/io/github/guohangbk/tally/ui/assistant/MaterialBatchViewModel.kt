@@ -29,6 +29,14 @@ import kotlinx.coroutines.launch
 data class ScannedBill(
     val key: Int,
     val imageIndex: Int,
+    /** 这一条从哪个入口来：通知 / 支付页 / 截图 / 语音 / 分享。 */
+    val source: IngestSource,
+    /** 入队时刻：自动草稿靠它算 30 天过期。 */
+    val createdAt: Long,
+    /** 订单号：跨入口幂等按它认同一笔，卡上来源位并排写。 */
+    val orderNo: String? = null,
+    /** 自动草稿（通知 / 支付页抓到的）：批次含它时卡头是「收起」而不是「先不处理」。 */
+    val auto: Boolean = false,
     val amountMinor: Long,
     val type: BillType,
     val occurredAt: Long?,
@@ -219,7 +227,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 }
                 // 账单图片：图在取图那一步已经读过一次，这里只把同一份字节留在内存里，
                 // 等这一批真的落库时写成附件。开关关着就一张都不留。
-                val keepImage = graph.preferences.settings.first().autoSaveBillImage
+                val keepImage = graph.preferences.settings.first().billImageSaved
                 val sources = requests.map { request -> request.images.firstOrNull().takeIf { keepImage } }
                 results.forEachIndexed { index, result ->
                     duplicates += collect(
@@ -303,15 +311,37 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
             val key = keyBase + scanned.size
             rowsByKey[key] = row
             if (imageBytes != null) imageBytesByKey[key] = imageBytes
-            scanned += scannedOf(key, imageIndex, row, checked = true)
+            scanned += scannedOf(
+                key = key,
+                imageIndex = imageIndex,
+                source = source,
+                createdAt = System.currentTimeMillis(),
+                orderNo = row.externalId,
+                auto = false,
+                row = row,
+                checked = true,
+            )
         }
         return duplicates
     }
 
     /** 卡上一行与落盘一条的唯一构造口：两处各写一遍迟早会漏字段。 */
-    private fun scannedOf(key: Int, imageIndex: Int, row: DraftRow, checked: Boolean) = ScannedBill(
+    private fun scannedOf(
+        key: Int,
+        imageIndex: Int,
+        source: IngestSource,
+        createdAt: Long,
+        orderNo: String?,
+        auto: Boolean,
+        row: DraftRow,
+        checked: Boolean,
+    ) = ScannedBill(
         key = key,
         imageIndex = imageIndex,
+        source = source,
+        createdAt = createdAt,
+        orderNo = orderNo,
+        auto = auto,
         amountMinor = row.amountMinor,
         type = runCatching { BillType.valueOf(row.type) }.getOrDefault(BillType.EXPENSE),
         occurredAt = row.occurredAt,
@@ -338,11 +368,16 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         // 空清单就把文件收掉，免得首页那枚「待确认」变成点开就消失的死入口。
         val entries = current.bills.mapNotNull { bill ->
             val row = rowsByKey[bill.key] ?: return@mapNotNull null
-            PendingIngestEntry(key = bill.key, imageIndex = bill.imageIndex, checked = bill.checked, row = row)
-        }
-        if (entries.isEmpty()) {
-            graph.pendingIngestStore.clear()
-            return
+            PendingIngestEntry(
+                key = bill.key,
+                imageIndex = bill.imageIndex,
+                checked = bill.checked,
+                source = bill.source.name,
+                createdAt = bill.createdAt,
+                orderNo = bill.orderNo,
+                auto = bill.auto,
+                row = row,
+            )
         }
         graph.pendingIngestStore.save(
             source = current.source.name,
@@ -352,8 +387,11 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         )
     }
 
-    /** 上次没处理完的那一批：原样摆回卡上，行的去重标识与关键词都跟着回来。 */
-    private suspend fun restorePending(): Boolean {
+    /**
+     * 把文件里的待确认清单摆回内存。[force] 用于点首页入口时：不覆盖内存里已有的行，
+     * 只把文件里**新增**的行（比如后台通知追加的自动草稿）并进来，免得入口点开看不到新行。
+     */
+    private suspend fun restorePending(force: Boolean = false): Boolean {
         val batch = graph.pendingIngestStore.load()
         // 只认还能动的行：文件里若只剩「已经记过」那些，这一批就等于处理完了，顺手把文件也收掉。
         val live = batch.entries.filterNot { it.row.duplicate }
@@ -363,10 +401,13 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         }
         // 已经开扫了就别再插队：这时 bills 还可能是空的，硬摆回去会盖掉正在跑的那一批。
         val current = state.value
-        if (live.isEmpty() || current.bills.isNotEmpty() || current.busy || current.stage != null) return false
+        if (current.busy || current.stage != null) return false
+        if (!force && (live.isEmpty() || current.bills.isNotEmpty())) return false
+        val existingKeys = current.bills.map { it.key }.toSet()
+        val incoming = live.filter { it.key !in existingKeys }
+        // 新进来的行才补进 rowsByKey，别覆盖内存里已经改过的那一份。
+        incoming.forEach { entry -> rowsByKey.putIfAbsent(entry.key, entry.row) }
         val source = runCatching { IngestSource.valueOf(batch.source) }.getOrDefault(IngestSource.SCREENSHOT)
-        rowsByKey.clear()
-        imageBytesByKey.clear()
         state.update {
             it.copy(
                 busy = false,
@@ -375,13 +416,22 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 restored = true,
                 droppedCount = batch.droppedCount,
                 failures = batch.failures.map { failure -> ScanFailure(failure.imageIndex, failure.reason) },
-                bills = live.map { entry ->
-                    rowsByKey[entry.key] = entry.row
-                    scannedOf(entry.key, entry.imageIndex, entry.row, entry.checked)
+                bills = current.bills + incoming.map { entry ->
+                    scannedOf(
+                        key = entry.key,
+                        imageIndex = entry.imageIndex,
+                        source = runCatching { IngestSource.valueOf(entry.source) }
+                            .getOrDefault(IngestSource.SCREENSHOT),
+                        createdAt = entry.createdAt,
+                        orderNo = entry.orderNo,
+                        auto = entry.auto,
+                        row = entry.row,
+                        checked = entry.checked,
+                    )
                 },
             )
         }
-        DebugLog.log("识别管线", "恢复待确认清单：${live.size} 笔")
+        DebugLog.log("识别管线", "恢复待确认清单：${(current.bills + incoming).size} 笔")
         return true
     }
 
@@ -392,12 +442,8 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
      * 那时直接开卡会立刻被 settled 收掉，看起来就是「闪一下什么都没有」。
      */
     fun openPending(onReady: () -> Unit) {
-        if (state.value.bills.isNotEmpty()) {
-            onReady()
-            return
-        }
         viewModelScope.launch {
-            if (restorePending()) onReady()
+            if (restorePending(force = true)) onReady()
         }
     }
 
@@ -460,7 +506,9 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         state.update { current ->
             current.copy(bills = current.bills.filterNot { row -> row.key == key })
         }
-        viewModelScope.launch { persist() }
+        // 这一行已经在记账页保存过了，必须精确从文件里摘掉；
+        // 用 persist() 会被 PendingIngestStore 的「合并追加」再写回去，回到首页又冒出来。
+        viewModelScope.launch { graph.pendingIngestStore.removeKeys(setOf(key)) }
         if (!queueMode) return
         val next = state.value.bills.firstOrNull()
         if (next == null) {
@@ -468,6 +516,15 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
             return
         }
         markEditing(next.key)?.let { bill -> mutableNext.value = bill }
+    }
+
+    /** 卡上某一行右侧的「×」：这一笔不要了，内存与落盘清单一起摘掉。 */
+    fun remove(key: Int) {
+        rowsByKey.remove(key)
+        imageBytesByKey.remove(key)
+        if (editingKey == key) editingKey = null
+        state.update { current -> current.copy(bills = current.bills.filterNot { it.key == key }) }
+        viewModelScope.launch { graph.pendingIngestStore.removeKeys(setOf(key)) }
     }
 
     /** 从记账页没保存就返回：解除编辑标记，这一笔重新可点。 */
@@ -508,7 +565,8 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                     )
                 }
                 keys.forEach(imageBytesByKey::remove)
-                persist()
+                // 同上：已保存的行要精确移除，不能走合并写回。
+                graph.pendingIngestStore.removeKeys(keys)
                 onSaved(keys.size)
             } catch (cancellation: CancellationException) {
                 throw cancellation

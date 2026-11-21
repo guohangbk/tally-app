@@ -42,8 +42,16 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
         val AI_VOICE_ENABLED = booleanPreferencesKey("ai_voice_enabled")
         val AI_IMAGE_ENABLED = booleanPreferencesKey("ai_image_enabled")
         val AI_QUICK_NOTE_ENABLED = booleanPreferencesKey("ai_quick_note_enabled")
+        /** 支付页补全：卡上缺分类时，才把脱敏文本交给 AI 补。默认关，没配服务商时打开也不生效。 */
+        val AI_PAYMENT_COMPLETE = booleanPreferencesKey("ai_payment_complete")
+        /** 通知补全：通知草稿缺商户/分类/时间时，才交给 AI 补。默认关。 */
+        val AI_NOTIFICATION_COMPLETE = booleanPreferencesKey("ai_notification_complete")
         /** 识图记账时把那张原图存进这一笔：默认关，关着只留识别结果。 */
         val AUTO_SAVE_BILL_IMAGE = booleanPreferencesKey("auto_save_bill_image")
+        /** 通知抓取：所有应用的通知都按内容过滤，抓到进待确认，不弹窗。 */
+        val NOTIFICATION_CAPTURE_ENABLED = booleanPreferencesKey("notification_capture_enabled")
+        /** 待确认提醒：抓到以后浮一枚小角标，点它进 App 确认；没有悬浮窗权限就不浮。 */
+        val PENDING_BADGE_ENABLED = booleanPreferencesKey("pending_badge_enabled")
         val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val SHOW_CURRENCY_SYMBOL = booleanPreferencesKey("show_currency_symbol")
@@ -96,7 +104,11 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
             aiVoiceEnabled = prefs[Keys.AI_VOICE_ENABLED] ?: false,
             aiImageEnabled = prefs[Keys.AI_IMAGE_ENABLED] ?: false,
             aiQuickNoteEnabled = prefs[Keys.AI_QUICK_NOTE_ENABLED] ?: false,
+            aiPaymentComplete = prefs[Keys.AI_PAYMENT_COMPLETE] ?: false,
+            aiNotificationComplete = prefs[Keys.AI_NOTIFICATION_COMPLETE] ?: false,
             autoSaveBillImage = prefs[Keys.AUTO_SAVE_BILL_IMAGE] ?: false,
+            notificationCaptureEnabled = prefs[Keys.NOTIFICATION_CAPTURE_ENABLED] ?: false,
+            pendingBadgeEnabled = prefs[Keys.PENDING_BADGE_ENABLED] ?: true,
             assistantEnabled = prefs[Keys.ASSISTANT_ENABLED] ?: false,
             themeMode = prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
@@ -148,7 +160,15 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
 
     suspend fun setAiQuickNoteEnabled(enabled: Boolean) = put(Keys.AI_QUICK_NOTE_ENABLED, enabled)
 
+    suspend fun setAiPaymentComplete(enabled: Boolean) = put(Keys.AI_PAYMENT_COMPLETE, enabled)
+
+    suspend fun setAiNotificationComplete(enabled: Boolean) = put(Keys.AI_NOTIFICATION_COMPLETE, enabled)
+
     suspend fun setAutoSaveBillImage(enabled: Boolean) = put(Keys.AUTO_SAVE_BILL_IMAGE, enabled)
+
+    suspend fun setNotificationCaptureEnabled(enabled: Boolean) = put(Keys.NOTIFICATION_CAPTURE_ENABLED, enabled)
+
+    suspend fun setPendingBadgeEnabled(enabled: Boolean) = put(Keys.PENDING_BADGE_ENABLED, enabled)
 
     suspend fun setAssistantEnabled(enabled: Boolean) = put(Keys.ASSISTANT_ENABLED, enabled)
 
@@ -334,8 +354,16 @@ data class TallySettings(
     val aiImageEnabled: Boolean = false,
     /** 塔莉速记（图库分享）的 AI 提取。默认关。 */
     val aiQuickNoteEnabled: Boolean = false,
+    /** 支付页补全：规则给不出分类或缺字段时，才把脱敏文本交给 AI。默认关。 */
+    val aiPaymentComplete: Boolean = false,
+    /** 通知补全：通知草稿缺商户/分类/时间时，才交给 AI。默认关。 */
+    val aiNotificationComplete: Boolean = false,
     /** 识图记账时把那张图存进账单附件。 */
     val autoSaveBillImage: Boolean = false,
+    /** 通知抓取：所有应用的通知都按内容过滤。 */
+    val notificationCaptureEnabled: Boolean = false,
+    /** 待确认提醒：抓到通知后浮一枚角标。默认开，没悬浮窗权限时静默不显示。 */
+    val pendingBadgeEnabled: Boolean = true,
     val assistantEnabled: Boolean,
     val themeMode: ThemeMode,
     val showCurrencySymbol: Boolean,
@@ -362,6 +390,14 @@ data class TallySettings(
     /** 锁屏与预览态要不要露出金额；默认关，关着就只显示「今天还没记账」这类句子。 */
     val showAmountOnLockscreen: Boolean = false,
 ) {
+    /**
+     * 账单图片的唯一读取口：**主开关开且子项开**才真的存来源图。
+     * 识别管线、记账页、卡上全部只认它，不再各自读两个开关拼。
+     * 关主开关不清子项值，再打开恢复原状；重置默认才清两项。
+     */
+    val billImageSaved: Boolean
+        get() = billImageEnabled && autoSaveBillImage
+
     companion object {
         /** 每日未记账提醒的默认时刻：晚上八点，设计板 T-01 定的那个。 */
         const val DEFAULT_REMINDER_HOUR = 20
@@ -376,7 +412,11 @@ data class TallySettings(
             aiVoiceEnabled = false,
             aiImageEnabled = false,
             aiQuickNoteEnabled = false,
+            aiPaymentComplete = false,
+            aiNotificationComplete = false,
             autoSaveBillImage = false,
+            notificationCaptureEnabled = false,
+            pendingBadgeEnabled = true,
             assistantEnabled = false,
             themeMode = ThemeMode.SYSTEM,
             showCurrencySymbol = true,

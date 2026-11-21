@@ -264,12 +264,12 @@ fun SettingsScreen(
 
             // AI 分组：只有开启后才点亮金色；＋ 右臂那三个字常驻，但没开时只是去设置的路口。
             // 自动记账挂在这里而不是单独成组：它增强的是 AI 认账那一步，服务商没配好就没有意义。
-            SettingsSection(title = "AI", gold = assistantOn) {
+            SettingsSection(title = "小莉（AI）", gold = assistantOn) {
                 SettingsSwitchRow(
                     checked = assistantOn,
                     onCheckedChange = viewModel::setAssistantEnabled,
                     label = "问小莉",
-                    description = "开启后长按 ＋ 右滑直接进入对话",
+                    description = "开启后，在首页长按 ＋ 并右滑可进入对话",
                     gold = assistantOn,
                 )
                 SettingsDivider()
@@ -282,9 +282,9 @@ fun SettingsScreen(
                 SettingsDivider()
                 SettingsNavRow(
                     title = "自动记账",
-                    // 这一页以后还装无障碍记账、通知记账这类开关，副标题只讲「机器记账这一块」，
+                    // 这一页以后还装通知记账这类开关，副标题只讲「机器记账这一块」，
                     // 不列举当前那几项，免得每加一个开关就要回来改一次。
-                    subtitle = "AI 提取、账单图片与各种自动入口",
+                    subtitle = "AI 提取与各种自动入口",
                     iconKey = "spark",
                     onClick = onOpenAutoBooking,
                 )

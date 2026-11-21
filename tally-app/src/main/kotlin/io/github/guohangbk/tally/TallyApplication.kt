@@ -1,13 +1,18 @@
 package io.github.guohangbk.tally
 
 import android.app.Application
+import android.content.ComponentName
+import android.service.notification.NotificationListenerService
 import io.github.guohangbk.tally.data.debug.CrashInfo
 import io.github.guohangbk.tally.data.debug.DebugLog
+import io.github.guohangbk.tally.data.notify.NotificationAccess
+import io.github.guohangbk.tally.data.notify.NotificationCaptureService
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.work.AutomationWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -22,6 +27,8 @@ class TallyApplication : Application() {
         val createAt = System.currentTimeMillis()
         // 日志目录与崩溃钩子要在第一行日志之前接上——最先那几条往往正是最想看的。
         DebugLog.attach(File(filesDir, "logs"))
+        // 同一批日志也打进系统日志：装机排查时 `adb logcat -s Tally` 直接看时间线。
+        DebugLog.mirror = { line -> android.util.Log.i("Tally", line) }
         CrashInfo.version = runCatching {
             @Suppress("DEPRECATION")
             packageManager.getPackageInfo(packageName, 0)
@@ -30,6 +37,19 @@ class TallyApplication : Application() {
         DebugLog.log("Perf", "Application.onCreate 开始")
         graph = AppGraph(this)
         DebugLog.log("Perf", "AppGraph 构建 +${System.currentTimeMillis() - createAt}ms")
+        // 装包更新或进程被系统杀掉以后，通知监听经常停在「已授权、但没连上」的状态（小米上实测会掉）。
+        // 启动时主动要一次重绑：没授权、或抓取关着时什么都不做。
+        appScope.launch {
+            val captureOn = runCatching { graph.preferences.settings.first().notificationCaptureEnabled }
+                .getOrDefault(false)
+            if (captureOn && NotificationAccess.enabled(this@TallyApplication)) {
+                runCatching {
+                    NotificationListenerService.requestRebind(
+                        ComponentName(this@TallyApplication, NotificationCaptureService::class.java),
+                    )
+                }.onSuccess { DebugLog.log("通知抓取", "启动时重绑通知监听") }
+            }
+        }
         // 启动即补执行：WorkManager 在国产 ROM 上可能被延迟，启动路径必须自己兜底。
         appScope.launch {
             // 首次触库：SQLite 冷开 + WAL + 建库/迁移校验都折在这一笔里，单拎出来便于定位「打开慢」。

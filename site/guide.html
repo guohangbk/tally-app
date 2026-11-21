@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>使用指南 · Tally 塔莉</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<meta name="description" content="Tally 塔莉使用指南：每个功能是什么意思、每个页面怎么操作，从记第一笔到账本、统计、备份与自动记账。">
+<style>
+:root{
+  --paper:#F6F3EB; --card:#FFFDF8; --ink:#16211D; --ink2:#4C5A53; --ink3:#8D978F;
+  --line:rgba(22,33,29,.10); --brand:#1F4A38; --brand-soft:rgba(31,74,56,.08);
+  --gold:#B98A34; --gold-hi:#E8C57A; --band:#FAF6EC;
+  --serif:Georgia,"Times New Roman","Songti SC","Noto Serif SC",SimSun,serif;
+  --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",-apple-system,sans-serif;
+  --max:1160px;
+}
+body:has(#ink:checked){
+  --paper:#131A17; --card:#1A2320; --ink:#E9E5DA; --ink2:#B9C2BB; --ink3:#93A09A;
+  --line:rgba(233,229,218,.13); --brand:#7ECBA9; --brand-soft:rgba(126,203,169,.12);
+  --gold:#D7B263; --gold-hi:#F0D49A; --band:#18211D;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.03;
+  background-image:radial-gradient(var(--ink) .6px,transparent .7px);background-size:5px 5px}
+header,main,footer{position:relative;z-index:1}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 28px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;margin:0}
+p{margin:0}
+ul{margin:0;padding:0;list-style:none}
+.bar{position:sticky;top:0;z-index:9;border-bottom:1px solid var(--line);
+  background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px)}
+.bar .wrap{height:60px;display:flex;align-items:center;gap:18px}
+.mark{display:flex;align-items:center;gap:9px;text-decoration:none;font-family:var(--serif);font-weight:600;white-space:nowrap}
+.mark svg{width:22px;height:22px}
+.nav{display:flex;gap:16px;margin-left:auto;font-size:14px}
+.nav a{text-decoration:none;color:var(--ink2);padding:4px 0;border-bottom:2px solid transparent}
+.nav a:hover{color:var(--ink);border-bottom-color:var(--gold)}
+.switch{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink3);cursor:pointer;
+  padding:6px 10px;border:1px solid var(--line);border-radius:999px;user-select:none}
+.switch::before{content:"";width:9px;height:9px;border-radius:50%;border:1.5px solid var(--gold)}
+body:has(#ink:checked) .switch::before{background:var(--gold)}
+.hero{padding:clamp(40px,7vw,72px) 0 clamp(26px,4vw,40px)}
+.hero h1{font-size:clamp(30px,5vw,46px);line-height:1.2;margin:12px 0}
+.hero .lead{color:var(--ink2);max-width:44em;font-size:17px}
+.eyebrow{font:600 11px/1 var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.layout{display:grid;grid-template-columns:225px minmax(0,1fr);gap:clamp(24px,4vw,48px);
+  padding-bottom:clamp(50px,8vw,90px)}
+.toc{position:sticky;top:84px;align-self:start;font-size:14px}
+.toc strong{display:block;font-family:var(--serif);font-size:14px;margin-bottom:10px}
+.toc a{display:block;text-decoration:none;color:var(--ink2);padding:6px 11px;border-left:2px solid var(--line)}
+.toc a:hover,.toc a.active{color:var(--brand);border-left-color:var(--gold);background:var(--brand-soft)}
+section{padding:26px 0;border-top:1px solid var(--line);scroll-margin-top:80px}
+section:first-of-type{border-top:0}
+.sh{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.sh .no{font:600 12px/1 var(--sans);letter-spacing:.16em;color:var(--gold)}
+.sh .tag{font-size:13px;color:var(--ink3)}
+.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px 18px}
+.card b{display:block;font-size:16px;margin-bottom:6px}
+.card p{font-size:14px;color:var(--ink2)}
+.card .steps{font-size:13.5px;color:var(--ink2);margin-top:8px;padding-top:9px;border-top:1px dashed var(--line)}
+.shot{margin:18px 0 0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card)}
+.shot img{display:block;width:100%;max-height:520px;object-fit:contain;object-position:top}
+.shot figcaption{font-size:13px;color:var(--ink3);padding:9px 14px;border-top:1px solid var(--line)}
+.note{margin-top:14px;font-size:13.5px;color:var(--ink3)}
+.note b{color:var(--ink2)}
+footer{border-top:1px solid var(--line);padding:24px 0 40px;color:var(--ink3);font-size:13.5px}
+footer a{text-decoration:none}
+footer a:hover{color:var(--brand)}
+.reveal{transform:translateY(12px);transition:transform .45s ease}
+.reveal.on{transform:none}
+@media (max-width:900px){
+  .nav{display:none}
+  .layout{grid-template-columns:1fr}
+  .toc{position:static;display:flex;gap:4px;overflow-x:auto;padding-bottom:6px}
+  .toc strong{display:none}
+  .toc a{white-space:nowrap;border-left:0;border-bottom:2px solid var(--line);padding:6px 10px}
+  .toc a.active,.toc a:hover{border-bottom-color:var(--gold)}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition:none!important;animation:none!important}
+  .reveal{transform:none}
+}
+</style>
+</head>
+<body>
+<input type="checkbox" id="ink" class="sr">
+<header class="bar"><div class="wrap">
+  <a class="mark" href="index.html#top">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#B98A34" stroke-width="1.6" stroke-linejoin="round"><path d="M12 12c0-3.4 1.1-5.3 3.3-5.7 1.9-.3 3 1 3 2.7 0 2-1.6 3-3.6 3.1"/><path d="M12 12c-3.4 0-5.3-1.1-5.7-3.3-.3-1.9 1-3 2.7-3 2 0 3 1.6 3.1 3.6"/><path d="M12 12c0 3.4-1.1 5.3-3.3 5.7-1.9.3-3-1-3-2.7 0-2 1.6-1.6 3.6-3.1"/><path d="M12 12c3.4 0 5.3 1.1 5.7 3.3.3 1.9 1 3-2.7 3-2 0-3-1.6-3.1-3.6"/></g></svg>
+    Tally 塔莉
+  </a>
+  <nav class="nav" aria-label="页面导航">
+    <a href="index.html#top">首页</a>
+    <a href="index.html#flow">六步</a>
+    <a href="index.html#entry">怎么记</a>
+    <a href="index.html#get">下载</a>
+  </nav>
+  <label class="switch" for="ink" role="button" tabindex="0">墨色</label>
+</div></header>
+
+<main class="wrap">
+  <div class="hero">
+    <span class="eyebrow">User guide</span>
+    <h1>使用指南</h1>
+    <p class="lead">按页面和操作讲清楚：每个功能是什么、在哪儿打开、点完会发生什么。第一次打开从「三分钟上手」开始，后面按需查。</p>
+  </div>
+
+  <div class="layout">
+    <aside class="toc" aria-label="指南目录">
+      <strong>本页目录</strong>
+      <a href="#start">第一次使用</a>
+      <a href="#record">首页与六种记法</a>
+      <a href="#capture">语音、识图与通知</a>
+      <a href="#confirm">待确认与关键词</a>
+      <a href="#books">账本与分类</a>
+      <a href="#view">查账、统计与批量</a>
+      <a href="#plan">周期、分期与预算</a>
+      <a href="#assistant">问小莉与 AI 提取</a>
+      <a href="#data">导入导出与备份</a>
+      <a href="#settings">设置</a>
+      <a href="#faq">常见问题</a>
+    </aside>
+
+    <div>
+      <section id="start" class="reveal">
+        <div class="sh"><span class="no">01</span><h2>第一次使用</h2><span class="tag">先建账本，再记第一笔</span></div>
+        <div class="cards">
+          <div class="card"><b>从零开始</b><p>直接打开 App 就能用。默认会准备好「日常账本」和一套常用分类，不用先注册，也不用先连服务器。</p><div class="steps">最低路径：首页点中间的 ＋ → 选分类 → 输金额 → 保存。</div></div>
+          <div class="card"><b>带历史账进来</b><p>旧账可以从模板、钱迹或支付宝账单导入；如果你之前用过塔莉，也可以恢复 <code>.tally</code> 备份包。</p><div class="steps">入口：左上角抽屉 → 设置 → 数据 → 导入账单 / 从备份恢复。</div></div>
+          <div class="card"><b>认识首页</b><p>顶部切月份和账本，中间看本月汇总与预算，下面按天列账单；待确认草稿会显示在预算条下面。</p></div>
+          <div class="card"><b>入口在哪</b><p>底部中间的 ＋ 是记账；左上角抽屉放账本、分类、统计、搜索、设置等低频入口；右上角放大镜直接搜索。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-home.jpg" alt="首页：本月收支、预算进度条、按天排列的账单和底部加号"><figcaption>首页是总入口：切账本、看进度、点待确认、翻账单都从这里开始。</figcaption></figure>
+      </section>
+
+      <section id="record" class="reveal">
+        <div class="sh"><span class="no">02</span><h2>首页与六种记法</h2><span class="tag">手打、语音、识图、分享、通知、问小莉</span></div>
+        <div class="cards">
+          <div class="card"><b>记账页字段</b><p>选支出或收入、选分类、输金额，然后保存。日期、备注、标签、图片、账单时间、标记不计入都在同一页；部分按钮可在记账键盘设置里显隐。</p></div>
+          <div class="card"><b>金额支持算式</b><p>键盘上的 ＋、− 会参与计算，例如输入 <code>18+12</code>，保存时按 30 记。这样不用另外拿计算器。</p></div>
+          <div class="card"><b>长按 ＋ 的六个入口</b><p>直接点 ＋ 是手打；长按后上滑语音、左滑识图、右滑问小莉。塔莉速记从系统分享进入，付款通知开启后自动进待确认。</p></div>
+          <div class="card"><b>查看和修改</b><p>点首页任意账单看详情；「修改」会带着原数据回记账页。删除先进入回收站，没到期之前还能恢复。</p></div>
+          <div class="card"><b>快速记账</b><p>开启秒开模式后，App 打开就落在记账页；保存一笔后回到首页，适合一天里连续补账。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-entry.jpg" alt="记账页：分类、金额、备注、标签与数字键盘"><figcaption>机器识别出来的草稿也回到这一页补字段；手动和自动使用同一个确认入口。</figcaption></figure>
+      </section>
+
+      <section id="capture" class="reveal">
+        <div class="sh"><span class="no">03</span><h2>语音、识图与通知</h2><span class="tag">机器先认，你再确认</span></div>
+        <div class="cards">
+          <div class="card"><b>语音记账</b><p>长按 ＋ 上滑，按住说完松手。松手后先出草稿卡，点存入才落账；返回或取消不会写进账本。</p><div class="steps">可以说「早上吃饭花了五块」「昨天在盒马买菜 128.5」，本机能解析金额和日期。</div></div>
+          <div class="card"><b>识图记账</b><p>长按 ＋ 左滑，从相册一次最多选 9 张。本机先 OCR 和规则匹配，缺字段时再按设置决定是否用 AI 提取。</p></div>
+          <div class="card"><b>塔莉速记</b><p>在相册或文件 App 里选图，点系统分享中的「塔莉速记」。识别结果会回到首页待确认清单，超 9 张只收前 9 张。</p></div>
+          <div class="card"><b>付款通知</b><p>设置 → 自动记账 → 通知抓取打开后，按内容筛支付通知；金额和商户能认出来的进待确认卡。通知原文不落盘、不进日志。</p></div>
+          <div class="card"><b>权限在哪里开</b><p>通知抓取需要通知使用权；悬浮提醒需要悬浮窗权限；自动记账页的「权限与检查」会列出真实状态和跳转入口。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-ai-loading.jpg" alt="AI 提取时的首页进度浮层"><figcaption>开启 AI 提取后，首页会显示识别进度；图片和语音在补字段前会先脱敏。</figcaption></figure>
+      </section>
+
+      <section id="confirm" class="reveal">
+        <div class="sh"><span class="no">04</span><h2>待确认与关键词</h2><span class="tag">所有自动入口共用一张卡</span></div>
+        <div class="cards">
+          <div class="card"><b>待确认卡</b><p>语音、识图、分享、通知的草稿都汇到这张卡。缺分类的行标红置顶且不能存；点任意一行进记账页修改。</p></div>
+          <div class="card"><b>逐条确认</b><p>勾选完整的行后点存入；不勾的行会保留。多张图的批次可以逐条改完再逐条存，全部处理完卡片自动关。</p></div>
+          <div class="card"><b>中断恢复</b><p>没确认完就退出、切后台或被系统杀掉，草稿不会丢。下次打开首页，预算条下面出现「待确认 N 笔」，点开继续。</p></div>
+          <div class="card"><b>自动草稿过期</b><p>通知抓来的草稿 30 天没人处理会自动退出清单；手动识别来的行不受影响。</p></div>
+          <div class="card"><b>关键词规则</b><p>设置 → 归类 → 关键词规则。语音或识图保存后，符合规则的备注会静默沉淀；下次先命中你自己的规则，命中了就不必打扰 AI。</p></div>
+          <div class="card"><b>跨渠道去重</b><p>美团下单、支付宝付款可能推来两条通知。系统会按订单号、同渠道、同金额与时间窗口合并，先到的留下，后到的只补空字段。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-confirm.jpg" alt="待确认卡：四笔草稿、缺分类标红、逐条确认与存入按钮"><figcaption>确认前草稿不进账本、不算预算、不进统计；只有点过存入才算数。</figcaption></figure>
+      </section>
+
+      <section id="books" class="reveal">
+        <div class="sh"><span class="no">05</span><h2>账本与分类</h2><span class="tag">各记各的，也能合起来看</span></div>
+        <div class="cards">
+          <div class="card"><b>账本</b><p>左上角抽屉 → 我的账本：新建、改名、换图标、排序、归档、删除。首页顶部账本名负责切换当前账本。</p></div>
+          <div class="card"><b>默认账本</b><p>记账页顶部显示的账本就是当前落点。长按 ＋ 记的账默认进这里，除非当场换一个。</p></div>
+          <div class="card"><b>全部账本</b><p>首页和统计的账本选择里有「全部账本」，选它看总账；预算仍按各本自己的进度算。</p></div>
+          <div class="card"><b>分类</b><p>分类是全机共用的一套两级树，不随账本重复建。一级长按拖动排序，二级在展开那排点选。</p></div>
+          <div class="card"><b>删分类</b><p>还有账单的分类不能直接删，要先选去处：并进另一个分类，或留在「其它」，不会把账单一起删掉。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-ledgers.jpg" alt="我的账本：五本账并列，标着默认、合计与最近一笔"><figcaption>每本账有自己的合计与预算；首页和统计跟着当前选中的账本走。</figcaption></figure>
+      </section>
+
+      <section id="view" class="reveal">
+        <div class="sh"><span class="no">06</span><h2>查账、统计与批量</h2><span class="tag">钱花到哪里去了</span></div>
+        <div class="cards">
+          <div class="card"><b>翻账单</b><p>首页点月份两侧箭头翻月，点月份文字打开年月选择器。右上角放大镜进搜索。</p></div>
+          <div class="card"><b>搜索</b><p>关键词和收支类型直接填；时间、账本、来源、标签、金额区间、排序收在更多筛选里。合计算全部命中，列表先列一部分避免卡顿。</p></div>
+          <div class="card"><b>统计</b><p>抽屉 → 统计，切月、年或自定义区间。收支总览、每日统计、星期分布、分类报表、日报表逐段看；点图例可联动明细。</p></div>
+          <div class="card"><b>批量</b><p>长按任意一行进选择态，可一次改分类、打标签、改日期和备注、报销、不计入、删除、移至账本。</p></div>
+          <div class="card"><b>标签</b><p>标签跨账本通用：记账页挂标，搜索按标筛，批量补标，还有标签详情页集中看同一标签的账。</p></div>
+          <div class="card"><b>回收站</b><p>删除是软删，按删除日分组。可保留 7 / 30 / 90 天或永不清理，到期才真正删除。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-stats.jpg" alt="统计页：收支总览、预算、每日统计与分类报表"><figcaption>统计范围跟首页当前账本走，切到「全部账本」就是总账。</figcaption></figure>
+      </section>
+
+      <section id="plan" class="reveal">
+        <div class="sh"><span class="no">07</span><h2>周期、分期与预算</h2><span class="tag">提前安排好的账</span></div>
+        <div class="cards">
+          <div class="card"><b>周期记账</b><p>房租、订阅、工资设一次，到点自动生成。错过的期数不静默补，页顶提示后点「全部补记」才入账。</p></div>
+          <div class="card"><b>分期</b><p>把一笔大额拆成多期。末期会自动吃掉分币尾差，合计始终等于原始总额。</p></div>
+          <div class="card"><b>房贷</b><p>支持 LPR±BP、等额本息与等额本金。利率可改，金额、期数和首期入账日锁死，避免算乱。</p></div>
+          <div class="card"><b>预算</b><p>按月或按年设总额，也能细到分类；阈值默认 80%，可自动续期。首页进度条来自这里。</p></div>
+          <div class="card"><b>到期提醒</b><p>当日未记账、周期到期、分期到期、执行失败四类提醒各自可关，只承诺当天之内提醒。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-recurring.jpg" alt="周期记账页：健身月卡、视频会员、物业费、工资、猫粮等规则"><figcaption>周期规则和房贷计划都在发生日生成账单；未来期次不算进当前收支。</figcaption></figure>
+      </section>
+
+      <section id="assistant" class="reveal">
+        <div class="sh"><span class="no">08</span><h2>问小莉与 AI 提取</h2><span class="tag">对话和自动记账是两件事</span></div>
+        <div class="cards">
+          <div class="card"><b>问小莉</b><p>设置 → 问小莉打开，再配好服务商。长按 ＋ 右滑进入对话，能打字、说话、发图；她给出的账仍要你点确认才入账。</p></div>
+          <div class="card"><b>AI 提取</b><p>设置 → 自动记账里按入口分开：语音、识图、塔莉速记、通知补全等。默认全关，开着且本机规则缺金额或缺分类时才补字段。</p></div>
+          <div class="card"><b>发送前脱敏</b><p>自动记账只把脱敏后的文字发给服务商，不让 AI 接触原图；AI 失败或超时就退回本机规则结果，不影响出草稿。</p></div>
+          <div class="card"><b>关键词优先</b><p>提示词里会带上你自己的关键词规则和分类短名。你自己的规则优先，AI 只在规则认不出时补建议。</p></div>
+          <div class="card"><b>服务商配置</b><p>设置 → 小莉 AI → 服务商配置。未配置时 AI 相关开关不能打开；配置只保存在本机，不进备份包。</p></div>
+        </div>
+        <p class="note">六种记法里，手打直接落账；语音、识图、塔莉速记、付款通知和问小莉都先出草稿或账单卡，再等你确认。</p>
+        <figure class="shot"><img src="assets/shot-auto.jpg" alt="自动记账设置页：自动入口与 AI 提取分组，各开关默认关闭"><figcaption>AI 是可选项，不是记账前提；不开 AI 也能正常使用全部基础入口。</figcaption></figure>
+      </section>
+
+      <section id="data" class="reveal">
+        <div class="sh"><span class="no">09</span><h2>导入导出与备份</h2><span class="tag">数据都在本机</span></div>
+        <div class="cards">
+          <div class="card"><b>导入</b><p>设置 → 数据 → 导入账单：模板、钱迹、支付宝三种格式，预览异常行后选目标账本，重复行默认跳过。</p></div>
+          <div class="card"><b>导出</b><p>导出 14 列 CSV 或 XLSX 到「下载 / Tally」，能原样导回；标记与图片引用都在列里。</p></div>
+          <div class="card"><b>换手机</b><p>旧机生成加密 <code>.tally</code> 包，可含图片；新机从备份恢复。WebDAV 只做手动快照，不后台同步。</p></div>
+          <div class="card"><b>分享长图</b><p>统计和账本概览可生成长图，支持一键脱敏，直接分享或保存到「下载 / Tally」。</p></div>
+          <div class="card"><b>备份不含什么</b><p>API Key、WebDAV 密码和偏好设置不进备份包，恢复后要重新填。</p></div>
+          <div class="card"><b>诊断包</b><p>设置 → 关于 → 导出诊断包：版本、机型、表行数、日志尾巴；不含金额、备注、分类名和 API Key。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-backup.jpg" alt="备份与同步页：导出、打包、校验、完成四步进度"><figcaption>恢复时先校验后替换，校验不过就不动现有数据。</figcaption></figure>
+      </section>
+
+      <section id="settings" class="reveal">
+        <div class="sh"><span class="no">10</span><h2>设置</h2><span class="tag">按分组找，低频但重要</span></div>
+        <div class="cards">
+          <div class="card"><b>外观</b><p>在最上面：主题、货币符号、千分位、默认货币、账单时间精度；跟随系统或强制浅色 / 深色。</p></div>
+          <div class="card"><b>记账键盘</b><p>控制记账页按钮显隐，以及「账单图片」和「识别时保留原图」。主开关关掉后，识别草稿就不存来源图。</p></div>
+          <div class="card"><b>归类</b><p>分类管理、标签管理、关键词规则。自动沉淀和手动添加的规则都在这里改或删。</p></div>
+          <div class="card"><b>自动记账</b><p>支付页确认、通知抓取、监听应用、权限与检查，以及按入口拆开的 AI 提取开关。</p></div>
+          <div class="card"><b>数据</b><p>导入导出、备份恢复、WebDAV 快照、回收站。所有数据默认留在本机。</p></div>
+          <div class="card"><b>关于</b><p>版本、诊断包、开源许可和反馈入口。</p></div>
+        </div>
+        <figure class="shot"><img src="assets/shot-settings.jpg" alt="设置页：外观、记账偏好、归类、数据、AI、关于等分组"><figcaption>设置分组按使用频率排列：外观在最上，自动记账集中放自动入口与 AI 提取。</figcaption></figure>
+      </section>
+
+      <section id="faq" class="reveal">
+        <div class="sh"><span class="no">11</span><h2>常见问题</h2><span class="tag">先查这里，再导出诊断包</span></div>
+        <div class="cards">
+          <div class="card"><b>没有自动落账</b><p>这是设计如此。机器识别只生成草稿，必须有人在确认卡或记账页点存入；不确认就不进账本。</p></div>
+          <div class="card"><b>AI 开关打不开</b><p>先去服务商配置填好并测试连接；没配好时会提示并跳配置页。基础规则识别不依赖 AI。</p></div>
+          <div class="card"><b>通知没有进待确认</b><p>检查通知使用权、通知抓取开关、监听应用里对应 App 是否打开。推广、汇总、无金额的通知会被过滤。</p></div>
+          <div class="card"><b>悬浮提醒不显示</b><p>需要系统悬浮窗权限；没有权限时不会强行弹窗，打开 App 仍能看到首页待确认入口。</p></div>
+          <div class="card"><b>数字对不上</b><p>先看是否开启了「不计入收支」，再看统计页是否开了「剔除未报销」；口径写在官网首页「每个数字怎么算」。</p></div>
+          <div class="card"><b>怎样反馈问题</b><p>设置 → 关于 → 导出诊断包，附上操作步骤和发生时间。诊断包不含金额、备注、分类名或 API Key。</p></div>
+        </div>
+        <p class="note">还没装上？<a href="index.html#get">回到首页下载 APK</a>。</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer><div class="wrap">
+  <span>Tally 塔莉 · 机器认账，你说了算</span>
+  <span style="margin-left:auto"><a href="index.html">返回首页</a></span>
+</div></footer>
+<script>
+(() => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sections = document.querySelectorAll('section.reveal');
+  if (reduced || !('IntersectionObserver' in window)) {
+    sections.forEach((el) => el.classList.add('on'));
+  } else {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('on');
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px' });
+    sections.forEach((el) => io.observe(el));
+  }
+  const links = document.querySelectorAll('.toc a');
+  const spy = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      links.forEach((link) => link.classList.toggle('active', link.hash === '#' + entry.target.id));
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('section[id]').forEach((el) => spy.observe(el));
+})();
+</script>
+</body>
+</html>

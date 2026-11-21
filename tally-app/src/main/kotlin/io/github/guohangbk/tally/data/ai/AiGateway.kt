@@ -8,6 +8,7 @@ import io.github.guohangbk.tally.domain.ai.AiRequest
 import io.github.guohangbk.tally.domain.ai.AiResult
 import io.github.guohangbk.tally.domain.ai.toOutcome
 import io.github.guohangbk.tally.domain.model.AiStatus
+import io.github.guohangbk.tally.data.debug.DebugLog
 
 /**
  * 小莉当前能不能用，以及为什么不能用。页面只认这一层，不自己拼开关与状态。
@@ -25,6 +26,10 @@ data class AiAvailability(
     val enabled: Boolean,
     val consecutiveFailures: Int,
     val visionCapable: Boolean,
+    /** 上一次失败的分类（NETWORK / TIMEOUT / AUTH …），只进日志，不给用户看。 */
+    val lastError: String? = null,
+    /** 上一次调用的时间：后台这条路没有「重新测试」按钮，靠它决定什么时候自己重试一次。 */
+    val lastTriedAt: Long = 0L,
 ) {
     /** 入口显示条件：开关打开且配置有效。管的是统计页与对话页里的 AI 触点；＋ 右臂另走 [entry]，常驻。 */
     val showsEntry: Boolean
@@ -71,16 +76,34 @@ sealed interface AiEnhancement {
 class AiGateway(
     private val client: AiClient,
     private val configs: AiConfigRepository,
+    private val now: () -> Long = System::currentTimeMillis,
 ) {
     suspend fun availability(): AiAvailability = configs.availability()
 
     suspend fun enhance(request: AiRequest): AiEnhancement {
         val availability = availability()
         if (!availability.showsEntry) return AiEnhancement.Skipped(null)
-        if (!availability.usableQuietly) {
+        if (!availability.usableQuietly && !probeDue(availability)) {
+            val last = availability.lastError?.let { "（上次 $it）" }.orEmpty()
+            DebugLog.log("AI 请求", "跳过：处于断开状态，还没到重试时间$last")
             return AiEnhancement.Skipped(AiFailure(AiErrorKind.NETWORK, AiUnavailable.Disconnected.reason))
         }
+        if (!availability.usableQuietly) {
+            DebugLog.log("AI 请求", "断开超过 ${RETRY_MILLIS / 60_000} 分钟，后台再试一次")
+        }
         return invoke(request)
+    }
+
+    /**
+     * 后台链路没有「重新测试」按钮：状态一旦落到 DISCONNECTED 就再也不会调，等于永久失效。
+     * 隔几分钟放一次探测，成功即回 READY；失败就继续按断开处理。
+     */
+    private fun probeDue(availability: AiAvailability): Boolean =
+        availability.status == AiStatus.DISCONNECTED &&
+            now() - availability.lastTriedAt >= RETRY_MILLIS
+
+    private companion object {
+        const val RETRY_MILLIS = 3 * 60_000L
     }
 
     suspend fun call(request: AiRequest): AiResult<AiCompletion> {

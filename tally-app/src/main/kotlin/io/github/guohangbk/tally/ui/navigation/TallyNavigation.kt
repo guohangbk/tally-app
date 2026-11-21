@@ -138,6 +138,8 @@ object Routes {
     const val ASSISTANT_CONFIG = "assistant/config"
     /** 自动记账：三条机器记账入口的 AI 提取与账单图片，挂在「小莉（AI）」下面。 */
     const val ASSISTANT_AUTO = "assistant/auto"
+    /** 权限与检查（A2）：通知使用权、悬浮窗、电池优化、自启动。 */
+    const val AUTO_HEALTH = "assistant/auto/health"
     /** 海报页只带那一段账的口径（账本 / 维度 / 锚点 / 区间），不带别的——口径换了就重画。 */
     const val POSTER = "poster?ledgerId={ledgerId}&granularity={granularity}&anchor={anchor}" +
         "&rangeEnd={rangeEnd}&bucket={bucket}&excludePending={excludePending}"
@@ -355,7 +357,10 @@ private fun TallyAppShell(
                 ) {
                     navController.navigate(Routes.HOME)
                 }
-                if (link !is NotificationLink.BillDetail) graph.pendingLink.value = null
+                // 账单详情与待确认卡都由首页自己消费并清空，别在这里先清掉。
+                if (link !is NotificationLink.BillDetail && link != NotificationLink.PendingIngest) {
+                    graph.pendingLink.value = null
+                }
             }
         }
     }
@@ -751,6 +756,12 @@ private fun TallyAppShell(
                         io.github.guohangbk.tally.ui.settings.AutoBookingSettingsScreen(
                             onBack = { navController.popBackStack() },
                             onOpenProviderConfig = { navController.navigate(Routes.ASSISTANT_CONFIG) },
+                            onOpenHealth = { navController.navigate(Routes.AUTO_HEALTH) },
+                        )
+                    }
+                    composable(Routes.AUTO_HEALTH) {
+                        io.github.guohangbk.tally.ui.settings.AutoHealthScreen(
+                            onBack = { navController.popBackStack() },
                         )
                     }
                     composable(Routes.ASSISTANT_CHAT) { entry ->

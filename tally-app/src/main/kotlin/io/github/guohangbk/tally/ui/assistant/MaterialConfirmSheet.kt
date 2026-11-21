@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -54,6 +55,8 @@ fun MaterialConfirmSheet(
     /** 从第一笔开始，存一笔自动接下一笔。 */
     onQueue: () -> Unit,
     onSave: () -> Unit,
+    /** 这一行不要了：通知抓进来的垃圾（退款、验证码之类）得有出口，不能挂着等 30 天过期。 */
+    onRemove: (Int) -> Unit,
     /** 这一批不要了：连落盘的清单一起丢掉。 */
     onDiscard: () -> Unit,
     onDismiss: () -> Unit,
@@ -66,18 +69,17 @@ fun MaterialConfirmSheet(
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // 张数并进标题里（「识别出 1 笔（1 张图）」），卡头只占一行：右边那一格留给「先不处理」，
-                // 它以前是一枚灰色小字，跟旁边的标签长得一样，看不出能点。
                 Text(
                     text = if (state.bills.isEmpty()) {
-                        "没识别到可记的一笔"
+                        "没有可确认的一笔"
                     } else {
-                        "识别出 ${state.bills.size} 笔（${materialLabel(state, imageCount)}）"
+                        "待确认 ${state.bills.size} 笔"
                     },
                     style = TallyType.sectionTitle,
                     color = colors.ink,
                     modifier = Modifier.weight(1f),
                 )
+                // 只留一个明确的出口：清空。单行不要了点行尾的「×」，整批不要了点这里。
                 SheetDismissAction(onClick = onDiscard)
             }
             // 没识别到的张数写在卡头：卡一浮起来就把气泡盖住了，只弹气泡等于没说。
@@ -118,6 +120,7 @@ fun MaterialConfirmSheet(
                         bill = bill,
                         onToggle = { onToggle(bill.key) },
                         onEdit = { onEdit(bill.key) },
+                        onRemove = { onRemove(bill.key) },
                     )
                 }
             }
@@ -147,6 +150,7 @@ private fun ScanRow(
     bill: ScannedBill,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
+    onRemove: () -> Unit,
 ) {
     val colors = tallyColors
     val marked = bill.checked
@@ -175,15 +179,20 @@ private fun ScanRow(
             }
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = bill.categoryLabel ?: "还没选分类",
-                fontSize = 13.5.sp,
-                lineHeight = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (bill.needsCategory) colors.expense else colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = bill.categoryLabel ?: "还没选分类",
+                    fontSize = 13.5.sp,
+                    lineHeight = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (bill.needsCategory) colors.expense else colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(5.dp))
+                SourceChip(bill.source)
+            }
             Spacer(Modifier.height(2.dp))
             if (bill.editing) {
                 Text("正在修改这一笔", fontSize = 10.sp, lineHeight = 12.5.sp, color = colors.ink3)
@@ -199,11 +208,21 @@ private fun ScanRow(
             color = if (positive) colors.income else colors.expense,
             maxLines = 1,
         )
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .then(if (bill.editing) Modifier else Modifier.clickable(onClick = onRemove)),
+            contentAlignment = Alignment.Center,
+        ) {
+            InlineIcon(iconKey = "close", contentDescription = "移除这一笔", size = 11.dp, tint = colors.ink3)
+        }
     }
 }
 
 /**
- * 分类下面那一行：**日期在前、备注在后**，用中点分开；没有备注就只留日期。
+ * 分类下面那一行：日期在前、商户/备注在后；没有备注就只留日期。
+ * 来源不进这一行，它是分类名右边的 [SourceChip]，一行一个，不跟文字挤。
  *
  * 「日期是不是真的」不另写一句解释——日期自己标红就是那个意思（默认按今天落的账、
  * 或原文提了日期却没解析出来）。文案解释会跟右侧金额抢位置，也说不出更多信息。
@@ -240,38 +259,57 @@ private fun rowOrder(bill: ScannedBill): Int = when {
 }
 
 /**
- * 卡头的「先不处理」：描边小按钮，不是一个灰字。
- * 它以前跟旁边的来源标签长得一模一样，一眼看不出能点——而它是这张卡唯一的退出口。
+ * 卡头右侧的「清空」：垃圾桶图标。
+ *
+ * 只留图标不写字：这一行右侧有标题占着，「清空」两个字会把「待确认 N 笔」挤短；
+ * 垃圾桶本身就是「整批不要了」，比小字更一眼。
  */
 @Composable
 private fun SheetDismissAction(onClick: () -> Unit) {
     val colors = tallyColors
     val shape = RoundedCornerShape(11.dp)
-    Row(
+    Box(
         modifier = Modifier
+            .size(30.dp)
             .clip(shape)
             .background(colors.card)
             .border(1.dp, colors.line, shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        InlineIcon(iconKey = "close", contentDescription = null, size = 11.dp, tint = colors.ink2)
-        Text(
-            text = "先不处理",
-            fontSize = 11.5.sp,
-            lineHeight = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = colors.ink2,
-            maxLines = 1,
-        )
+        InlineIcon(iconKey = "trash", contentDescription = "清空待确认", size = 13.dp, tint = colors.ink2)
     }
 }
 
-/** 卡头那句「这批素材从哪来」：语音是一句话，其余都是一张张图。 */
-private fun materialLabel(state: MaterialBatchUiState, imageCount: Int): String =
-    if (state.source == IngestSource.VOICE) "1 句话" else "$imageCount 张图"
+/**
+ * 行内来源标签：只标这张卡上真会出现的四个入口。
+ * 支付页与对话不走这份清单（前者入口已下线，后者是小莉自己的对话框），落 else 只作兜底。
+ */
+private fun sourceLabel(source: IngestSource): String = when (source) {
+    IngestSource.NOTIFICATION -> "通知"
+    IngestSource.SCREENSHOT -> "截图"
+    IngestSource.SHARE -> "塔莉速记"
+    IngestSource.VOICE -> "语音"
+    else -> "其他"
+}
+
+@Composable
+private fun SourceChip(source: IngestSource) {
+    val colors = tallyColors
+    val shape = RoundedCornerShape(5.dp)
+    Text(
+        text = sourceLabel(source),
+        modifier = Modifier
+            .clip(shape)
+            .background(colors.ink.copy(alpha = 0.05f))
+            .border(1.dp, colors.line, shape)
+            .padding(horizontal = 5.dp, vertical = 1.5.dp),
+        fontSize = 9.sp,
+        lineHeight = 11.sp,
+        color = colors.ink3,
+        maxLines = 1,
+    )
+}
 
 /** 行上的落账日期：今天 / 昨天 直接说，再往前报月日。 */
 private fun scanDayStamp(epochMillis: Long?): String {

@@ -25,5 +25,6 @@ internal fun notificationRoute(link: NotificationLink): String? = when (link) {
     NotificationLink.NotificationSettings -> Routes.NOTIFICATIONS
     is NotificationLink.Stats -> Routes.stats(ledgerId = link.ledgerId)
     is NotificationLink.BillDetail -> null
+    NotificationLink.PendingIngest -> null
     NotificationLink.Home -> null
 }

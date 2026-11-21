@@ -1,5 +1,6 @@
 package io.github.guohangbk.tally.ui.assistant
 
+import io.github.guohangbk.tally.domain.ingest.IngestSource
 import io.github.guohangbk.tally.domain.model.BillType
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
@@ -17,6 +18,8 @@ class MaterialBatchUiStateTest {
     private fun row() = ScannedBill(
         key = 0,
         imageIndex = 0,
+        source = IngestSource.SCREENSHOT,
+        createdAt = 1_794_600_000_000,
         amountMinor = 1200,
         type = BillType.EXPENSE,
         occurredAt = 1_794_600_000_000,

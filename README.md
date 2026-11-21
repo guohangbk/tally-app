@@ -1,154 +1,106 @@
 # Tally 塔莉
 
-> 小莉帮你管好每一笔收支。
+> 纯离线、功能多、AI 赋能。小莉帮你管好每一笔收支。
 
-**一本只存在手机里的账本**：原生安卓的离线记账 App，数据只存在手机本地，没有账号、没有服务端。
-
-官网：<https://tally.guohang.asia> · 源码与发行包：<https://github.com/guohangbk/tally-app>
+官网 <https://tally.guohang.asia> · 源码与发行包 <https://github.com/guohangbk/tally-app>
 
 <p align="center">
-  <img src="site/assets/shot-home.jpg" width="200" alt="首页：本月支出与收入、预算进度条，下面是按天分组的账单">
-  <img src="site/assets/shot-entry.jpg" width="200" alt="记账页：4×4 金额键盘，算式 18.00 + 12.00 = 30.00">
-  <img src="site/assets/shot-stats.jpg" width="200" alt="统计页：年视图的收支总览、每月柱状、星期分布与分类环">
-  <img src="site/assets/shot-chat.jpg" width="200" alt="小莉：说一句「火锅 168，打车 26」，回来一张两笔待确认的账单卡">
+  <img src="site/assets/shot-home.jpg" width="190" alt="首页：预算进度、待确认入口和按天账单">
+  <img src="site/assets/shot-stats.jpg" width="190" alt="统计：收支、预算、趋势与分类报表">
+  <img src="site/assets/shot-ledgers.jpg" width="190" alt="多账本：日常、装修、买车、旅行">
+  <img src="site/assets/shot-chat.jpg" width="190" alt="问小莉：对话返回待确认账单">
 </p>
+
+## 它是什么
+
+塔莉是一个单机自用的 Android 记账 App。没有账号，没有服务端，账单、分类、预算、备份都在本机。中文 OCR、口语金额解析、关键词规则先在本机跑；AI 提取是可选增强，默认关闭，外发前先脱敏。
+
+机器只负责认字段，不负责替你落账：语音、识图、系统分享、付款通知、问小莉识别出来的账单，都会先进入待确认卡或账单卡，点确认后才进账本和统计。
+
+## 六种记账方式
+
+| 方式 | 怎么用 | 处理结果 |
+| ---- | ------ | -------- |
+| 手打 | 点中间的 ＋，选分类、输金额、保存 | 4×4 键盘支持 `38+12` 算式，日期、备注、标签、图片和账单时间同页填写 |
+| 语音 | 长按 ＋ 上滑，按住说完松手 | 系统语音转写后本机解析金额、日期和关键词，出待确认卡 |
+| 识图 | 长按 ＋ 左滑，从相册选图 | 一次最多 9 张，本机 OCR + 规则抽字段；需要时再走 AI 提取 |
+| 塔莉速记 | 相册或文件里分享图片到 Tally | 回首页走同一张确认卡，不进对话；超过 9 张只收前 9 张 |
+| 付款通知 | 开启通知抓取后照常付款 | 只认支付成功通知，解析金额、商户、订单号后进入待确认；推广和汇总不入账 |
+| 问小莉 | 长按 ＋ 右滑打开对话 | 打字、说话、发图都可以；小莉给出账单卡，人工确认后才落账 |
+
+所有自动入口共用一张待确认卡：缺分类的行标红置顶且不允许存入，点任意一行进记账页修改。没确认完退出或被杀进程也不丢，下次打开首页在预算条下继续处理。
+
+<p align="center">
+  <img src="site/assets/shot-confirm.jpg" width="260" alt="待确认卡：多来源草稿汇在一处，缺分类的行标红置顶">
+  <img src="site/assets/shot-auto.jpg" width="260" alt="自动记账设置：自动入口与 AI 提取按入口分开控制">
+</p>
+
+## 主要能力
+
+- **多账本**：日常、装修、买车各记各的；首页和统计可切到「全部账本」看总账。
+- **分类与关键词**：两级分类树全机共用；语音和识图保存的备注可沉淀成关键词规则，后续优先命中本机规则。
+- **统计与搜索**：月、年、自定义区间；收支总览、预算段、趋势、星期分布、分类报表、日报；搜索支持时间、账本、来源、金额区间与排序。
+- **批量操作**：长按账单进选择态，可批量改分类、标签、日期、备注、账本、报销状态、不计入或删除。
+- **周期、分期、房贷与预算**：房租订阅按计划生成；分期末期自动处理分币尾差；房贷支持等额本息与等额本金；预算支持总额与分类维度。
+- **标签与回收站**：标签跨账本通用；删除是软删，可在保留期内恢复。
+- **桌面组件与长图**：多枚只读组件快速看数；统计和账本概览可导出脱敏长图。
+- **备份与迁移**：`.tally` 加密备份包换机；CSV/XLSX 可导回；支持支付宝、钱迹、自有模板导入和 WebDAV 手动快照。
+
+<p align="center">
+  <img src="site/assets/shot-budget.jpg" width="190" alt="预算：总额与分类预算进度">
+  <img src="site/assets/shot-backup.jpg" width="190" alt="备份：导出、打包、校验、完成">
+  <img src="site/assets/shot-widgets.jpg" width="190" alt="桌面组件：近七日、收支速览、快速记账与预算环">
+</p>
+
+## AI 提取与问小莉
+
+AI 是两个独立能力：
+
+- **AI 提取**：设置 → 自动记账里按入口开关控制。默认关闭，未配置服务商不允许开启。语音、识图、塔莉速记和通知补全在本机规则缺金额或缺分类时才调用 AI，外发的是脱敏文本，不是原图；AI 失败就退回规则结果。
+- **问小莉**：长按 ＋ 右滑进入对话，可以打字、说话、发图。小莉返回的账单仍然要人工确认才落账。
+
+自动记账不依赖 AI。不开 AI 时规则识别照常出待确认卡；开了 AI 只是少改几个字段。
+
+## 权限与数据
+
+| 权限    | 用途                        |
+| ----- | ------------------------- |
+| 网络    | 仅在主动配置 AI、WebDAV 或检查更新时使用 |
+| 麦克风   | 语音记账                      |
+| 通知    | 到期、失败和待确认提醒               |
+| 悬浮窗   | 待确认角标；不给就不浮，不影响记账         |
+| 通知使用权 | 系统里单独授权，付款通知自动进入待确认       |
+
+通知原文不落盘、不进日志；自动草稿 30 天没人处理会退出待确认清单。诊断包不含金额、备注、分类名和 API Key。
 
 ## 下载与安装
 
-**APK 在 Releases 页**：<https://github.com/guohangbk/tally-app/releases>。
+历史版本在 Releases：<https://github.com/guohangbk/tally-app/releases>
 
-下载前先确认手机对得上：
-
-| 项 | 要求 |
-|---|---|
-| 架构 | 安装包**只含 `arm64-v8a`**：2018 年后的主流机型都是这个架构 |
-| 系统 | **Android 9（API 28）及以上** |
-| 装不上 | 32 位老机器、x86 / x86_64 模拟器——包里没有对应的 ABI |
-| 怎么装 | 没有上架任何应用商店，下载 APK 后自己装；从浏览器或文件管理器装的第一次，要在系统里允许「安装未知应用」 |
-
-想自己编也行：仓库里带着一把测试签名钥匙，克隆下来不用配任何东西就能出包，命令见[本地构建](#本地构建)。
-
-```bash
-git clone https://github.com/guohangbk/tally-app.git
-```
-
-## 这是什么
-
-**原生 Android 记账应用**：Kotlin + Jetpack Compose 写界面，Room 存本地库，不引跨端框架、不引 AI SDK、不引图表库——图表、金额键盘、海报、桌面组件都是自己画的。数据全部存在手机本地，没有账号、没有服务端。
-
-一眼看全：多账本与「全部账本」合并统计、预算提醒与自动续期、周期记账与分期（含房贷 LPR）到期自动入账、语音与识图记账、导入导出与 `.tally` 加密备份换机、桌面八枚只读小组件与两条长按快捷方式。可选的 AI 小莉负责统计分析与对话式记账——不配置它，前面这些照样能用。
-
-### 记账方式
-
-| 方式 | 怎么用 |
-|---|---|
-| 手打 | 4×4 金额键盘，支持 `38+12` 这类算式；两级分类、时刻、凭证图、备注 |
-| 语音 | 长按 ＋ 上滑（松开即识别），说「二十九块八毛五」出 29.85；识别交给系统语音引擎、端侧优先，金额与分类在手机本地按规则解析 |
-| 截图 | 长按 ＋ 左滑，从相册选支付截图，端侧 OCR + 规则抽金额与商户，一次最多 9 张；规则认不全时可交给 AI 提取（默认关） |
-| 塔莉速记 | 在相册或文件里选图 → 系统分享 → 塔莉速记，回首页走同一张确认卡；一次最多 9 张 |
-| 周期 | 固定周期**到期自动入账**（房租、订阅、工资），错过的期数一次性「全部补记」；一次要补超过 100 期才停下来等确认 |
-| 分期 | 一笔大额拆成多期，末期自动吃分币尾差；支持房贷（LPR±BP、等额本息 / 等额本金），到期同样自动入账 |
-| 小莉（AI） | 可选增强：长按 ＋ 右滑，对话里一句话或几张图变成待确认的记账卡；不配置也不影响上面六条 |
-
-### 账本与数据
-
-- **多账本**：日常、装修、买车、结婚……各记各的，也能选「全部账本」一起看；账本只管钱归属哪件事，分类字典全机共用一套。
-- **预算**：按月或按年设总额与分类额，每月预算可自动续期，往期有「预算历史」。
-- **找回**：删除是软删，回收站按删除日分组，保留期自己设（7 / 30 / 90 天 / 永不清理）。
-- **看账**：任意起止区间的统计（趋势、星期分布、分类二级小计、日报表下钻）、带金额区间与排序的搜索、全局标签（记账页挂标、搜索按标筛选、批量补标、独立的标签详情）、七动作批量修改（改分类、报销、不计入、删除、改日期、改备注、移至账本）。
-- **传出去**：月度 / 年度 / 区间分享长图（可一键脱敏）、桌面八枚只读小组件——近七日、收支速览（小 / 四格）、快速记账（小 / 八格）、预算环、消费节奏、记账连续记录，点击一律落回 App；长按图标另有「记一笔」「查看统计」两条快捷方式。
-- **换机与备份**：`.tally` 加密备份包（ZIP + AES-256）导出后在任何设备上恢复；CSV/XLSX 导出可原样导回；支付宝 / 钱迹账单可批量导入，重复行在预览阶段就说破。
-- **排障**：设置 → 关于 → 导出诊断包——把版本、机型与 ABI、库结构与各表行数、日志尾巴写成一份 txt 落到公共下载目录，并直接顶起系统分享；**不含**账单金额、备注、分类名、账本名、图片与 API Key，行数只说明有多少条、不含任何一条的内容。
-
-### 设置里几个常被问到的入口
-
-| 想干什么 | 在哪 |
-|---|---|
-| 导入 / 导出账单 | 设置 → 数据 → 导入账单 / 导出账单 |
-| 换机、备份、WebDAV | 设置 → 数据 → 备份与同步 |
-| 找回删掉的账 | 设置 → 数据 → 回收站 |
-| 导出诊断包给作者排障 | 设置 → 关于 → 导出诊断包 |
-| 看怎么用 | 设置 → 关于 → 使用指南 |
-| 打开项目主页 | 设置 → 关于 → 项目主页（用浏览器打开 <https://github.com/guohangbk/tally-app>） |
-| 看许可与第三方依赖 | 设置 → 关于 → 许可与依赖 |
-
-### 不做的事
-
-账号体系、云同步、多端合并、账户与资产、转账、多币种、iOS、应用商店上架。系统已经提供的能力（应用锁、通知中心）不在 App 里做第二套。
-
-## 文档
-
-都在 [`docs/release/`](docs/release/) 下（对外**只有这一份，不带版本号**；历史版本用公开仓的 tag 取回）：
-
-| 内容                               | 文档指引                                                                             |
-|------------------------------------|--------------------------------------------------------------------------------------|
-| 需求与验收标准                     | [`需求规格说明书.md`](docs/release/需求规格说明书.md)                         |
-| 架构、模块、技术选型、构建基线     | [`概要设计说明书.md`](docs/release/概要设计说明书.md)                         |
-| 逐功能 / 逐模块的处理逻辑与边界    | [`详细设计说明书.md`](docs/release/详细设计说明书.md)                         |
-| 表结构、索引、统计口径与版本策略   | [`数据库设计文档.md`](docs/release/数据库设计文档.md)                         |
-| 设计语言、组件与交互判据           | [`界面与交互规范.md`](docs/release/界面与交互规范.md)                         |
-| 界面长什么样（自包含，可离线打开） | [`界面设计图.html`](docs/release/界面设计图.html)（29 节 / 137 屏）           |
-| 为什么这么设计、否决过什么         | [`设计决策.md`](docs/release/设计决策.md)                                     |
-| 交给使用者看的说明书               | [`用户操作手册.md`](docs/release/用户操作手册.md) + App 内「设置 → 使用指南」 |
-
+| 项   | 要求                       |
+| --- | ------------------------ |
+| 架构  | 仅 `arm64-v8a`            |
+| 系统  | Android 9（API 28）及以上     |
+| 安装  | 浏览器下载后直接安装，首次需允许「安装未知应用」 |
 
 ## 本地构建
 
-环境：**JDK 17+**（Gradle 的守护进程要 JDK 21，本机没有时 Gradle 会自己下载）+ **Android SDK `android-37.0`（API 37）**，Android Studio 或纯命令行都行。签名文件仓库里已经带了，克隆下来直接构建，不用先配任何东西；`local.properties` 不进 git——Android Studio 会自己写 `sdk.dir`，纯命令行则用 `ANDROID_HOME` 指定 SDK。
-
-### 1. 签名：一把测试钥匙，随仓库走
-
-Debug 与 Release 都走同一把签名钥匙，仓库里带的是 `tally-app/keystore/tally-unified.jks`——用 Android 调试那套公开常量生成（store/key 口令都是 `android`，别名 `androiddebugkey`）。它不是秘密，所以任何一次克隆都能直接出包；也正因为两者同签名，自己编的 debug 与 release 包可以互相覆盖安装。
-
-> 这把钥匙只为了让大家装得上、能自己编。真要正式发版，请在仓库根的 `local.properties` 里用你自己的钥匙覆盖它，写四项（`tally.keystore` 是**相对 `tally-app/` 模块目录**的路径）：
->
-> ```properties
-> # local.properties —— 只存在于本机，不进 git
-> tally.keystore=keystore/tally-unified.jks
-> tally.storePassword=<你的 keystore 口令>
-> tally.keyAlias=<你的别名>
-> tally.keyPassword=<你的别名口令>
-> ```
->
-> 想换成自己那把 `~/.android/debug.keystore` 也一样，构建脚本不关心它是哪把。四项缺任何一项，Gradle 会直接报错并告诉你缺哪个键，不会静默走出一个没签名的包。
-
-### 2. 构建
+优先复用本机已有环境：`GRADLE_USER_HOME=E:\dev\repository\gradle`。Windows 上如遇 Gradle loopback 连接问题，用 `JAVA_TOOL_OPTIONS` 指定一个仓库内临时目录作为 `jdk.net.unixdomain.tmpdir`，跑完删除。
 
 ```powershell
-.\gradlew.bat :tally-app:assembleDebug      # Windows
+$env:GRADLE_USER_HOME='E:\dev\repository\gradle'
+.\gradlew.bat :tally-app:assembleRelease
+.\gradlew.bat :tally-app:testDebugUnitTest
 ```
 
-```bash
-./gradlew :tally-app:assembleDebug          # macOS / Linux
-```
+签名钥匙随仓库提供，可与本地 release 包互相覆盖安装。要用自己的钥匙，在 `local.properties` 里覆盖 `tally.keystore`、`tally.storePassword`、`tally.keyAlias` 和 `tally.keyPassword`。
 
-产物：`tally-app/build/outputs/apk/debug/tally-app-debug.apk`，装到 `arm64-v8a` 的真机或模拟器即可。首次构建会下载 Gradle 发行包（走腾讯镜像）与依赖（`google()` / `mavenCentral()`），之后走本地缓存。
+## 文档与指南
 
-构建基线（AGP 9.4.1 / Gradle 9.6.0 / Kotlin 2.3.21 / KSP 2.3.12 / Compose BOM 2026.09.00 / Room 2.8.5 / compileSdk 37 + minor 0 / minSdk 28 / 仅 `arm64-v8a`）**互相咬死，不要单独升降其中任何一个**，原因见《概要设计说明书》§9.2。
-
-## 验证方式
-
-本项目不写自动化测试。改代码之后只有两条路：
-
-1. 完整构建必须绿：`.\gradlew.bat :tally-app:build`（macOS / Linux 用 `./gradlew :tally-app:build`）。它包含编译、lint、debug 与 release 打包四步；
-2. 真机 / 模拟器走查（交互验证一律用 Pixel 9 模拟器，AVD `Tally_API37`）。
-
-单独出包与看报告：
-
-- release 包：`.\gradlew.bat :tally-app:assembleRelease` → `tally-app/build/outputs/apk/release/tally-app-release.apk`（用仓库自带的测试钥匙签名，可覆盖安装）；
-- lint 报告：`tally-app/build/reports/lint-results-debug.html`。
-
-## 仓库结构
-
-```text
-tally/
-├── tally-app/              # Android 客户端（:tally-app，唯一应用模块）
-├── docs/                   # 对外只发布 docs/release/ 这一份当前口径
-├── site/                   # 官网（单页 HTML + 截图资源，无构建）
-├── gradle/                 # Gradle wrapper 与守护进程 JVM 配置（发行包 9.6.0，走腾讯镜像）
-└── LICENSE                 # BUSL-1.1
-```
+- 使用指南：<https://tally.guohang.asia/guide.html>
+- 对外文档：<https://github.com/guohangbk/tally-app/tree/HEAD/docs/release>
+- 隐私说明：<https://github.com/guohangbk/tally-app/blob/HEAD/PRIVACY.md>
 
 ## 许可
 
-**BUSL-1.1**（Business Source License 1.1）——属于 **Source-Available（源码可用许可 / 商业源码许可）**，不是 OSI 定义的开源许可。可读、可改、可自行构建、可个人自用；不得作为商业产品或服务提供给第三方。每个版本在 Change Date（最早 2030-11-01，或该版本首次公开分发满四年）自动转为 GPL-2.0-or-later。详见 [LICENSE](LICENSE) 与 App 内「设置 → 许可与依赖」。
+BUSL-1.1。源码可读、可改、可自行构建、可个人自用；不得作为商业产品或服务提供给第三方。详见 [LICENSE](LICENSE)。

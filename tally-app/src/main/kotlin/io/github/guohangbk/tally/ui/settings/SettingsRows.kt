@@ -6,8 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,6 +77,7 @@ internal fun SettingsSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     label: String,
     description: String?,
+    modifier: Modifier = Modifier,
     gold: Boolean = false,
     descriptionAction: (@Composable () -> Unit)? = null,
     /** 依赖别的开关时才置灰：关着的行仍然看得见，说明行写清为什么点不动。 */
@@ -83,11 +87,49 @@ internal fun SettingsSwitchRow(
         checked = checked,
         onCheckedChange = onCheckedChange,
         label = label,
+        modifier = modifier,
         description = description,
         descriptionAction = descriptionAction,
         gold = gold,
         enabled = enabled,
     )
+}
+
+/**
+ * 子级开关行：挂在某一项主开关下面，靠一段缩进和左侧竖线表达从属，不另起分组、也不压分隔线。
+ * 主开关关着时整行不渲染，所以这里不管可见性。
+ */
+@Composable
+internal fun SettingsNestedSwitchRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+    description: String?,
+) {
+    val colors = tallyColors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp)
+            .height(IntrinsicSize.Min),
+    ) {
+        Box(
+            modifier = Modifier
+                .width(2.dp)
+                .fillMaxHeight()
+                .padding(vertical = 8.dp)
+                .background(colors.line, RoundedCornerShape(1.dp)),
+        )
+        SettingsSwitchRow(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            label = label,
+            description = description,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp),
+        )
+    }
 }
 
 /** 说明行末尾的文字链：品牌色、不加底色，别做成第二个按钮把一行说明挤成两行。 */
@@ -164,6 +206,51 @@ internal fun SettingsInfoRow(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+/**
+ * 状态行：左边标题 + 一行说明，右边是系统里的真实状态和箭头。
+ *
+ * 整行可点，不另起「去设置」链接——那会把一行撑成两行，页面高度翻倍。
+ * [status] 为 null 时右端只留箭头（自启动这类读不到状态的项）。
+ */
+@Composable
+internal fun SettingsStatusRow(
+    title: String,
+    description: String?,
+    status: String?,
+    modifier: Modifier = Modifier,
+    statusTone: Color = tallyColors.ink3,
+    onClick: (() -> Unit)? = null,
+) {
+    val colors = tallyColors
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = TallyType.listTitle, color = colors.ink)
+            if (description != null) {
+                Text(description, style = TallyType.helper, color = colors.ink3)
+            }
+        }
+        if (status != null) {
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = status,
+                style = TallyType.listTitle.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                color = statusTone,
+                maxLines = 1,
+            )
+        }
+        if (onClick != null) {
+            Spacer(Modifier.width(4.dp))
+            TallyRowChevron()
+        }
     }
 }
 

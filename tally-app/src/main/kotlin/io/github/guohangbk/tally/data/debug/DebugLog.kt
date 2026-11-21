@@ -21,6 +21,12 @@ import java.util.concurrent.Executors
  */
 object DebugLog {
 
+    /**
+     * 系统日志出口：由 App 启动时挂上，单测里没有 Android 也就没有它。
+     * 装机排查时 `adb logcat -s Tally` 就能看到时间线，不用先跑进 App 导出诊断包。
+     */
+    var mirror: ((String) -> Unit)? = null
+
     private const val RING_LINES = 300
     private const val FILE_CAP_BYTES = 512 * 1024
     private const val CRASH_KEEP = 5
@@ -73,6 +79,7 @@ object DebugLog {
     private fun emit(level: String, tag: String, message: String) {
         val now = Date()
         val line = "${clock.format(now)} [$level/$tag] $message"
+        mirror?.invoke("$tag · $message")
         mutable.update { previous -> (previous + line).takeLast(RING_LINES) }
         val text = "${fileClock.format(now)} [$level/$tag] $message"
         val storage = dir
