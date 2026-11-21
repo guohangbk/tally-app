@@ -1,15 +1,23 @@
 package io.github.guohangbk.tally.ui.bill
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,7 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,34 +45,33 @@ import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.BillType
-import io.github.guohangbk.tally.domain.model.ReimburseStatus
 import io.github.guohangbk.tally.domain.model.TimePrecision
+import io.github.guohangbk.tally.ui.common.BillAmountTone
+import io.github.guohangbk.tally.ui.common.TagPill
+import io.github.guohangbk.tally.ui.common.billAmountView
 import io.github.guohangbk.tally.ui.common.formatDate
 import io.github.guohangbk.tally.ui.common.formatDateTime
 import io.github.guohangbk.tally.ui.common.tallyViewModel
-import io.github.guohangbk.tally.ui.design.BillBadges
-import io.github.guohangbk.tally.ui.design.ButtonVariant
+import io.github.guohangbk.tally.ui.design.BillBadge
 import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.FullScreenImageViewer
 import io.github.guohangbk.tally.ui.design.ImageThumbnail
 import io.github.guohangbk.tally.ui.design.InlineIcon
+import io.github.guohangbk.tally.ui.design.Marker
 import io.github.guohangbk.tally.ui.design.TallyBottomSheet
-import io.github.guohangbk.tally.ui.design.TallyButton
 import io.github.guohangbk.tally.ui.design.TallyConfirmDialog
-import io.github.guohangbk.tally.ui.design.TallyTag
 import io.github.guohangbk.tally.ui.design.TallyToast
 import io.github.guohangbk.tally.ui.design.TallyType
-import io.github.guohangbk.tally.ui.design.TagTone
 import io.github.guohangbk.tally.ui.design.ToastTone
+import io.github.guohangbk.tally.ui.design.billBadges
 import io.github.guohangbk.tally.ui.design.rememberTallyHaptics
-import io.github.guohangbk.tally.ui.design.sheetBody
 import io.github.guohangbk.tally.ui.design.tallyColors
 
 /**
  * 点账单行不再推进入页：信息从底部浮上来，看完随手关掉。
  * 要改内容才进记账页——弹层里不长出第二套编辑器，分类组件也不再重复一遍。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BillDetailSheet(
     billId: String,
@@ -70,11 +80,14 @@ fun BillDetailSheet(
     onRepeat: (l1Id: String?, l2Id: String?, type: BillType?) -> Unit = { _, _, _ -> },
     /** 退款与原单互跳：换一个弹层继续看，不退出到列表。 */
     onOpenBill: (String) -> Unit = {},
+    /** 点标签先收起弹层，再去标签统计页。 */
+    onOpenTag: ((String) -> Unit)? = null,
 ) {
     val graph = rememberAppGraph()
     val viewModel = tallyViewModel(key = "bill-sheet-$billId") { BillDetailViewModel(graph, billId) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = tallyColors
+    val context = LocalContext.current
     var confirmDelete by remember { mutableStateOf(false) }
     var viewerStart by remember { mutableStateOf<Int?>(null) }
 
@@ -107,45 +120,137 @@ fun BillDetailSheet(
         onDismissRequest = onDismiss,
         containerColor = colors.paper,
     ) {
-        val item = state.item
-        Column(modifier = Modifier.fillMaxWidth().sheetBody().padding(horizontal = 15.dp).padding(bottom = 18.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 520.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(top = 2.dp, bottom = 20.dp),
+        ) {
+            val item = state.item
             when {
                 item == null && state.loaded -> Text("这笔账单已经不在了。", style = TallyType.helper, color = colors.ink3)
                 item == null -> Text("正在读取…", style = TallyType.helper, color = colors.ink3)
                 else -> {
-                    SheetHead(
-                        item = item,
-                        imagePaths = state.imagePaths,
-                        onOpenImage = { viewerStart = it },
-                    )
-                    SheetNote(item.bill.note)
-                    RefundBlock(state = state, onOpenBill = onOpenBill)
-                    Spacer(Modifier.height(14.dp))
-                    val isIncome = item.bill.type == BillType.INCOME.name
-                    // 退款入口只给未退过的支出原单：已退满的不再出现，省掉一次注定失败的提交。
-                    val canRefund = !isIncome && !item.bill.isRefund && item.bill.refundOfBillId == null &&
+                    val bill = item.bill
+                    val isIncome = bill.type == BillType.INCOME.name
+                    val canRefund = !isIncome && !bill.isRefund && bill.refundOfBillId == null &&
                         state.refundableMinor > 0L
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedAction(icon = "repeat", label = "再记一笔") {
+
+                    DetailHeader(
+                        canRefund = canRefund,
+                        onRepeat = {
                             onRepeat(
-                                item.bill.categoryL1Id,
-                                item.bill.categoryL2Id,
+                                bill.categoryL1Id,
+                                bill.categoryL2Id,
                                 if (isIncome) BillType.INCOME else BillType.EXPENSE,
                             )
+                        },
+                        onRefund = viewModel::openRefund,
+                        onEdit = { onEdit(billId) },
+                        onDelete = { confirmDelete = true },
+                    )
+
+                    Spacer(Modifier.height(6.dp))
+                    DetailGroup {
+                        DetailField(label = "金额") { AmountCell(item) }
+                        DetailField(label = "分类") { CategoryCell(item) }
+                        DetailField(label = "时间") { TimeCell(item) }
+
+                        val badges = billBadges(item)
+                        if (badges.isNotEmpty()) {
+                            DetailField(label = "标记") {
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.End),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                                ) {
+                                    badges.forEach { badge: BillBadge -> Marker(badge) }
+                                }
+                            }
                         }
-                        if (canRefund) {
-                            OutlinedAction(icon = "refund", label = "退款") { viewModel.openRefund() }
+
+                        if (item.tags.isNotEmpty()) {
+                            DetailField(label = "标签") {
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.End),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    item.tags.forEach { tag ->
+                                        TagPill(
+                                            name = tag.name,
+                                            fontSize = 10.sp,
+                                            verticalPadding = 2.dp,
+                                            onClick = onOpenTag?.let { open ->
+                                                {
+                                                    onDismiss()
+                                                    open(tag.id)
+                                                }
+                                            },
+                                            trailing = {
+                                                InlineIcon(
+                                                    iconKey = "chevron",
+                                                    contentDescription = null,
+                                                    size = 9.dp,
+                                                    tint = colors.ink3,
+                                                )
+                                            },
+                                        )
+                                    }
+                                }
+                            }
                         }
-                        OutlinedAction(icon = "trash", label = "删除", danger = true) { confirmDelete = true }
-                        Spacer(Modifier.weight(1f))
-                        TallyButton(
-                            label = "修改",
-                            onClick = { onEdit(billId) },
-                            variant = ButtonVariant.BRAND,
-                            leadingIcon = "pencil",
-                            modifier = Modifier.widthIn(min = 104.dp, max = 128.dp),
-                        )
+
+                        val note = bill.note?.takeIf { it.isNotBlank() }
+                        if (note != null) {
+                            DetailField(
+                                label = "备注",
+                                onClick = {
+                                    context.getSystemService(ClipboardManager::class.java)
+                                        ?.setPrimaryClip(ClipData.newPlainText("账单备注", note))
+                                    Toast.makeText(context, "复制成功", Toast.LENGTH_SHORT).show()
+                                },
+                            ) {
+                                Text(
+                                    text = note,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    fontSize = 12.5.sp,
+                                    lineHeight = 20.5.sp,
+                                    color = colors.ink2,
+                                    textAlign = TextAlign.End,
+                                )
+                            }
+                        }
+
+                        if (state.imagePaths.isNotEmpty()) {
+                            DetailField(label = "凭证") {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    state.imagePaths.take(3).forEachIndexed { index, path ->
+                                        ImageThumbnail(
+                                            relativePath = path,
+                                            size = 42,
+                                            onClick = { viewerStart = index },
+                                        )
+                                    }
+                                    if (state.imagePaths.size > 3) {
+                                        Text(
+                                            text = "+${state.imagePaths.size - 3}",
+                                            style = TallyType.helper,
+                                            color = colors.ink3,
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
+
+                    RefundBlock(state = state, onOpenBill = onOpenBill)
                 }
             }
 
@@ -184,7 +289,7 @@ fun BillDetailSheet(
                 refundAt = state.refundAt,
                 error = state.refundError,
                 onAmountChange = viewModel::setRefundAmount,
-                onDateChange = viewModel::setRefundDate,
+                onTimeChange = viewModel::setRefundTime,
                 onDismiss = viewModel::closeRefund,
                 onConfirm = viewModel::confirmRefund,
             )
@@ -193,73 +298,254 @@ fun BillDetailSheet(
 }
 
 @Composable
-private fun SheetHead(
-    item: BillListItem,
-    imagePaths: List<String>,
-    onOpenImage: (Int) -> Unit,
+private fun DetailHeader(
+    canRefund: Boolean,
+    onRepeat: () -> Unit,
+    onRefund: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val colors = tallyColors
+    Row(
+        modifier = Modifier.fillMaxWidth().height(30.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("详情", style = TallyType.screenTitle, color = colors.ink)
+        Spacer(Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+            DetailAction(label = "再记", onClick = onRepeat)
+            if (canRefund) DetailAction(label = "退款", onClick = onRefund)
+            DetailAction(label = "修改", primary = true, onClick = onEdit)
+            DetailAction(label = "删除", danger = true, onClick = onDelete)
+        }
+    }
+}
+
+@Composable
+private fun DetailAction(
+    label: String,
+    onClick: () -> Unit,
+    primary: Boolean = false,
+    danger: Boolean = false,
+) {
+    val colors = tallyColors
+    val haptics = rememberTallyHaptics()
+    val shape = RoundedCornerShape(14.dp)
+    val background = when {
+        primary -> colors.brand
+        else -> colors.card
+    }
+    val foreground = when {
+        primary -> colors.onBrand
+        danger -> colors.expense
+        else -> colors.ink
+    }
+    val borderColor = when {
+        primary -> colors.brand
+        danger -> colors.expense.copy(alpha = 0.34f)
+        else -> colors.line.copy(alpha = 0.72f)
+    }
+    Row(
+        modifier = Modifier
+            .height(28.dp)
+            .clip(shape)
+            .background(background)
+            .border(1.dp, borderColor, shape)
+            .clickable {
+                haptics.tap()
+                onClick()
+            }
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.5.sp,
+            lineHeight = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = foreground,
+            maxLines = 1,
+        )
+    }
+}
+
+/** 详情主信息与退款明细各自成组：只用浅色卡片和留白分区，不再画满宽硬线。 */
+@Composable
+private fun DetailGroup(content: @Composable () -> Unit) {
+    val colors = tallyColors
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.card)
+            .padding(horizontal = 14.dp),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun DetailSectionHeader(title: String) {
+    val colors = tallyColors
+    Text(
+        text = title,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 18.dp)
+            .padding(bottom = 2.dp),
+        style = TallyType.screenTitle,
+        color = colors.ink,
+    )
+    Spacer(Modifier.height(6.dp))
+}
+
+@Composable
+private fun DetailField(
+    label: String,
+    horizontal: Alignment.Horizontal = Alignment.End,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val colors = tallyColors
+    val haptics = rememberTallyHaptics()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable {
+                        haptics.tap()
+                        onClick()
+                    }
+                } else {
+                    Modifier
+                },
+            )
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.width(58.dp),
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = colors.ink2,
+        )
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = horizontal) { content() }
+    }
+}
+
+@Composable
+private fun AmountCell(item: BillListItem) {
+    val colors = tallyColors
     val bill = item.bill
-    val isIncome = bill.type == BillType.INCOME.name
-    // 退款是钱回来，按正数方向显示；它不进收入合计，由退款角标说明。
+    val amount = billAmountView(item)
+    val color = when (amount.tone) {
+        BillAmountTone.EXPENSE -> colors.expense
+        BillAmountTone.INCOME -> colors.income
+        BillAmountTone.NEUTRAL -> colors.slate
+    }
     val isRefund = bill.isRefund || bill.refundOfBillId != null
-    val positive = isIncome || isRefund
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(colors.brandSurface),
-                contentAlignment = Alignment.Center,
-            ) {
-                CategoryGlyph(iconKey = item.iconKey ?: "note", label = item.categoryPath, size = 17.dp, tint = colors.brand)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.categoryPath.ifBlank { "未分类" }, style = TallyType.listTitle, color = colors.ink)
-                Text(
-                    text = "${if (bill.timePrecision == TimePrecision.DATETIME.name) formatDateTime(bill.occurredAt) else formatDate(bill.occurredAt)} · ${item.ledgerName}",
-                    style = TallyType.helper,
-                    color = colors.ink3,
-                )
-            }
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            text = amount.sign + "¥" + formatAmount(amount.amountMinor),
+            style = TallyType.moneyDisplay.copy(fontSize = 25.sp, lineHeight = 29.sp),
+            color = color,
+            fontWeight = FontWeight.Medium,
+        )
+        if (!isRefund && item.refundedMinor > 0L) {
+            val remaining = (bill.amountMinor - item.refundedMinor).coerceAtLeast(0L)
             Text(
-                text = (if (positive) "+" else "−") + "¥" + formatAmount(bill.amountMinor),
-                style = TallyType.moneyDisplay.copy(fontSize = 24.sp, lineHeight = 29.sp),
-                color = if (positive) colors.income else colors.expense,
-                fontWeight = FontWeight.Medium,
+                text = if (remaining > 0L) {
+                    "已退 ¥${formatAmount(item.refundedMinor)} · 实际支出 ¥${formatAmount(remaining)}"
+                } else {
+                    "已全额退款"
+                },
+                style = TallyType.helper,
+                color = colors.ink3,
+                textAlign = TextAlign.End,
             )
         }
-        Spacer(Modifier.height(9.dp))
-        // 图片缩略图与「支出」标签同处一行，靠右落在金额正下方；点开进全屏大图。
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-                BillBadges(item = item)
-                TallyTag(text = if (isIncome) "收入" else "支出", tone = if (isIncome) TagTone.BRAND else TagTone.NEUTRAL)
-                if (bill.reimbursed == ReimburseStatus.DONE.name) {
-                    TallyTag(text = "已报销", tone = TagTone.GOLD)
-                }
-            }
-            if (imagePaths.isNotEmpty()) {
-                Spacer(Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    imagePaths.take(3).forEachIndexed { index, path ->
-                        ImageThumbnail(relativePath = path, size = 40, onClick = { onOpenImage(index) })
-                    }
-                    if (imagePaths.size > 3) {
-                        Text("+${imagePaths.size - 3}", style = TallyType.helper, color = colors.ink3)
-                    }
-                }
-            }
+    }
+}
+
+@Composable
+private fun CategoryCell(item: BillListItem) {
+    val colors = tallyColors
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(colors.brandSurface),
+            contentAlignment = Alignment.Center,
+        ) {
+            CategoryGlyph(
+                iconKey = item.iconKey ?: "note",
+                label = item.categoryPath.ifBlank { "账" },
+                size = 18.dp,
+                tint = colors.brand,
+            )
         }
-        // 账目时间在上头跟着分类走，记账时间单独一行：补记昨天的账时这两个不是一回事。
-        Spacer(Modifier.height(8.dp))
-        Text("记录于 ${formatDateTime(bill.createdAt)}", style = TallyType.helper, color = colors.ink3)
+        Spacer(Modifier.width(8.dp))
+        Column(
+            modifier = Modifier.widthIn(max = 220.dp),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Text(
+                text = item.categoryPath.ifBlank { "未分类" },
+                style = TallyType.listTitle,
+                color = colors.ink,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = item.ledgerName,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                color = colors.ink3,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimeCell(item: BillListItem) {
+    val colors = tallyColors
+    val bill = item.bill
+    val occurred = if (bill.timePrecision == TimePrecision.DATETIME.name) {
+        formatDateTime(bill.occurredAt)
+    } else {
+        formatDate(bill.occurredAt)
+    }
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            text = occurred,
+            modifier = Modifier.fillMaxWidth(),
+            style = TallyType.secondary,
+            color = colors.ink,
+            textAlign = TextAlign.End,
+        )
+        Text(
+            text = "记录于 ${formatDateTime(bill.createdAt)}",
+            modifier = Modifier.fillMaxWidth(),
+            fontSize = 10.5.sp,
+            lineHeight = 14.sp,
+            color = colors.ink3.copy(alpha = 0.82f),
+            textAlign = TextAlign.End,
+        )
     }
 }
 
 /**
- * 退款信息块：退款行写「退自哪一笔」，原单写「已退多少」并列出明细。
+ * 退款关系块：退款行向上看原账单，原单向下看退款明细。
  * 两边都能跳到对账单，退款与原始消费在同一个弹层链路里看全。
  */
 @Composable
@@ -267,112 +553,135 @@ private fun RefundBlock(
     state: BillDetailUiState,
     onOpenBill: (String) -> Unit,
 ) {
-    val colors = tallyColors
     val item = state.item ?: return
     val bill = item.bill
     val isRefund = bill.isRefund || bill.refundOfBillId != null
     if (isRefund) {
         val origin = state.origin
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(colors.brandSurface)
-                .border(1.dp, colors.brand.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
-                .then(
-                    if (origin != null) Modifier.clickable { onOpenBill(origin.bill.id) } else Modifier,
-                )
-                .padding(horizontal = 11.dp, vertical = 9.dp),
-        ) {
-            Text("退自", style = TallyType.helper, color = colors.brand)
-            Spacer(Modifier.height(3.dp))
+        DetailSectionHeader("原账单")
+        DetailGroup {
             if (origin != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = origin.categoryPath.ifBlank { "未分类" } + " · " +
-                            formatDate(origin.bill.occurredAt) + " · ¥" + formatAmount(origin.bill.amountMinor),
-                        style = TallyType.listTitle,
-                        color = colors.ink,
-                        modifier = Modifier.weight(1f),
-                    )
-                    InlineIcon(iconKey = "chevron", contentDescription = "查看原单", size = 12.dp, tint = colors.ink3)
-                }
+                OriginalBillRow(origin = origin, onClick = { onOpenBill(origin.bill.id) })
             } else {
                 Text(
                     text = "未关联原单：这笔退款不冲抵任何分类的支出",
+                    modifier = Modifier.padding(vertical = 10.dp),
                     style = TallyType.helper,
-                    color = colors.ink3,
+                    color = tallyColors.ink3,
                 )
             }
         }
         return
     }
     if (state.refunds.isEmpty()) return
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 12.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.card)
-            .border(1.dp, colors.line, RoundedCornerShape(12.dp))
-            .padding(horizontal = 11.dp, vertical = 9.dp),
-    ) {
-        Text(
-            text = "已退 ¥${formatAmount(state.refundedMinor)} / ¥${formatAmount(bill.amountMinor)}",
-            style = TallyType.helper,
-            color = colors.ink3,
-        )
-        Spacer(Modifier.height(4.dp))
-        state.refunds.forEachIndexed { index, refund ->
-            if (index > 0) {
-                Spacer(Modifier.height(4.dp))
-                Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line))
-                Spacer(Modifier.height(4.dp))
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onOpenBill(refund.id) }
-                    .padding(vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = formatDate(refund.occurredAt) + (refund.note?.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()),
-                    style = TallyType.helper,
-                    color = colors.ink2,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                )
-                Text(
-                    text = "+¥" + formatAmount(refund.amountMinor),
-                    style = TallyType.moneyList.copy(fontSize = 13.sp, lineHeight = 16.3.sp),
-                    color = colors.income,
-                )
-                InlineIcon(iconKey = "chevron", contentDescription = "查看退款", size = 12.dp, tint = colors.ink3)
-            }
+
+    DetailSectionHeader("退款记录")
+    DetailGroup {
+        state.refunds.forEach { refund ->
+            RefundRecordRow(
+                category = item.categoryPath.substringAfterLast(" · ").ifBlank { "未分类" },
+                occurredAt = refund.occurredAt,
+                amountMinor = refund.amountMinor,
+                onClick = { onOpenBill(refund.id) },
+            )
         }
     }
 }
 
-/** 备注整段摊开显示：长内容不折叠、不加「展开」。 */
 @Composable
-private fun SheetNote(note: String?) {    val colors = tallyColors
-    if (note.isNullOrBlank()) return
-    Column(
+private fun OriginalBillRow(
+    origin: BillListItem,
+    onClick: () -> Unit,
+) {
+    val colors = tallyColors
+    val bill = origin.bill
+    val category = origin.categoryPath.substringAfterLast(" · ").ifBlank { "未分类" }
+    val note = bill.note?.takeIf { it.isNotBlank() }
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 12.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.card)
-            .border(1.dp, colors.line, RoundedCornerShape(12.dp))
-            .padding(horizontal = 11.dp, vertical = 9.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("备注", style = TallyType.helper, color = colors.ink3)
-        Spacer(Modifier.height(3.dp))
-        Text(note, style = TallyType.listTitle, color = colors.ink)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = category,
+                style = TallyType.listTitle,
+                color = colors.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = formatDate(bill.occurredAt) + note?.let { " · $it" }.orEmpty(),
+                style = TallyType.helper,
+                color = colors.ink3,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = "−¥" + formatAmount(bill.amountMinor),
+                style = TallyType.moneyList.copy(fontSize = 15.5.sp, lineHeight = 18.sp),
+                color = colors.expense,
+            )
+            if (origin.refundedMinor > 0L) {
+                Text(
+                    text = "(退款¥${formatAmount(origin.refundedMinor)})",
+                    fontSize = 10.5.sp,
+                    lineHeight = 13.sp,
+                    color = colors.ink3,
+                )
+            }
+        }
+        InlineIcon(iconKey = "chevron", contentDescription = "查看原账单", size = 12.dp, tint = colors.ink3)
+    }
+}
+
+@Composable
+private fun RefundRecordRow(
+    category: String,
+    occurredAt: Long,
+    amountMinor: Long,
+    onClick: () -> Unit,
+) {
+    val colors = tallyColors
+    val textColor = colors.slate
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "退款 · $category",
+                fontSize = 12.5.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.Normal,
+                color = textColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = formatDate(occurredAt),
+                fontSize = 10.5.sp,
+                lineHeight = 13.sp,
+                color = textColor.copy(alpha = 0.8f),
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "¥" + formatAmount(amountMinor),
+            style = TallyType.moneyList.copy(fontSize = 15.5.sp, lineHeight = 18.sp),
+            color = textColor,
+        )
+        InlineIcon(iconKey = "chevron", contentDescription = "查看退款", size = 12.dp, tint = textColor.copy(alpha = 0.8f))
     }
 }
 
@@ -383,7 +692,6 @@ private fun DeleteConfirm(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val colors = tallyColors
     val bill = item.bill
     val isRefund = bill.isRefund || bill.refundOfBillId != null
     val delta = when {
@@ -401,49 +709,4 @@ private fun DeleteConfirm(
         onConfirm = onConfirm,
         onDismiss = onDismiss,
     )
-}
-
-/**
- * 动作行左边的三枚描边小胶囊：30dp 高、9dp 圆角、12.5dp 图标 + 11.5sp 中字重标签，
- * 只包一圈表示「点得动」，矮行尾那枚实心按钮一档，四块才不会读成平级。
- * 删除转陶土，与卡上其它破坏动作同色。
- */
-@Composable
-private fun OutlinedAction(
-    icon: String,
-    label: String,
-    danger: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val colors = tallyColors
-    val haptics = rememberTallyHaptics()
-    val background = if (danger) colors.expense.copy(alpha = 0.07f) else colors.card
-    val borderColor = if (danger) colors.expense.copy(alpha = 0.28f) else colors.line
-    val contentColor = if (danger) colors.expense else colors.ink
-    val shape = RoundedCornerShape(9.dp)
-    Row(
-        modifier = Modifier
-            .height(30.dp)
-            .clip(shape)
-            .background(background)
-            .border(1.dp, borderColor, shape)
-            .clickable {
-                haptics.tap()
-                onClick()
-            }
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        InlineIcon(iconKey = icon, contentDescription = label, size = 12.5.dp, tint = contentColor)
-        Spacer(Modifier.width(4.dp))
-        Text(
-            label,
-            fontSize = 11.5.sp,
-            lineHeight = 15.sp,
-            fontWeight = FontWeight.Medium,
-            color = contentColor,
-            maxLines = 1,
-        )
-    }
 }

@@ -29,6 +29,8 @@ data class BillDraft(
     val externalId: String? = null,
     /** 图片指纹，用于「同一张截图重复分享」的去重。 */
     val fingerprint: String? = null,
+    /** 编辑账单时把这笔已有的图片一并移除；只影响附件，不动账单本身。 */
+    val clearAttachments: Boolean = false,
     /** null = 不改动关联（其它入口保存时沿用原值）；空列表 = 明确清空（记账页取消到零枚）。 */
     val tagIds: List<String>? = null,
 )
@@ -44,8 +46,8 @@ data class BillListItem(
     val attachmentCount: Int = 0,
     /** 作为原单被退掉的累计金额；只有原单行有值，退款行自己不算。 */
     val refundedMinor: Long = 0L,
-    /** 挂在这一笔上的标签名，按标签自己的排序；列表行最多显示两枚，其余折成 ＋N。 */
-    val tags: List<String> = emptyList(),
+    /** 挂在这一笔上的标签，按标签自己的排序；列表与详情都全量展示（每笔最多 8 枚）。 */
+    val tags: List<BillTagRef> = emptyList(),
 ) {
     val categoryPath: String
         get() = listOfNotNull(categoryL1Name, categoryL2Name).joinToString(" · ")
@@ -54,6 +56,12 @@ data class BillListItem(
     val iconKey: String?
         get() = categoryL2Icon ?: categoryL1Icon
 }
+
+/** 账单上的标签引用：列表、详情与跳转都只要 id + 名称。 */
+data class BillTagRef(
+    val id: String,
+    val name: String,
+)
 
 data class BillSummary(
     val billCount: Int = 0,
@@ -134,8 +142,9 @@ data class BillFilter(
     /** 金额区间（分）。真实库里 80% 的账单没有备注，关键词根本覆盖不到——区间是另一条筛路。 */
     val amountMinMinor: Long? = null,
     val amountMaxMinor: Long? = null,
-    /** 标签是并集：选两枚 = 命中任一；空列表即不限。 */
+    /** 标签筛选：默认并集，选两枚 = 命中任一；[tagMatchAll] 为真时要求同时含全部；空列表即不限。 */
     val tagIds: List<String> = emptyList(),
+    val tagMatchAll: Boolean = false,
     val sort: BillSort = BillSort.TIME_DESC,
 )
 

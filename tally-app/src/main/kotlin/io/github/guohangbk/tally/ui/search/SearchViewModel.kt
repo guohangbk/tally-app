@@ -148,12 +148,15 @@ class SearchViewModel(
 
     fun setSource(value: BillSource?) = updateFromChip { copy(source = value) }
 
-    /** 多选＝含任一：再点一次摘掉那一枚，摘到零枚就是不限。 */
+    /** 多选默认含任一：再点一次摘掉那一枚，摘到零枚就是不限；不足两枚时交集没有意义，回到任一。 */
     fun toggleTag(tagId: String) = updateFromChip {
-        copy(tagIds = if (tagId in tagIds) tagIds - tagId else tagIds + tagId)
+        val next = if (tagId in tagIds) tagIds - tagId else tagIds + tagId
+        copy(tagIds = next, tagMatchAll = tagMatchAll && next.size >= 2)
     }
 
-    fun clearTags() = updateFromChip { copy(tagIds = emptyList()) }
+    fun setTagMatchAll(value: Boolean) = update { copy(tagMatchAll = value) }
+
+    fun clearTags() = updateFromChip { copy(tagIds = emptyList(), tagMatchAll = false) }
 
     /** 分类筛选只能带着进来或清掉：这一页没有分类选择器，要挑分类去分类管理。 */
     fun clearCategory() = updateFromChip { copy(categoryL1Id = null, categoryL2Id = null) }

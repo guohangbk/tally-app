@@ -26,6 +26,7 @@ import io.github.guohangbk.tally.domain.model.BillMonthSnapshot
 import io.github.guohangbk.tally.domain.model.BillRepositoryContract
 import io.github.guohangbk.tally.domain.model.BillSearchResult
 import io.github.guohangbk.tally.domain.model.BillSummary
+import io.github.guohangbk.tally.domain.model.BillTagRef
 import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.CategoryBills
 import io.github.guohangbk.tally.domain.model.CategoryTotal
@@ -128,29 +129,31 @@ class BillRepository(
         val source = filter.source?.name
         val amountMin = filter.amountMinMinor
         val amountMax = filter.amountMaxMinor
-        // 标签多选是并集；Room 不认空列表的 IN，短路开关 tagFilter=0 时补一个永不命中的占位值。
+        // 标签默认取并集，可切成交集；Room 不认空列表的 IN，短路开关 tagFilter=0 时补一个永不命中的占位值。
         val tagFilter = if (filter.tagIds.isEmpty()) 0 else 1
         val tagIds = filter.tagIds.ifEmpty { listOf("") }
+        val tagMatchAll = if (filter.tagMatchAll) 1 else 0
+        val tagCount = filter.tagIds.distinct().size
         val limit = SEARCH_ROW_LIMIT
 
         // 排序必须在 SQL 里选哪一条查询：列表只取回这一批，回到界面上排等于只在这批里排，
         // 「金额最高的那笔」会排错。
         val rows = when (filter.sort) {
             BillSort.TIME_DESC ->
-                billDao.observeSearchRowsNewest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
+                billDao.observeSearchRowsNewest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, tagMatchAll, tagCount, limit)
 
             BillSort.TIME_ASC ->
-                billDao.observeSearchRowsOldest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
+                billDao.observeSearchRowsOldest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, tagMatchAll, tagCount, limit)
 
             BillSort.AMOUNT_DESC ->
-                billDao.observeSearchRowsLargest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
+                billDao.observeSearchRowsLargest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, tagMatchAll, tagCount, limit)
 
             BillSort.AMOUNT_ASC ->
-                billDao.observeSearchRowsSmallest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, limit)
+                billDao.observeSearchRowsSmallest(keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax, tagFilter, tagIds, tagMatchAll, tagCount, limit)
         }
         val summary = billDao.observeSearchSummary(
             keyword, startAt, endAtExclusive, type, ledgerId, categoryL1Id, categoryL2Id, source, amountMin, amountMax,
-            tagFilter, tagIds,
+            tagFilter, tagIds, tagMatchAll, tagCount,
         )
         return combine(rows, summary, tagDao.observeLinkTick()) { list, aggregate, _ ->
             // 列表只取最近一批，汇总走 SQL：几千笔账不该在打开搜索时整表映射成对象再分组。
@@ -426,6 +429,9 @@ class BillRepository(
             )
         }
         billDao.upsert(entity)
+        if (draft.clearAttachments) {
+            attachmentDao.softDeleteByBill(entity.id, timestamp)
+        }
         // 只有明确带着 tagIds 的草稿才改关联：退款、AI、导入这些入口不传，
         // 保存时不能顺手把用户挂好的标签清掉。空列表是「明确清空」。
         draft.tagIds?.let { ids ->
@@ -616,10 +622,10 @@ class BillRepository(
      */
     private suspend fun withTags(items: List<BillListItem>): List<BillListItem> {
         if (items.isEmpty()) return items
-        val names = LinkedHashMap<String, MutableList<String>>()
+        val names = LinkedHashMap<String, MutableList<BillTagRef>>()
         items.map { it.bill.id }.chunked(TAG_QUERY_CHUNK).forEach { chunk ->
             tagDao.namesForBills(chunk).forEach { row ->
-                names.getOrPut(row.billId) { mutableListOf() } += row.name
+                names.getOrPut(row.billId) { mutableListOf() } += BillTagRef(id = row.id, name = row.name)
             }
         }
         if (names.isEmpty()) return items

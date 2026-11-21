@@ -24,6 +24,7 @@ import io.github.guohangbk.tally.domain.parser.KeywordLearning
 import io.github.guohangbk.tally.data.ai.KeywordSource
 import io.github.guohangbk.tally.domain.parseAmountExpression
 import io.github.guohangbk.tally.ui.common.alignToPrecision
+import io.github.guohangbk.tally.ui.common.MAX_TAGS_PER_BILL
 import io.github.guohangbk.tally.ui.common.startOfDay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,8 @@ data class BillEntryUiState(
     val imageUri: Uri? = null,
     /** 编辑态下这笔账单已有的附件数，用来让「图片」chip 如实显示数量。 */
     val attachedCount: Int = 0,
+    /** 这一笔已经保存的图被叉掉了：保存时一并软删附件。 */
+    val clearAttachments: Boolean = false,
     /** 机器填的内容非空时，页面顶部挂一条来源条；撤销即清掉金额/分类/备注。 */
     val sourceText: String? = null,
     val sourceKind: String? = null,
@@ -120,7 +123,7 @@ data class BillEntryUiState(
     val isIncome: Boolean get() = type == BillType.INCOME
 
     /** 「图片」chip 上的数量：已落库的附件 + 这一笔还没保存的新图。 */
-    val imageCount: Int get() = attachedCount + if (imageUri != null) 1 else 0
+    val imageCount: Int get() = (if (clearAttachments) 0 else attachedCount) + if (imageUri != null) 1 else 0
 }
 
 /** 沉淀只记「哪个词 → 哪个分类」，不带金额与日期：规则是全局词表，不是这一笔的副本。 */
@@ -307,6 +310,10 @@ class BillEntryViewModel(
         val next = if (existing != null) {
             current.selectedTags - existing
         } else {
+            if (current.selectedTags.size >= MAX_TAGS_PER_BILL) {
+                local.value = current.copy(tagError = "每笔最多 $MAX_TAGS_PER_BILL 个标签")
+                return
+            }
             val choice = current.tagChoices.firstOrNull { it.id == tagId } ?: return
             current.selectedTags + choice
         }
@@ -315,6 +322,10 @@ class BillEntryViewModel(
 
     /** 名称即全部，可带 emoji；撞名就地报，不静默复用已有标签。 */
     fun createTag(rawName: String) {
+        if (local.value.selectedTags.size >= MAX_TAGS_PER_BILL) {
+            local.value = local.value.copy(tagError = "每笔最多 $MAX_TAGS_PER_BILL 个标签")
+            return
+        }
         viewModelScope.launch {
             try {
                 val tag = graph.tagRepository.create(rawName)
@@ -360,6 +371,15 @@ class BillEntryViewModel(
     /** 选图只记 uri，写盘发生在保存成功之后（图存不住不影响账单本身）。 */
     fun setImage(uri: Uri?) {
         local.value = local.value.copy(imageUri = uri, dirty = true)
+    }
+
+    /** 「图片」chip 右上角的叉：新选的图直接丢，已保存的图等保存时一起软删。 */
+    fun clearImage() {
+        local.value = local.value.copy(
+            imageUri = null,
+            clearAttachments = local.value.attachedCount > 0,
+            dirty = true,
+        )
     }
 
     fun requestSave() {
@@ -457,6 +477,7 @@ class BillEntryViewModel(
                         isRefund = current.isRefund,
                         refundOfBillId = current.refundOfBillId,
                         excludedFromStats = current.excludedFromStats,
+                        clearAttachments = current.clearAttachments,
                         tagIds = current.selectedTags.map { it.id },
                         externalId = identity?.first,
                         fingerprint = identity?.second,
@@ -507,6 +528,7 @@ class BillEntryViewModel(
                         occurredAt = System.currentTimeMillis(),
                         imageUri = null,
                         attachedCount = 0,
+                        clearAttachments = false,
                         isRefund = false,
                         refundOfBillId = null,
                         sourceText = null,
@@ -521,13 +543,22 @@ class BillEntryViewModel(
                 } else {
                     graph.billRepository.rememberCategory(current.categoryL1Id, current.categoryL2Id)
                     if (imageFailure == null) {
-                        local.value = local.value.copy(savedId = id, error = null, sedimentOffer = sediment)
+                        local.value = local.value.copy(
+                            savedId = id,
+                            error = null,
+                            sedimentOffer = sediment,
+                            imageUri = null,
+                            attachedCount = 0,
+                            clearAttachments = false,
+                        )
                     } else {
                         // 账单已经落库，只是图没留住：把 id 认下来，重试保存只会补图，不会再记一笔。
                         local.value = local.value.copy(
                             billId = id,
                             editing = true,
                             imageUri = null,
+                            attachedCount = 0,
+                            clearAttachments = false,
                             error = imageFailure,
                             sedimentOffer = sediment,
                         )
@@ -759,7 +790,7 @@ class BillDetailViewModel(
         mutable.value = current.copy(
             refundSheet = true,
             refundAmountText = formatEntryAmount(current.refundableMinor),
-            refundAt = startOfDay(System.currentTimeMillis()),
+            refundAt = System.currentTimeMillis(),
             refundError = null,
             refundNotice = null,
         )
@@ -773,7 +804,7 @@ class BillDetailViewModel(
         mutable.value = mutable.value.copy(refundAmountText = text, refundError = null)
     }
 
-    fun setRefundDate(millis: Long) {
+    fun setRefundTime(millis: Long) {
         mutable.value = mutable.value.copy(refundAt = millis)
     }
 
@@ -796,7 +827,7 @@ class BillDetailViewModel(
         }
         val remaining = current.refundableMinor
         if (amount > remaining) {
-            mutable.value = current.copy(refundError = "最多还能退 ¥" + formatAmount(remaining))
+            mutable.value = current.copy(refundError = "最多可退 ¥" + formatAmount(remaining))
             return
         }
         viewModelScope.launch {
@@ -808,8 +839,8 @@ class BillDetailViewModel(
                         categoryL2Id = bill.categoryL2Id,
                         type = BillType.EXPENSE,
                         amountMinor = amount,
-                        occurredAt = alignToPrecision(current.refundAt, TimePrecision.DATE),
-                        timePrecision = TimePrecision.DATE,
+                        occurredAt = current.refundAt,
+                        timePrecision = TimePrecision.DATETIME,
                         isRefund = true,
                         refundOfBillId = bill.id,
                     ),
@@ -836,6 +867,8 @@ class BillDetailViewModel(
 private fun billSourceOf(sourceKind: String?): BillSource = when (sourceKind) {
     "shot" -> BillSource.SCREENSHOT
     "voice" -> BillSource.VOICE
+    "notification" -> BillSource.NOTIFICATION
+    "payment" -> BillSource.PAYMENT
     "assistant" -> BillSource.ASSISTANT
     else -> BillSource.MANUAL
 }

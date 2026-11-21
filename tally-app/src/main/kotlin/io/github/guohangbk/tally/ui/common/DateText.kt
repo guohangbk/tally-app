@@ -49,6 +49,10 @@ fun formatClock(epochMillis: Long): String =
 fun alignToPrecision(epochMillis: Long, precision: TimePrecision): Long =
     if (precision == TimePrecision.DATE) startOfDay(epochMillis) else epochMillis
 
+/** 只选了日期时，把当天的记录时刻补上；退款等“今天记一笔”的排序要真实时间，不能落 00:00。 */
+fun dayWithCurrentClock(dayMillis: Long, nowMillis: Long = System.currentTimeMillis()): Long =
+    startOfDay(dayMillis) + (nowMillis - startOfDay(nowMillis))
+
 fun localDateToMillis(date: LocalDate): Long = date.atStartOfDay(zone).toInstant().toEpochMilli()
 
 fun millisToLocalDate(epochMillis: Long): LocalDate =

@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -90,6 +91,7 @@ fun SearchScreen(
     onBack: () -> Unit,
     onOpenBillEdit: (String) -> Unit = {},
     onRepeatBill: (String?, String?, BillType?) -> Unit = { _, _, _ -> },
+    onOpenTag: (String) -> Unit = {},
 ) {
     val graph = rememberAppGraph()
     val viewModel = tallyViewModel {
@@ -207,7 +209,25 @@ fun SearchScreen(
                             // 标签排在账本之后：先定范围（时间、账本），再切维度；多选是并集。
                             if (state.tags.isNotEmpty()) {
                                 Spacer(Modifier.height(9.dp))
-                                FilterLabel("标签 · 多选＝含任一")
+                                Row(
+                                    // 固定行高：右侧切换只在选满两枚时出现，不能让它把下面的标签行顶下去。
+                                    modifier = Modifier.fillMaxWidth().height(21.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "标签",
+                                        style = TallyType.helper,
+                                        color = colors.ink3,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    if (filter.tagIds.size >= 2) {
+                                        TagMatchToggle(
+                                            matchAll = filter.tagMatchAll,
+                                            onChange = viewModel::setTagMatchAll,
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(5.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -423,6 +443,7 @@ fun SearchScreen(
                 onRepeatBill(l1, l2, type)
             },
             onOpenBill = { detailBillId = it },
+            onOpenTag = onOpenTag,
         )
     }
 }
@@ -500,17 +521,66 @@ private fun FilterLabel(text: String) {
     Text(text, style = TallyType.helper, color = tallyColors.ink3, modifier = Modifier.padding(bottom = 5.dp))
 }
 
+/** 选了两枚以上标签才出现的交集开关：常驻会让只选一枚的人多背一个用不上的概念。 */
 @Composable
-private fun FilterButton(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun TagMatchToggle(matchAll: Boolean, onChange: (Boolean) -> Unit) {
+    val colors = tallyColors
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(colors.ink.copy(alpha = if (colors.isDark) 0.10f else 0.05f))
+            .padding(1.dp),
+        horizontalArrangement = Arrangement.spacedBy(1.dp),
+    ) {
+        TagMatchOption("任一标签", !matchAll) { onChange(false) }
+        TagMatchOption("同时包含", matchAll) { onChange(true) }
+    }
+}
+
+@Composable
+private fun TagMatchOption(label: String, active: Boolean, onClick: () -> Unit) {
     val colors = tallyColors
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(9.dp))
-            .background(if (selected) colors.brandSurface else colors.card)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (active) colors.card else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 7.dp, vertical = 1.dp),
+    ) {
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (active) colors.brand else colors.ink3,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun FilterButton(label: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = tallyColors
+    val shape = RoundedCornerShape(9.dp)
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .background(if (selected) colors.brand.copy(alpha = 0.16f) else colors.card)
+            .border(
+                1.dp,
+                if (selected) colors.brand.copy(alpha = 0.55f) else Color.Transparent,
+                shape,
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 7.dp),
     ) {
-        Text(label, style = TallyType.helper, color = if (selected) colors.brand else colors.ink2, maxLines = 1)
+        Text(
+            text = label,
+            style = TallyType.helper,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) colors.brand else colors.ink2,
+            maxLines = 1,
+        )
     }
 }
 

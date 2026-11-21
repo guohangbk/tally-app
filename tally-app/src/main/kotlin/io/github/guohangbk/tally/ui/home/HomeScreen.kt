@@ -153,6 +153,7 @@ fun TallyHomeScreen(
     onOpenSearch: (String?) -> Unit = {},
     onOpenBillEdit: (String) -> Unit = {},
     onRepeatBill: (String?, String?, BillType?) -> Unit = { _, _, _ -> },
+    onOpenTag: (String) -> Unit = {},
     onNavigateRoot: (String) -> Unit = {},
 ) {
     val graph = rememberAppGraph()
@@ -884,6 +885,7 @@ fun TallyHomeScreen(
                 onRepeatBill(l1, l2, type)
             },
             onOpenBill = { detailBillId = it },
+            onOpenTag = onOpenTag,
         )
     }
 

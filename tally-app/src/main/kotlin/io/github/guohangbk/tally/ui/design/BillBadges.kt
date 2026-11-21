@@ -48,7 +48,7 @@ fun billBadges(item: BillListItem): List<BillBadge> {
     if (bill.isRefund || bill.refundOfBillId != null) {
         // 旧导入数据只有 is_refund、没有原单可指：角标要如实写出来，不能假装关联过。
         val label = if (bill.refundOfBillId != null) "退款" else "退款（未关联原单）"
-        badges += BillBadge("refund", label, MarkerTone.BRAND)
+        badges += BillBadge("refund", label, MarkerTone.SLATE)
     }
     if (bill.excludedFromStats) badges += BillBadge("eyeoff", "不计入收支", MarkerTone.SLATE)
     if (bill.recurrenceRuleId != null) badges += BillBadge("repeat", "周期", MarkerTone.GOLD)
@@ -60,9 +60,10 @@ fun billBadges(item: BillListItem): List<BillBadge> {
     }
     when (bill.source) {
         BillSource.IMPORT.name -> badges += BillBadge("import", "导入", MarkerTone.EXPENSE)
-        // 语音、截图、系统分享对用户是同一件事——「机器帮我记的一笔」，分那么细没有决策价值；
+        // 语音、截图、系统分享、通知 / 支付页抓取对用户是同一件事——「机器帮我记的一笔」，分那么细没有决策价值；
         // 小莉是有名字的角色，且小莉记的账必定由她经手，单独标出来不算噪音。
-        BillSource.VOICE.name, BillSource.SCREENSHOT.name ->
+        BillSource.VOICE.name, BillSource.SCREENSHOT.name,
+        BillSource.NOTIFICATION.name, BillSource.PAYMENT.name ->
             badges += BillBadge("ai", "速记", MarkerTone.GOLD)
         BillSource.ASSISTANT.name -> badges += BillBadge("ai", "小莉", MarkerTone.GOLD)
         else -> Unit
