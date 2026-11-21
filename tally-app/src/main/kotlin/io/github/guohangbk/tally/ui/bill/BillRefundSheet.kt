@@ -2,12 +2,18 @@ package io.github.guohangbk.tally.ui.bill
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,14 +23,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.BillListItem
 import io.github.guohangbk.tally.domain.model.TimePrecision
 import io.github.guohangbk.tally.ui.common.TallyDateTimePickerDialog
 import io.github.guohangbk.tally.ui.common.TallyFormInput
-import io.github.guohangbk.tally.ui.common.formatDate
+import io.github.guohangbk.tally.ui.common.formatDateTime
 import io.github.guohangbk.tally.ui.design.ButtonVariant
+import io.github.guohangbk.tally.ui.design.CategoryGlyph
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyButton
@@ -32,7 +40,7 @@ import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.tallyColors
 
 /**
- * 退款弹层：入口只出现在原单详情上，所以要退哪一笔已经定了，这里只填金额与退款日期。
+ * 退款弹层：入口只出现在原单详情上，所以要退哪一笔已经定了，这里只填金额与退款时间。
  * 分类跟着原单走，不超过剩余可退的校验本地拦一道、仓库事务再拦一道。
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,12 +52,13 @@ fun BillRefundInputSheet(
     refundAt: Long,
     error: String?,
     onAmountChange: (String) -> Unit,
-    onDateChange: (Long) -> Unit,
+    onTimeChange: (Long) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     val colors = tallyColors
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    val cardShape = RoundedCornerShape(14.dp)
     TallyBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = colors.paper,
@@ -57,19 +66,50 @@ fun BillRefundInputSheet(
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Spacer(Modifier.height(12.dp))
             Text("退款", style = TallyType.sectionTitle, color = colors.ink)
-            Spacer(Modifier.height(4.dp))
-            Text("退款不算收入，从这笔支出的分类里冲抵。", style = TallyType.helper, color = colors.ink3)
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(cardShape)
+                    .background(colors.card)
+                    .border(1.dp, colors.line, cardShape)
+                    .padding(horizontal = 12.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(colors.brandSurface),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CategoryGlyph(
+                        iconKey = origin.iconKey ?: "note",
+                        label = origin.categoryPath.ifBlank { "账" },
+                        size = 18.dp,
+                        tint = colors.brand,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = origin.categoryPath.ifBlank { "未分类" },
+                        style = TallyType.listTitle,
+                        color = colors.ink,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = formatDateTime(origin.bill.occurredAt),
+                        style = TallyType.helper,
+                        color = colors.ink3,
+                    )
+                }
                 Text(
-                    text = origin.categoryPath.ifBlank { "未分类" } + " · " +
-                        formatDate(origin.bill.occurredAt) + " · ¥" + formatAmount(origin.bill.amountMinor),
-                    style = TallyType.listTitle,
-                    color = colors.ink,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
+                    text = "−¥" + formatAmount(origin.bill.amountMinor),
+                    style = TallyType.moneyList,
+                    color = colors.expense,
                 )
-                InlineIcon(iconKey = "refund", contentDescription = "退款", size = 14.dp, tint = colors.brand)
             }
             Spacer(Modifier.height(14.dp))
             TallyFormInput(
@@ -81,20 +121,22 @@ fun BillRefundInputSheet(
                 onValueChange = onAmountChange,
             )
             Spacer(Modifier.height(4.dp))
-            Text("还能退 ¥${formatAmount(remainingMinor)}", style = TallyType.helper, color = colors.ink3)
-            Spacer(Modifier.height(12.dp))
+            Text("剩余可退 ¥${formatAmount(remainingMinor)}", style = TallyType.helper, color = colors.ink3)
+            Spacer(Modifier.height(10.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(38.dp)
-                    .padding(horizontal = 11.dp)
-                    .padding(vertical = 8.dp)
-                    .clickable { showDatePicker = true },
+                    .clip(cardShape)
+                    .background(colors.card)
+                    .border(1.dp, colors.line, cardShape)
+                    .clickable { showTimePicker = true }
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("退款日期", style = TallyType.helper, color = colors.ink3, modifier = Modifier.weight(1f))
-                Text(formatDate(refundAt), style = TallyType.listTitle, color = colors.ink)
-                InlineIcon(iconKey = "calendar", contentDescription = "选择退款日期", size = 14.dp, tint = colors.ink3)
+                Text("退款时间", style = TallyType.helper, color = colors.ink3, modifier = Modifier.weight(1f))
+                Text(formatDateTime(refundAt), style = TallyType.listTitle, color = colors.ink)
+                Spacer(Modifier.width(6.dp))
+                InlineIcon(iconKey = "calendar", contentDescription = "选择退款时间", size = 14.dp, tint = colors.ink3)
             }
             error?.let { failure ->
                 Spacer(Modifier.height(10.dp))
@@ -117,14 +159,14 @@ fun BillRefundInputSheet(
             }
         }
     }
-    if (showDatePicker) {
+    if (showTimePicker) {
         TallyDateTimePickerDialog(
             initialMillis = refundAt,
-            precision = TimePrecision.DATE,
-            onDismiss = { showDatePicker = false },
+            precision = TimePrecision.DATETIME,
+            onDismiss = { showTimePicker = false },
             onConfirm = { millis ->
-                showDatePicker = false
-                onDateChange(millis)
+                showTimePicker = false
+                onTimeChange(millis)
             },
         )
     }

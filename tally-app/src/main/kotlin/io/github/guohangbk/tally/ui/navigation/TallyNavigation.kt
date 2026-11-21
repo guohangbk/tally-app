@@ -41,6 +41,7 @@ import io.github.guohangbk.tally.data.notify.NotificationLink
 import io.github.guohangbk.tally.data.preferences.ThemeMode
 import io.github.guohangbk.tally.di.AppGraphProvider
 import io.github.guohangbk.tally.di.rememberAppGraph
+import io.github.guohangbk.tally.domain.ingest.IngestSource
 import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.Period
@@ -454,8 +455,8 @@ private fun TallyAppShell(
                                         type = bill.type,
                                         amountMinor = bill.amountMinor,
                                         note = bill.merchant,
-                                        source = "第 ${bill.imageIndex + 1} 张截图",
-                                        sourceKind = "shot",
+                                        source = materialSourceLabel(bill.source, bill.imageIndex),
+                                        sourceKind = materialSourceKind(bill.source),
                                         occurredAt = bill.occurredAt,
                                         keyword = bill.keyword,
                                         noteFromAi = bill.noteFromAi,
@@ -465,6 +466,7 @@ private fun TallyAppShell(
                             onOpenSearch = { ledgerId -> navController.navigate(Routes.search(ledgerId)) },
                             onOpenBillEdit = { navController.navigate(Routes.billEdit(it)) },
                             onRepeatBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
+                            onOpenTag = { tagId -> navController.navigate(Routes.tagDetail(tagId)) },
                             onNavigateRoot = { navController.switchTab(it) },
                             onNavigateRoute = { route -> navController.navigate(if (route.startsWith("bill/new")) Routes.billNew(null, null, null) else route) },
                         )
@@ -480,6 +482,7 @@ private fun TallyAppShell(
                             onAskAssistant = { report -> navController.navigate(Routes.assistantChat(report)) },
                             onOpenBillEdit = { navController.navigate(Routes.billEdit(it)) },
                             onRepeatBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
+                            onOpenTag = { tagId -> navController.navigate(Routes.tagDetail(tagId)) },
                         )
                     }
                     composable(Routes.GUIDE) { GuideScreen(onBack = { navController.popBackStack() }) }
@@ -525,6 +528,7 @@ private fun TallyAppShell(
                             },
                             onOpenBillEdit = { billId -> navController.navigate(Routes.billEdit(billId)) },
                             onOpenSettlePoster = { navController.navigate(Routes.settlePoster(ledgerId)) },
+                            onOpenTag = { tagId -> navController.navigate(Routes.tagDetail(tagId)) },
                             startSettle = entry.arguments?.getString("settle") == "1",
                         )
                     }
@@ -667,6 +671,7 @@ private fun TallyAppShell(
                             onBack = { navController.popBackStack() },
                             onOpenBillEdit = { navController.navigate(Routes.billEdit(it)) },
                             onRepeatBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
+                            onOpenTag = { tagId -> navController.navigate(Routes.tagDetail(tagId)) },
                         )
                     }
                     composable(Routes.TAGS) {
@@ -725,6 +730,7 @@ private fun TallyAppShell(
                             onBack = { navController.popBackStack() },
                             onOpenBillEdit = { navController.navigate(Routes.billEdit(it)) },
                             onRepeatBill = { l1, l2, type -> navController.navigate(Routes.billNew(l1, l2, type)) },
+                            onOpenTag = { tagId -> navController.navigate(Routes.tagDetail(tagId)) },
                         )
                     }
                     composable(Routes.BACKUP) {
@@ -825,6 +831,26 @@ private fun NavHostController.openChatDraft(
             occurredAt = draft.occurredAt,
         ),
     )
+}
+
+/**
+ * 待确认卡里的每一行都可能来自不同入口（截图 / 分享 / 语音 / 通知），
+ * 进记账页时来源必须跟着行走，不能再一律写「第 N 张截图」。
+ */
+private fun materialSourceKind(source: IngestSource): String = when (source) {
+    IngestSource.SCREENSHOT, IngestSource.SHARE -> "shot"
+    IngestSource.VOICE -> "voice"
+    IngestSource.NOTIFICATION -> "notification"
+    IngestSource.PAYMENT -> "payment"
+    IngestSource.CHAT -> "assistant"
+}
+
+private fun materialSourceLabel(source: IngestSource, imageIndex: Int): String = when (source) {
+    IngestSource.SCREENSHOT, IngestSource.SHARE -> "第 ${imageIndex + 1} 张截图"
+    IngestSource.VOICE -> "语音"
+    IngestSource.NOTIFICATION -> "支付通知"
+    IngestSource.PAYMENT -> "支付页"
+    IngestSource.CHAT -> "小莉"
 }
 
 /** 推入页：淡入 + 从右侧轻推一小段，返回时原路收回去。 */

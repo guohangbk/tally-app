@@ -6,6 +6,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +39,7 @@ import io.github.guohangbk.tally.ui.design.tallyColors
  * 账单行：首页、搜索页、批量态共用同一套行组件与标记体系。
  * 被排除的账单仍然出现在列表里，只是整行降透明度并挂青灰角标（AC-F6-2）。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BillRow(
     item: BillListItem,
@@ -50,10 +53,7 @@ fun BillRow(
     val colors = tallyColors
     val haptics = rememberTallyHaptics()
     val bill = item.bill
-    val isIncome = bill.type == "INCOME"
-    // 退款是「钱回来」，列表中按正数方向显示；它不进收入合计，角标与统计口径负责说明。
-    val isRefund = bill.isRefund || bill.refundOfBillId != null
-    val positive = isIncome || isRefund
+    val amount = billAmountView(item)
     val excluded = bill.excludedFromStats
     val contentAlpha = if (excluded && !selected) 0.55f else 1f
 
@@ -124,22 +124,6 @@ fun BillRow(
             Spacer(Modifier.height(1.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 BillBadges(item = item)
-                // 行上最多两枚标签，第三枚起折成 ＋N（TG-06）：标签多了也不把这一行撑高。
-                // 名称由用户自己起，可能很长——给一枚封顶宽度，超出走省略号，不把备注与金额挤出去。
-                if (item.tags.isNotEmpty()) {
-                    val shown = item.tags.take(2)
-                    shown.forEach { name ->
-                        TagPill(
-                            name = name,
-                            modifier = Modifier.widthIn(max = 80.dp),
-                            fontSize = 9.sp,
-                            verticalPadding = 1.dp,
-                        )
-                    }
-                    if (item.tags.size > shown.size) {
-                        TagPill(name = "＋${item.tags.size - shown.size}", fontSize = 9.sp, verticalPadding = 1.dp)
-                    }
-                }
                 // 行上只留备注：时刻属于「这一笔是什么时候」的细节，点开弹层再看，列表不铺时间。
                 val note = bill.note?.takeIf { it.isNotBlank() }
                 if (note != null) {
@@ -153,21 +137,42 @@ fun BillRow(
                     )
                 }
             }
+            // 标签放在备注下一行：一笔最多 8 枚，全部平铺，不再折成「还有 N 个」。
+            if (item.tags.isNotEmpty()) {
+                Spacer(Modifier.height(2.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    item.tags.forEach { tag ->
+                        TagPill(
+                            name = tag.name,
+                            modifier = Modifier.widthIn(max = 96.dp),
+                            fontSize = 9.sp,
+                            verticalPadding = 1.dp,
+                        )
+                    }
+                }
+            }
         }
         Spacer(Modifier.width(8.dp))
-        val refunded = if (isRefund) 0L else item.refundedMinor
-        val remaining = bill.amountMinor - refunded
-        if (refunded > 0L) {
+        val amountColor = when (amount.tone) {
+            BillAmountTone.EXPENSE -> colors.expense
+            BillAmountTone.INCOME -> colors.income
+            BillAmountTone.NEUTRAL -> colors.slate
+        }
+        if (amount.subtitle != null) {
             Column(modifier = Modifier.alpha(contentAlpha), horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "−" + formatAmount(remaining, grouping),
+                    text = amount.sign + formatAmount(amount.amountMinor, grouping),
                     style = io.github.guohangbk.tally.ui.design.TallyType.moneyList.copy(fontSize = 17.5.sp, lineHeight = 21.9.sp),
-                    color = colors.expense,
+                    color = amountColor,
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(Modifier.height(1.dp))
                 Text(
-                    text = if (remaining > 0L) "(已退款¥${formatAmount(refunded, grouping)})" else "(已全额退款)",
+                    text = "(${amount.subtitle})",
                     fontSize = 9.5.sp, lineHeight = 11.9.sp,
                     color = colors.ink3,
                     fontWeight = FontWeight.Medium,
@@ -175,9 +180,9 @@ fun BillRow(
             }
         } else {
             Text(
-                text = (if (positive) "+" else "−") + formatAmount(bill.amountMinor, grouping),
+                text = amount.sign + formatAmount(amount.amountMinor, grouping),
                 style = io.github.guohangbk.tally.ui.design.TallyType.moneyList.copy(fontSize = 17.5.sp, lineHeight = 21.9.sp),
-                color = if (positive) colors.income else colors.expense,
+                color = amountColor,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.alpha(contentAlpha),
             )

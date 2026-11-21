@@ -179,12 +179,24 @@ class BillBatchViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun toggleTag(tagId: String) {
         val current = mutable.value
-        val next = if (tagId in current.tagSelection) current.tagSelection - tagId else current.tagSelection + tagId
+        val next = if (tagId in current.tagSelection) {
+            current.tagSelection - tagId
+        } else {
+            if (current.tagSelection.size >= MAX_TAGS_PER_BILL) {
+                mutable.value = current.copy(tagError = "每笔最多 $MAX_TAGS_PER_BILL 个标签")
+                return
+            }
+            current.tagSelection + tagId
+        }
         mutable.value = current.copy(tagSelection = next, tagError = null)
     }
 
     /** 批量新建：建完直接勾上，随这次「打标签」一起挂到整批。 */
     fun createTag(rawName: String) {
+        if (mutable.value.tagSelection.size >= MAX_TAGS_PER_BILL) {
+            mutable.value = mutable.value.copy(tagError = "每笔最多 $MAX_TAGS_PER_BILL 个标签")
+            return
+        }
         viewModelScope.launch {
             try {
                 val tag = graph.tagRepository.create(rawName)

@@ -32,7 +32,10 @@ private const val SEARCH_WHERE = """
           AND (:source IS NULL OR b.source = :source)
           AND (:amountMin IS NULL OR b.amount_minor >= :amountMin)
           AND (:amountMax IS NULL OR b.amount_minor <= :amountMax)
-          AND (:tagFilter = 0 OR b.id IN (SELECT bt.bill_id FROM bill_tag bt WHERE bt.tag_id IN (:tagIds)))
+          AND (:tagFilter = 0
+               OR (:tagMatchAll = 0 AND b.id IN (SELECT bt.bill_id FROM bill_tag bt WHERE bt.tag_id IN (:tagIds)))
+               OR (:tagMatchAll = 1 AND (SELECT COUNT(DISTINCT bt.tag_id) FROM bill_tag bt
+                                          WHERE bt.bill_id = b.id AND bt.tag_id IN (:tagIds)) = :tagCount))
           AND (:keyword = '' OR b.note LIKE '%' || :keyword || '%'
                OR c1.name LIKE '%' || :keyword || '%'
                OR c2.name LIKE '%' || :keyword || '%'
@@ -309,6 +312,8 @@ interface BillDao {
         amountMax: Long?,
         tagFilter: Int,
         tagIds: List<String>,
+        tagMatchAll: Int,
+        tagCount: Int,
         limit: Int,
     ): Flow<List<BillListItemRow>>
 
@@ -326,6 +331,8 @@ interface BillDao {
         amountMax: Long?,
         tagFilter: Int,
         tagIds: List<String>,
+        tagMatchAll: Int,
+        tagCount: Int,
         limit: Int,
     ): Flow<List<BillListItemRow>>
 
@@ -344,6 +351,8 @@ interface BillDao {
         amountMax: Long?,
         tagFilter: Int,
         tagIds: List<String>,
+        tagMatchAll: Int,
+        tagCount: Int,
         limit: Int,
     ): Flow<List<BillListItemRow>>
 
@@ -361,6 +370,8 @@ interface BillDao {
         amountMax: Long?,
         tagFilter: Int,
         tagIds: List<String>,
+        tagMatchAll: Int,
+        tagCount: Int,
         limit: Int,
     ): Flow<List<BillListItemRow>>
 
@@ -399,6 +410,8 @@ interface BillDao {
         amountMax: Long?,
         tagFilter: Int,
         tagIds: List<String>,
+        tagMatchAll: Int,
+        tagCount: Int,
     ): Flow<BillSummary>
 
     @Query(

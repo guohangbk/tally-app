@@ -72,6 +72,7 @@ fun ReimbursementScreen(
     onBack: () -> Unit,
     onOpenBillEdit: (String) -> Unit = {},
     onRepeatBill: (String?, String?, BillType?) -> Unit = { _, _, _ -> },
+    onOpenTag: (String) -> Unit = {},
 ) {
     val graph = rememberAppGraph()
     val viewModel = tallyViewModel { ReimbursementViewModel(graph) }
@@ -301,6 +302,7 @@ fun ReimbursementScreen(
                 onRepeatBill(l1, l2, type)
             },
             onOpenBill = { detailBillId = it },
+            onOpenTag = onOpenTag,
         )
     }
 }

@@ -90,6 +90,7 @@ fun LedgerOverviewScreen(
     onOpenCategory: (String) -> Unit,
     onOpenBillEdit: (String) -> Unit,
     onOpenSettlePoster: () -> Unit,
+    onOpenTag: (String) -> Unit = {},
     /** 从账本列表 ⋯ 的「结算」进来：页面就绪后直接弹确认框，不再让人找第二次按钮。 */
     startSettle: Boolean = false,
 ) {
@@ -220,6 +221,7 @@ fun LedgerOverviewScreen(
                 onOpenBillEdit(billId)
             },
             onOpenBill = { detailBillId = it },
+            onOpenTag = onOpenTag,
         )
     }
 

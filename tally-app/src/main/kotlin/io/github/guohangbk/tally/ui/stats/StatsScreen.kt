@@ -158,6 +158,7 @@ fun TallyStatsScreen(
     onAskAssistant: (String) -> Unit = {},
     onOpenBillEdit: (String) -> Unit = {},
     onRepeatBill: (l1Id: String?, l2Id: String?, type: BillType?) -> Unit = { _, _, _ -> },
+    onOpenTag: (String) -> Unit = {},
     onNavigateRoute: (String) -> Unit = {},
 ) {
     val graph = rememberAppGraph()
@@ -540,6 +541,7 @@ fun TallyStatsScreen(
                 onRepeatBill(l1, l2, type)
             },
             onOpenBill = { detailBillId = it },
+            onOpenTag = onOpenTag,
         )
     }
 }

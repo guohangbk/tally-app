@@ -51,6 +51,9 @@ import io.github.guohangbk.tally.ui.design.tallyColors
 /** 空词库时给的三枚示例：名称即全部，点一下即建即选。 */
 private val SAMPLE_TAGS = listOf("🏠 装修", "✈️ 旅行", "🧾 出差")
 
+/** 一笔账单最多挂 8 枚标签：再多就会把列表与详情挤成标签墙。 */
+const val MAX_TAGS_PER_BILL = 8
+
 /**
  * 标签胶囊：记账页已选行、列表行、筛选与选择器共用同一套外形。
  * 选中是品牌淡底 + 描边，未选是白底描边；点选、✕、拖把手都由调用方给。
@@ -195,7 +198,7 @@ fun TagPickerSheet(
                     }
                 } else {
                     if (selected.isNotEmpty()) {
-                        Section(label = "已选 ${selected.size} 枚") {
+                        Section(label = "已选 ${selected.size}/$MAX_TAGS_PER_BILL") {
                             selected.forEach { tag ->
                                 TagPill(
                                     name = tag.name,

@@ -202,11 +202,18 @@ fun BillEntryScreen(
             state.sourceText?.let { heard ->
                 val fromShot = state.sourceKind == "shot"
                 val fromAssistant = state.sourceKind == "assistant"
+                val fromNotification = state.sourceKind == "notification"
                 SourceBar(
-                    iconKey = if (fromShot) "image" else if (fromAssistant) "ai" else "mic",
+                    iconKey = when {
+                        fromShot -> "image"
+                        fromAssistant -> "ai"
+                        fromNotification -> "notification"
+                        else -> "mic"
+                    },
                     label = when {
                         fromShot -> "截图识别 · 已填充"
                         fromAssistant -> "AI 提取 · 已填充"
+                        fromNotification -> "通知识别 · 已填充"
                         else -> "语音识别 · 已填充"
                     },
                     heard = heard,
@@ -307,8 +314,9 @@ fun BillEntryScreen(
                                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                                         )
                                     },
-                                    // 点它会打开图库，没法「再点一下取消」：用右上角的叉收回还没保存的这一张。
-                                    onClear = if (state.imageUri != null) ({ viewModel.setImage(null) }) else null,
+                                    // 点它会打开图库，没法「再点一下取消」：用右上角的叉收回新选的，
+                                    // 或把已保存的那张标记为移除，保存时一起生效。
+                                    onClear = if (state.imageCount > 0) ({ viewModel.clearImage() }) else null,
                                 )
                             }
                             // 报销 / 排除不再挂拨钮：点亮即开、再点即关，和图片同一个样式。
