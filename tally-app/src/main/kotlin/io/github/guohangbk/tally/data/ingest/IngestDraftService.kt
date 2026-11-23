@@ -27,6 +27,8 @@ class IngestDraftService(
     private val conversations: AiConversationRepository,
     private val attachments: AttachmentStore,
     private val catalog: suspend () -> QuickNoteCatalog,
+    /** 收素材那一刻首页选中的账本；null 是「全部账本」，落库时回默认账本。 */
+    private val currentLedgerId: () -> String? = { null },
 ) {
     private val savedEvents = MutableSharedFlow<BillSavedEvent>(extraBufferCapacity = 16)
     val billSaved: SharedFlow<BillSavedEvent> = savedEvents
@@ -142,6 +144,8 @@ class IngestDraftService(
             timePrecision = fields.timePrecision.name,
             source = billSource.name,
             inputKind = inputKind.name,
+            // 「全部账本」下识别出来的账也必须有明确归属：默认账本，而不是等确认时再取当前账本。
+            ledgerId = currentLedgerId() ?: bills.defaultLedgerId(),
             categoryL1Id = fields.categoryL1Id,
             categoryL2Id = fields.categoryL2Id,
             categoryLabel = label,
@@ -207,11 +211,13 @@ class IngestDraftService(
         attachmentAt: ((Int) -> ByteArray?)?,
     ): List<String?> {
         if (pending.isEmpty()) return emptyList()
-        val ledger = bills.defaultLedgerId() ?: return List(pending.size) { null }
+        val fallbackLedger = currentLedgerId() ?: bills.defaultLedgerId()
+            ?: return List(pending.size) { null }
         val saved = pending.mapIndexed { index, row ->
             // 分类是硬条件：没认出分类的那一笔到不了这里，真到了也宁可空着，不塞进「其他」。
             if (row.categoryL1Id == null) return@mapIndexed null
-            runCatching { bills.save(row.toBillDraft(ledger)) }
+            // 每一行记自己入队时那本账：识别完换了账本，也不该把旧草稿塞进新账本。
+            runCatching { bills.save(row.toBillDraft(row.ledgerId ?: fallbackLedger)) }
                 .onSuccess { billId ->
                     attachmentAt?.invoke(index)?.let { bytes -> attach(billId, bytes) }
                 }

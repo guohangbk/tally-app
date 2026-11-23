@@ -55,6 +55,8 @@ import io.github.guohangbk.tally.domain.model.StatsGranularity
 import io.github.guohangbk.tally.domain.model.StatsRequest
 import io.github.guohangbk.tally.ui.design.IconLibrary
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.atomic.AtomicLong
 
@@ -69,6 +71,19 @@ class AppGraph(
     /** 测试里塞 FakeAiClient，就能在没有网络的情况下跑完小莉的全部分支。 */
     val injectedAiClient: AiClient? = null,
 ) {
+    /**
+     * 首页当前选中的账本；null 表示「全部账本」。
+     * 语音、截图、分享、待确认都要落进人正看着的那一本，不能一律回默认账本。
+     */
+    private val mutableActiveLedgerId = MutableStateFlow<String?>(null)
+    val activeLedger: StateFlow<String?> = mutableActiveLedgerId.asStateFlow()
+
+    var activeLedgerId: String?
+        get() = mutableActiveLedgerId.value
+        set(value) {
+            mutableActiveLedgerId.value = value
+        }
+
     val categoryRepository: CategoryRepository = CategoryRepository(
         categoryDao = database.categoryDao(),
         billDao = database.billDao(),
@@ -176,10 +191,14 @@ class AppGraph(
 
     val secretVault: SecretVault = SecretVault(context.applicationContext)
 
+    val aiKeyVault: AiKeyVault = AiKeyVault(secretVault)
+
     val backupService: BackupService = BackupService(
         context = context.applicationContext,
         database = database,
         backupDao = database.backupDao(),
+        aiKeys = aiKeyVault,
+        preferences = preferences,
     )
 
     val webDavRepository: WebDavRepository = WebDavRepository(
@@ -194,8 +213,6 @@ class AppGraph(
     // ---- 小莉：AI 是增强层，任何一条都要能在没有小莉的时候被跳过 ----
 
     val aiClient: AiClient = injectedAiClient ?: OpenAiCompatibleClient()
-
-    val aiKeyVault: AiKeyVault = AiKeyVault(secretVault)
 
     val aiConfigRepository: AiConfigRepository = AiConfigRepository(
         dao = database.aiConfigDao(),
@@ -306,6 +323,7 @@ class AppGraph(
         conversations = aiConversationRepository,
         attachments = attachmentStore,
         catalog = { keywordRuleRepository.catalog() },
+        currentLedgerId = { activeLedgerId },
     )
 
     /**
@@ -362,8 +380,14 @@ class AppGraph(
      * 应用启动 bootstrap 后写入的默认账本 id。首页据此初始化，避免「先查全部账本、
      * bootstrap 完再查默认账本」的第二次查询。未就绪时为 null，首页按原逻辑兜底。
      */
-    @Volatile
-    var cachedDefaultLedgerId: String? = null
+    private val mutableDefaultLedgerId = MutableStateFlow<String?>(null)
+    val defaultLedgerId: StateFlow<String?> = mutableDefaultLedgerId.asStateFlow()
+
+    var cachedDefaultLedgerId: String?
+        get() = mutableDefaultLedgerId.value
+        set(value) {
+            mutableDefaultLedgerId.value = value
+        }
 
     /** 默认账本名称，随 id 一起缓存；首页初始态拿它显示标题，避免开场先闪一下「全部账本」。 */
     @Volatile
@@ -404,6 +428,7 @@ class AppGraph(
     val dataGeneration = MutableStateFlow(0L)
 
     fun notifyDataReplaced() {
+        activeLedgerId = null
         cachedDefaultLedgerId = null
         cachedDefaultLedgerName = null
         cachedHomeSnapshot = null

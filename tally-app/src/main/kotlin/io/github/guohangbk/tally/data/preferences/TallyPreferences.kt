@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import io.github.guohangbk.tally.domain.model.TimePrecision
+import io.github.guohangbk.tally.domain.model.TallySkin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -54,6 +55,11 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
         val PENDING_BADGE_ENABLED = booleanPreferencesKey("pending_badge_enabled")
         val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+    /**
+     * 皮肤（主题色）。和 [THEME_MODE] 是两个维度：mode 决定读浅色档还是深色档，
+     * skin 决定读哪一张色表，互不覆盖。
+     */
+    val THEME_SKIN = stringPreferencesKey("theme_skin")
         val SHOW_CURRENCY_SYMBOL = booleanPreferencesKey("show_currency_symbol")
         val SHOW_THOUSANDS_SEPARATOR = booleanPreferencesKey("show_thousands_separator")
         val TIME_PRECISION = stringPreferencesKey("time_precision")
@@ -112,6 +118,7 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
             assistantEnabled = prefs[Keys.ASSISTANT_ENABLED] ?: false,
             themeMode = prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
+            themeSkin = TallySkin.fromKey(prefs[Keys.THEME_SKIN]),
             showCurrencySymbol = prefs[Keys.SHOW_CURRENCY_SYMBOL] ?: true,
             showThousandsSeparator = prefs[Keys.SHOW_THOUSANDS_SEPARATOR] ?: true,
             timePrecision = prefs[Keys.TIME_PRECISION]?.let { runCatching { TimePrecision.valueOf(it) }.getOrNull() }
@@ -174,6 +181,10 @@ class TallyPreferences(private val dataStore: DataStore<Preferences>) {
 
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { it[Keys.THEME_MODE] = mode.name }
+    }
+
+    suspend fun setThemeSkin(skin: TallySkin) {
+        dataStore.edit { it[Keys.THEME_SKIN] = skin.key }
     }
 
     suspend fun setShowCurrencySymbol(show: Boolean) = put(Keys.SHOW_CURRENCY_SYMBOL, show)
@@ -366,6 +377,8 @@ data class TallySettings(
     val pendingBadgeEnabled: Boolean = true,
     val assistantEnabled: Boolean,
     val themeMode: ThemeMode,
+    /** 皮肤（主题色），与 [themeMode] 正交：mode 管档，skin 管套。 */
+    val themeSkin: TallySkin = TallySkin.INK,
     val showCurrencySymbol: Boolean,
     val showThousandsSeparator: Boolean,
     val timePrecision: TimePrecision,
@@ -419,6 +432,7 @@ data class TallySettings(
             pendingBadgeEnabled = true,
             assistantEnabled = false,
             themeMode = ThemeMode.SYSTEM,
+            themeSkin = TallySkin.INK,
             showCurrencySymbol = true,
             showThousandsSeparator = true,
             timePrecision = TimePrecision.DATE,

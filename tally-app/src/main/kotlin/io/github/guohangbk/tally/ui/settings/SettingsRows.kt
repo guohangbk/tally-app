@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import io.github.guohangbk.tally.domain.model.TallySkin
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.Hairline
 import io.github.guohangbk.tally.ui.design.TallyButton
@@ -38,7 +39,6 @@ import io.github.guohangbk.tally.ui.design.TallyLabeledSwitch
 import io.github.guohangbk.tally.ui.design.TallyListRow
 import io.github.guohangbk.tally.ui.design.TallyRowChevron
 import io.github.guohangbk.tally.ui.design.TallySectionLabel
-import io.github.guohangbk.tally.ui.design.TallySegmented
 import io.github.guohangbk.tally.ui.design.TallyType
 import io.github.guohangbk.tally.ui.design.tallyColors
 
@@ -148,25 +148,6 @@ internal fun SettingsInlineLink(text: String, onClick: () -> Unit) {
     )
 }
 
-@Composable
-internal fun <T> SettingsChoiceRow(
-    label: String,
-    description: String?,
-    options: List<Pair<T, String>>,
-    selected: T,
-    onSelect: (T) -> Unit,
-) {
-    val colors = tallyColors
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp)) {
-        Text(label, style = TallyType.listTitle, color = colors.ink)
-        if (description != null) {
-            Text(description, style = TallyType.helper, color = colors.ink3)
-        }
-        Spacer(Modifier.height(8.dp))
-        TallySegmented(options = options, selected = selected, onSelect = onSelect)
-    }
-}
-
 /** 导航行右端只放一个箭头：文字「进入」既占位又重复了「这一行能点」这件事。 */
 @Composable
 internal fun SettingsNavRow(
@@ -182,6 +163,41 @@ internal fun SettingsNavRow(
         iconSize = 30,
         onClick = onClick,
         trailing = { TallyRowChevron() },
+    )
+}
+
+/**
+ * 主题入口行：右侧写当前皮肤名，**字的颜色就是这套皮肤的主操作色**。
+ *
+ * 页面本身已经按这套皮肤渲染，所以直接取 `colors.brand` 即可——名字与颜色天然对齐，
+ * 不需要再维护一份「皮肤 → 展示色」的映射。顺带还是个自检：两套皮肤如果右侧看起来一样，
+ * 说明它们的 brand 拉不开，得改色表。
+ */
+@Composable
+internal fun SettingsThemeRow(
+    skin: TallySkin,
+    onClick: () -> Unit,
+) {
+    val colors = tallyColors
+    TallyListRow(
+        title = "主题",
+        subtitle = "10 套配色，深浅可跟随系统",
+        iconKey = "paint",
+        iconSize = 30,
+        onClick = onClick,
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = skin.label,
+                    style = TallyType.listTitle.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                    color = colors.brand,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.width(4.dp))
+                TallyRowChevron()
+            }
+        },
     )
 }
 

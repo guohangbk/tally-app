@@ -140,6 +140,8 @@ class BillEntryViewModel(
     prefillSource: String? = null,
     prefillSourceKind: String? = null,
     prefillOccurredAt: Long? = null,
+    /** 从素材卡某一笔进来时带着它的账本；空着就落首页当前选中的那本。 */
+    prefillLedgerId: String? = null,
     /** 语音 / 截图命中分类的那个词；分类被改掉时用它问一句沉淀。 */
     private val prefillKeyword: String? = null,
     /** 这次带进来的备注是 AI 写的：静默沉淀时标成 `LEARNED_AI`。 */
@@ -148,14 +150,20 @@ class BillEntryViewModel(
     /** 同一句话只问一次沉淀，即便在「再记」里连着存了几笔。 */
     private var sedimentAsked = false
 
+    private val initialLedgerId = prefillLedgerId ?: graph.activeLedgerId ?: graph.cachedDefaultLedgerId
+
     private val local = MutableStateFlow(
         BillEntryUiState(
             editing = billId != null,
             billId = billId,
             type = prefillType ?: BillType.EXPENSE,
-            // 启动时缓存好的默认账本：不等查询就有账本 id 与名字，首帧不闪「选择账本」。
-            ledgerId = graph.cachedDefaultLedgerId,
-            ledgerName = graph.cachedDefaultLedgerName ?: "选择账本",
+            // 当前账本优先：语音、截图、待确认改一笔都该落在人正看着的那一本上。
+            ledgerId = initialLedgerId,
+            ledgerName = if (initialLedgerId == graph.cachedDefaultLedgerId) {
+                graph.cachedDefaultLedgerName ?: "选择账本"
+            } else {
+                "选择账本"
+            },
             categoryL1Id = prefillL1Id,
             categoryL2Id = prefillL2Id,
             amountText = prefillAmountMinor?.let(::formatEntryAmount).orEmpty(),

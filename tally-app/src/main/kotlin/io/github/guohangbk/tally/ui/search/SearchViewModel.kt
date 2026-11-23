@@ -3,12 +3,14 @@
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.guohangbk.tally.data.db.entity.LedgerEntity
+import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.model.BillFilter
 import io.github.guohangbk.tally.domain.model.BillSearchResult
 import io.github.guohangbk.tally.domain.model.BillSort
 import io.github.guohangbk.tally.domain.model.BillSource
 import io.github.guohangbk.tally.domain.model.BillType
+import io.github.guohangbk.tally.domain.model.CategoryType
 import io.github.guohangbk.tally.domain.parseAmount
 import io.github.guohangbk.tally.ui.common.monthStartOf
 import io.github.guohangbk.tally.ui.common.shiftMonthStart
@@ -37,8 +39,11 @@ data class SearchUiState(
     val ledgers: List<LedgerEntity> = emptyList(),
     /** 筛选可选的标签；归档且正被选中的排在最前，标「已归档」。 */
     val tags: List<TagFilterChoice> = emptyList(),
-    /** 分类筛选的名称（「零食 / 咖啡」），只有带着分类进来时才有值。 */
+    /** 分类筛选的名称（「零食 / 咖啡」），带着进来或在筛选里挑的都算。 */
     val categoryLabel: String? = null,
+    /** 分类候选：按收支类型分开，筛选面板按顶部那档决定摊哪一组。 */
+    val expenseCategories: List<CategoryEntity> = emptyList(),
+    val incomeCategories: List<CategoryEntity> = emptyList(),
     val loaded: Boolean = false,
 )
 
@@ -60,8 +65,13 @@ class SearchViewModel(
         ),
     )
 
-    /** 分类名在建立这一页时取一次就够：这一页不改分类名，改完再进来是新的一次。 */
-    private val categoryLabel = MutableStateFlow<String?>(null)
+    /**
+     * 分类表整份取一次：这一页既不建分类也不改名，为两个 chip 现查现挂不值当。
+     *
+     * 拿整份而不是只拿被选中的那两个，是因为筛选面板要就地摊开候选树，
+     * 而「已选分类」的名字也要能从同一份里查——两处各查一遍迟早会对不上。
+     */
+    private val categories = MutableStateFlow<List<CategoryEntity>>(emptyList())
 
     /**
      * 从归档标签详情带进来的那枚只是**入场默认**，不是他挑的：一旦点了别的筛选 chip，
@@ -72,12 +82,10 @@ class SearchViewModel(
     private var filterChanged = false
 
     init {
-        if (initialCategoryL1Id != null || initialCategoryL2Id != null) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val l1 = initialCategoryL1Id?.let { graph.categoryRepository.find(it)?.name }
-                val l2 = initialCategoryL2Id?.let { graph.categoryRepository.find(it)?.name }
-                categoryLabel.value = listOfNotNull(l1, l2).joinToString(" / ")
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            val expense = runCatching { graph.billRepository.activeCategories(CategoryType.EXPENSE) }.getOrDefault(emptyList())
+            val income = runCatching { graph.billRepository.activeCategories(CategoryType.INCOME) }.getOrDefault(emptyList())
+            categories.value = expense + income
         }
         if (initialTagIds.isNotEmpty()) {
             viewModelScope.launch {
@@ -128,21 +136,34 @@ class SearchViewModel(
         result,
         ledgerChips,
         tagChoices,
-        categoryLabel,
-    ) { currentFilter, currentResult, ledgers, tags, label ->
+        categories,
+    ) { currentFilter, currentResult, ledgers, tags, allCategories ->
+        val label = categoryLabelOf(allCategories, currentFilter.categoryL1Id, currentFilter.categoryL2Id)
         SearchUiState(
             filter = currentFilter,
             result = currentResult,
             ledgers = ledgers,
             tags = tags,
-            categoryLabel = label.takeIf { currentFilter.categoryL1Id != null || currentFilter.categoryL2Id != null },
+            categoryLabel = label,
+            expenseCategories = allCategories.filter { it.type == CategoryType.EXPENSE.name },
+            incomeCategories = allCategories.filter { it.type == CategoryType.INCOME.name },
             loaded = true,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
 
     fun setKeyword(value: String) = update { copy(keyword = value) }
 
-    fun setType(value: BillType?) = updateFromChip { copy(type = value) }
+    /**
+     * 收支类型一改，选不过去的那半棵树要跟着退场：
+     * 带着「餐饮（支出）」再筛「收入」，SQL 会永远查不到东西，界面却显示两个都生效。
+     */
+    fun setType(value: BillType?) {
+        val pickedL1 = filter.value.categoryL1Id?.let { id -> categories.value.firstOrNull { it.id == id } }
+        val mismatch = value != null && pickedL1 != null && pickedL1.type != value.name
+        updateFromChip {
+            if (mismatch) copy(type = value, categoryL1Id = null, categoryL2Id = null) else copy(type = value)
+        }
+    }
 
     fun setLedger(value: String?) = updateFromChip { copy(ledgerId = value) }
 
@@ -158,7 +179,13 @@ class SearchViewModel(
 
     fun clearTags() = updateFromChip { copy(tagIds = emptyList(), tagMatchAll = false) }
 
-    /** 分类筛选只能带着进来或清掉：这一页没有分类选择器，要挑分类去分类管理。 */
+    /**
+     * 分类筛选：一级即含其下全部二级（账单行同时存 l1 与 l2，按 l1 查天然覆盖子树），
+     * 挑到二级就只查那一格。
+     */
+    fun setCategory(l1Id: String, l2Id: String?) =
+        updateFromChip { copy(categoryL1Id = l1Id, categoryL2Id = l2Id) }
+
     fun clearCategory() = updateFromChip { copy(categoryL1Id = null, categoryL2Id = null) }
 
     fun setAllTime() = updateFromChip { copy(startAt = null, endAtExclusive = null) }
@@ -222,4 +249,19 @@ class SearchViewModel(
     private companion object {
         const val KEYWORD_DEBOUNCE_MILLIS = 160L
     }
+}
+
+/**
+ * 「零食 / 咖啡」这种两级写法：与分类管理、统计页同一套口径。
+ * 查不到 id（分类被删了还带着筛选进来）就退回到只写能查到的那一级，不显示「未知分类」。
+ */
+private fun categoryLabelOf(
+    categories: List<CategoryEntity>,
+    l1Id: String?,
+    l2Id: String?,
+): String? {
+    if (l1Id == null && l2Id == null) return null
+    val l1 = l1Id?.let { id -> categories.firstOrNull { it.id == id }?.name }
+    val l2 = l2Id?.let { id -> categories.firstOrNull { it.id == id }?.name }
+    return listOfNotNull(l1, l2).joinToString(" / ").ifEmpty { null }
 }

@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -19,6 +21,8 @@ data class PendingIngestEntry(
     val checked: Boolean = true,
     /** 这一条从哪个入口来（通知 / 支付页 / 截图 / 语音 / 分享），卡上据此写来源。 */
     val source: String = "",
+    /** 这一条归属的账本：入队时定死，切换账本只展示当前账本的那几笔。 */
+    val ledgerId: String? = null,
     /** 入队时刻：自动草稿靠它算 30 天过期。 */
     val createdAt: Long = 0L,
     /** 订单号：跨入口幂等按它认同一笔。 */
@@ -30,7 +34,11 @@ data class PendingIngestEntry(
 
 /** 一张没识别到的图：卡头要按它说「N 张里 M 张没认出来」。 */
 @Serializable
-data class PendingFailure(val imageIndex: Int, val reason: String)
+data class PendingFailure(
+    val imageIndex: Int,
+    val reason: String,
+    val ledgerId: String? = null,
+)
 
 /** 待确认的一整批（一次识别就是一批）。[version] 变了就把旧文件当过期直接丢掉。 */
 @Serializable
@@ -71,15 +79,38 @@ class PendingIngestStore(
     private val file = File(dir, FILE_NAME)
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val mutableCount = MutableStateFlow(0)
+    private val mutableEntries = MutableStateFlow<List<PendingIngestEntry>>(emptyList())
+    private val gate = Mutex()
+    /** 下一个可用行号；从落盘清单里最大的那个往后接，进程内只增不减。 */
+    private var nextKey: Int? = null
 
     /** 待确认笔数：首页那枚入口只认它，不自己读文件。 */
     val count: StateFlow<Int> = mutableCount.asStateFlow()
 
-    suspend fun load(): PendingIngestBatch = withContext(Dispatchers.IO) {
-        val batch = read()
-        val live = live(batch.entries)
-        mutableCount.value = live.size
-        batch.copy(entries = live)
+    /** 文件里还能动的行：卡与账本过滤都只认这一份。 */
+    val entries: StateFlow<List<PendingIngestEntry>> = mutableEntries.asStateFlow()
+
+    suspend fun load(): PendingIngestBatch = gate.withLock {
+        withContext(Dispatchers.IO) {
+            val batch = read()
+            val live = live(batch.entries)
+            publish(live)
+            seedNextKey(live)
+            batch.copy(entries = live)
+        }
+    }
+
+    /**
+     * 行号由清单统一发：只从内存里的 bills 往下数，关掉卡再识别就会从 0 重来，
+     * 新的第一笔把文件里同号的那笔顶掉——所以分配必须落在这一层。
+     */
+    suspend fun reserveKeys(count: Int): Int = gate.withLock {
+        if (count <= 0) return@withLock 0
+        val base = nextKey ?: withContext(Dispatchers.IO) {
+            (read().entries.maxOfOrNull { it.key } ?: -1) + 1
+        }
+        nextKey = base + count
+        base
     }
 
     suspend fun save(
@@ -109,8 +140,8 @@ class PendingIngestStore(
         }
     }
 
-    suspend fun clear() {
-        mutableCount.value = 0
+    suspend fun clear() = gate.withLock {
+        publish(emptyList())
         withContext(Dispatchers.IO) {
             runCatching {
                 file.delete()
@@ -120,15 +151,22 @@ class PendingIngestStore(
     }
 
     /** 已在记账页保存/确认的行：按 key 精确摘掉，不能被 [save] 的合并逻辑再写回来。 */
-    suspend fun removeKeys(keys: Set<Int>) {
-        if (keys.isEmpty()) return
+    suspend fun removeKeys(keys: Set<Int>) = gate.withLock {
+        if (keys.isEmpty()) return@withLock
         val batch = withContext(Dispatchers.IO) { read() }
         val remaining = batch.entries.filterNot { it.key in keys }
         if (remaining.isEmpty()) {
-            clear()
-            return
+            publish(emptyList())
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    file.delete()
+                    File(dir, "$FILE_NAME.tmp").delete()
+                }
+            }
+            return@withLock
         }
-        mutableCount.value = remaining.size
+        publish(remaining)
+        seedNextKey(remaining)
         write(batch.copy(savedAt = now(), entries = remaining))
     }
 
@@ -140,7 +178,7 @@ class PendingIngestStore(
     private suspend fun merge(
         entries: List<PendingIngestEntry>,
         build: (existing: PendingIngestBatch, merged: List<PendingIngestEntry>) -> PendingIngestBatch,
-    ) {
+    ) = gate.withLock {
         val (existing, merged) = withContext(Dispatchers.IO) {
             val batch = read()
             val map = LinkedHashMap<Int, PendingIngestEntry>()
@@ -150,15 +188,16 @@ class PendingIngestStore(
         }
         // 合并完一行都不剩：把文件收掉，别留一个空壳让首页入口变成点开就消失的死入口。
         if (merged.isEmpty()) {
-            mutableCount.value = 0
+            publish(emptyList())
             withContext(Dispatchers.IO) {
                 runCatching { file.delete(); File(dir, "$FILE_NAME.tmp").delete() }
             }
-            return
+            return@withLock
         }
         val batch = build(existing, merged)
         // 先上状态再落盘：入口跟着内存立刻亮，写盘失败最多丢一次恢复能力，不影响这一轮。
-        mutableCount.value = batch.entries.size
+        publish(batch.entries)
+        seedNextKey(batch.entries)
         write(batch)
     }
 
@@ -189,6 +228,17 @@ class PendingIngestStore(
     /** 还能动的行：入口与卡都只认它们，已经解决的不占数、不出现。 */
     private fun live(entries: List<PendingIngestEntry>): List<PendingIngestEntry> =
         entries.filter { !resolved(it.row) && !expired(it) }
+
+    private fun publish(entries: List<PendingIngestEntry>) {
+        mutableEntries.value = entries
+        mutableCount.value = entries.size
+    }
+
+    /** 只增不减：同一进程里清过清单也不复用旧行号，避免界面上还留着的行被新行撞上。 */
+    private fun seedNextKey(entries: List<PendingIngestEntry>) {
+        val minimum = (entries.maxOfOrNull { it.key } ?: -1) + 1
+        nextKey = maxOf(nextKey ?: 0, minimum)
+    }
 
     private fun resolved(row: DraftRow): Boolean = row.saved || row.duplicate || row.reverted
 

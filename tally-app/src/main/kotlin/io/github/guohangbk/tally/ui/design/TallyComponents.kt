@@ -474,8 +474,7 @@ fun <T> TallySegmented(
             ) {
                 Text(
                     text = label,
-                    fontSize = 12.5.sp,
-                    lineHeight = 16.sp,
+                    style = TallyType.helper,
                     fontWeight = FontWeight.SemiBold,
                     color = when {
                         !active -> colors.ink3

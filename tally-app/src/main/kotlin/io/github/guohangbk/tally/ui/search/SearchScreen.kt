@@ -25,13 +25,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.guohangbk.tally.di.rememberAppGraph
+import io.github.guohangbk.tally.data.db.entity.CategoryEntity
 import io.github.guohangbk.tally.ui.bill.BillDetailSheet
 import io.github.guohangbk.tally.domain.formatAmount
 import io.github.guohangbk.tally.domain.model.BillFilter
@@ -60,6 +65,7 @@ import io.github.guohangbk.tally.domain.model.BillType
 import io.github.guohangbk.tally.domain.model.ReimburseStatus
 import io.github.guohangbk.tally.ui.common.BatchProgress
 import io.github.guohangbk.tally.ui.common.BillBatchViewModel
+import io.github.guohangbk.tally.ui.common.CategoryPanel
 import io.github.guohangbk.tally.ui.common.BillRow
 import io.github.guohangbk.tally.ui.common.BillBatchOverlays
 import io.github.guohangbk.tally.ui.common.SelectionBar
@@ -69,6 +75,7 @@ import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.InlineIcon
 import io.github.guohangbk.tally.ui.design.LocalMoneyGrouping
 import io.github.guohangbk.tally.ui.design.TallyCard
+import io.github.guohangbk.tally.ui.design.TallyBottomSheet
 import io.github.guohangbk.tally.ui.design.TallyEmptyState
 import io.github.guohangbk.tally.ui.design.TallySegmented
 import io.github.guohangbk.tally.ui.design.TallyTag
@@ -108,6 +115,8 @@ fun SearchScreen(
     var minText by remember { mutableStateOf("") }
     var maxText by remember { mutableStateOf("") }
     var filtersOpen by remember { mutableStateOf(false) }
+    /** 分类候选树要占一整屏，塞进折叠面板里会把筛选区撑爆；点 chip 起一层弹层挑。 */
+    var categoryPicker by remember { mutableStateOf(false) }
 
     // 勾选态是页面内的一层：系统返回 / 侧滑先退出勾选，不该把人直接甩回上一页。
     BackHandler(enabled = selection.active) { batch.exitSelection() }
@@ -186,14 +195,18 @@ fun SearchScreen(
                                 FilterButton("本月", viewModel.isThisMonth(), viewModel::setThisMonth)
                                 FilterButton("近 30 天", viewModel.isLast30Days(), viewModel::setLast30Days)
                             }
-                            // 分类筛选是从分类管理「查看统计数据」带进来的，这里只负责显示与放开。
-                            state.categoryLabel?.let { label ->
-                                Spacer(Modifier.height(9.dp))
-                                FilterLabel("分类")
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                    FilterButton(label, true, viewModel::clearCategory)
-                                    FilterButton("不限分类", false, viewModel::clearCategory)
-                                }
+                            // 分类排在账本之前：先定「哪一类钱」再定「哪个账本」，
+                            // 反过来挑会让人在几十个分类里白点一轮。选中再点一次即摘掉，与标签行同一条规则。
+                            Spacer(Modifier.height(9.dp))
+                            FilterLabel("分类")
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                FilterButton(
+                                    label = state.categoryLabel ?: "选择分类",
+                                    selected = state.categoryLabel != null,
+                                    onClick = {
+                                        if (state.categoryLabel != null) viewModel.clearCategory() else categoryPicker = true
+                                    },
+                                )
                             }
                             Spacer(Modifier.height(9.dp))
                             FilterLabel("账本")
@@ -429,6 +442,33 @@ fun SearchScreen(
 
     // 四件弹层与首页同一份实现，见 BillBatchOverlays。
     BillBatchOverlays(selection, batch)
+
+    if (categoryPicker) {
+        CategoryFilterSheet(
+            expenseCategories = state.expenseCategories,
+            incomeCategories = state.incomeCategories,
+            // 顶部那档决定摊哪一组：筛支出时不该看到「工资」，筛全部才两组都摊开。
+            showType = filter.type,
+            selectedL1 = filter.categoryL1Id,
+            selectedL2 = filter.categoryL2Id,
+            onPick = { l1, l2 ->
+                // 点一级只把它选中并展开二级，浮层留在原地；点二级才算选完、收起。
+                // 再点一次「已经单独选中的一级」＝摘掉这条筛选，与筛选行上选中再点即取消同一条规则。
+                val l1OnlyAlready = l2 == null &&
+                    filter.categoryL1Id == l1 &&
+                    filter.categoryL2Id == null
+                if (l1OnlyAlready) viewModel.clearCategory() else viewModel.setCategory(l1, l2)
+                // 收起只有三种时候：选了二级、再点一次取消、或者这个一级压根没有二级（留着只会让人以为没点上）。
+                val hasChildren = (state.expenseCategories + state.incomeCategories).any { it.parentId == l1 }
+                if (l2 != null || l1OnlyAlready || !hasChildren) categoryPicker = false
+            },
+            onClear = {
+                viewModel.clearCategory()
+                categoryPicker = false
+            },
+            onDismiss = { categoryPicker = false },
+        )
+    }
 
     detailBillId?.let { id ->
         BillDetailSheet(
@@ -718,3 +758,106 @@ private fun sortLabel(sort: BillSort): String = when (sort) {
 
 private fun trimMoney(minor: Long): String =
     if (minor % 100L == 0L) (minor / 100L).toString() else formatAmount(minor, grouping = false)
+
+/**
+ * 筛选用的分类弹层。
+ *
+ * 瓦片与二级气泡整个复用记账页那一套 [CategoryPanel]，所以动线也一样：**点一级浮出它的二级**，
+ * 一级与二级都能单独作为筛选条件。区别只在收尾——点二级立刻收起（选完了），点一级留着浮层
+ * 让人继续挑二级；不用挂「确定」，筛选是来回改的动线，多一步就少一次尝试。
+ *
+ * 候选跟着顶部的收支类型走——筛支出时不该看到「工资」，选「全部」才把两组都摊开并加分组小标题。
+ * 一级分类本身就可选（账单行同时存 l1 与 l2，按 l1 查天然含其下全部二级）。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryFilterSheet(
+    expenseCategories: List<CategoryEntity>,
+    incomeCategories: List<CategoryEntity>,
+    showType: BillType?,
+    selectedL1: String?,
+    selectedL2: String?,
+    onPick: (String, String?) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = tallyColors
+    val bothGroups = showType == null
+    val showExpense = bothGroups || showType == BillType.EXPENSE
+    val showIncome = bothGroups || showType == BillType.INCOME
+
+    TallyBottomSheet(onDismissRequest = onDismiss, containerColor = colors.paper) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Spacer(Modifier.height(12.dp))
+            Text("筛选分类", style = TallyType.sectionTitle, color = colors.ink)
+            Spacer(Modifier.height(5.dp))
+            Text(
+                text = if (bothGroups) "点一级展开它的二级，也可只选一级；收支两组都摊开" else "点一级展开它的二级，也可只选一级",
+                style = TallyType.helper,
+                color = colors.ink3,
+            )
+            Spacer(Modifier.height(14.dp))
+            // 一百多个分类全展开会把弹层顶满整屏：给一个上限高度，内部滚动。
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                if (showExpense && expenseCategories.isNotEmpty()) {
+                    if (bothGroups) SheetGroupLabel("支出")
+                    CategoryPanel(
+                        categories = expenseCategories,
+                        selectedL1 = selectedL1,
+                        selectedL2 = selectedL2,
+                        onSelect = onPick,
+                    )
+                }
+                if (showIncome && incomeCategories.isNotEmpty()) {
+                    if (bothGroups) {
+                        Spacer(Modifier.height(16.dp))
+                        SheetGroupLabel("收入")
+                    }
+                    CategoryPanel(
+                        categories = incomeCategories,
+                        selectedL1 = selectedL1,
+                        selectedL2 = selectedL2,
+                        onSelect = onPick,
+                    )
+                }
+                if (expenseCategories.isEmpty() && incomeCategories.isEmpty()) {
+                    Text(
+                        text = if (showType == BillType.INCOME) "收入里还没有分类" else "还没有分类",
+                        style = TallyType.helper,
+                        color = colors.ink3,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onClear) {
+                    Text("不限分类", style = TallyType.listTitle, color = colors.ink3)
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onDismiss) {
+                    Text("关闭", style = TallyType.listTitle, color = colors.brand)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SheetGroupLabel(text: String) {
+    Text(
+        text = text,
+        style = TallyType.helper,
+        color = tallyColors.ink3,
+        modifier = Modifier.padding(bottom = 9.dp),
+    )
+}

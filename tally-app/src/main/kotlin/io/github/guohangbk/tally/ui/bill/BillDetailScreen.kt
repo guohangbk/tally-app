@@ -625,7 +625,7 @@ private fun OriginalBillRow(
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "−¥" + formatAmount(bill.amountMinor),
-                style = TallyType.moneyList.copy(fontSize = 15.5.sp, lineHeight = 18.sp),
+                style = TallyType.moneyList,
                 color = colors.expense,
             )
             if (origin.refundedMinor > 0L) {
@@ -661,9 +661,7 @@ private fun RefundRecordRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "退款 · $category",
-                fontSize = 12.5.sp,
-                lineHeight = 16.sp,
-                fontWeight = FontWeight.Normal,
+                style = TallyType.helper,
                 color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -678,7 +676,7 @@ private fun RefundRecordRow(
         Spacer(Modifier.width(8.dp))
         Text(
             text = "¥" + formatAmount(amountMinor),
-            style = TallyType.moneyList.copy(fontSize = 15.5.sp, lineHeight = 18.sp),
+            style = TallyType.moneyList,
             color = textColor,
         )
         InlineIcon(iconKey = "chevron", contentDescription = "查看退款", size = 12.dp, tint = textColor.copy(alpha = 0.8f))
