@@ -1023,6 +1023,7 @@ private fun DraftRow.toUi(): ChatBillDraft = ChatBillDraft(
     occurredAt = occurredAt,
     source = runCatching { BillSource.valueOf(source) }.getOrDefault(BillSource.MANUAL),
     inputKind = runCatching { InputKind.valueOf(inputKind) }.getOrNull(),
+    ledgerId = ledgerId,
     merchant = merchant,
     externalId = externalId,
     imageSha = imageSha,
@@ -1413,7 +1414,7 @@ private fun TextFieldPill(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().heightIn(max = 84.dp).verticalScroll(scroll),
-            textStyle = TallyType.body.copy(fontSize = 13.5.sp, lineHeight = 18.sp, color = colors.ink),
+            textStyle = TallyType.secondary.copy(color = colors.ink),
             cursorBrush = SolidColor(colors.gold),
             maxLines = 4,
             decorationBox = { inner ->
@@ -1535,8 +1536,7 @@ private fun HoldToTalkArea(
     ) {
         Text(
             text = if (listening) "松开 发送" else "按住 说话",
-            fontSize = 13.5.sp,
-            lineHeight = 18.sp,
+            style = TallyType.secondary,
             color = if (enabled) colors.ink2 else colors.ink3,
             maxLines = 1,
         )

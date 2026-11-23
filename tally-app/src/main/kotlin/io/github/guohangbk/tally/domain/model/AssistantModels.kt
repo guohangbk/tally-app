@@ -63,6 +63,8 @@ data class DraftRow(
      * 空字符串是升级前的老卡：那时候拿 [source] 兼当输入形态，读的时候按它回推。
      */
     val inputKind: String = "",
+    /** 这条草稿属于哪本账：入队时记下，落库与「改一下」都按它走；老数据为空时回当前账本。 */
+    val ledgerId: String? = null,
     val categoryL1Id: String? = null,
     val categoryL2Id: String? = null,
     val categoryLabel: String? = null,

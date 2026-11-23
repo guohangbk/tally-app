@@ -37,6 +37,7 @@ import io.github.guohangbk.tally.domain.ai.AiConfiguration
 import io.github.guohangbk.tally.domain.ai.AiModelPreset
 import io.github.guohangbk.tally.domain.ai.AiProviderPreset
 import io.github.guohangbk.tally.domain.ai.AiProviderPresets
+import io.github.guohangbk.tally.domain.model.AiStatus
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.ButtonVariant
 import io.github.guohangbk.tally.ui.design.InlineIcon
@@ -195,7 +196,14 @@ private fun ConfigList(
                         color = colors.ink,
                         maxLines = 1,
                     )
-                    if (isActive) TallyTag(text = "生效中", tone = TagTone.GOLD)
+                    if (isActive) {
+                        // 备份恢复只带回引用名，没带回 Key：这时不能再说「生效中」。
+                        if (config.status == AiStatus.UNCONFIGURED) {
+                            TallyTag(text = "缺 Key", tone = TagTone.DANGER)
+                        } else {
+                            TallyTag(text = "生效中", tone = TagTone.GOLD)
+                        }
+                    }
                     Spacer(Modifier.weight(1f))
                     TallyTag(
                         text = if (config.visionCapable) "图片" else "文本",

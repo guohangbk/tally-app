@@ -248,8 +248,7 @@ private fun OverviewCard(state: LedgerOverviewUiState, statsAlpha: Float, skelet
                 )
                 Text(
                     text = state.ledgerName.ifBlank { "账本" },
-                    fontSize = 15.sp,
-                    lineHeight = 18.sp,
+                    style = TallyType.listTitle,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.ink,
                     maxLines = 1,
@@ -350,8 +349,7 @@ private fun QuestionChip(text: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             text = text,
-            fontSize = 12.5.sp,
-            lineHeight = 16.sp,
+            style = TallyType.helper,
             fontWeight = FontWeight.SemiBold,
             color = if (selected) colors.onBrand else colors.ink2,
             maxLines = 1,
@@ -477,8 +475,7 @@ private fun QValue(
             Spacer(Modifier.width(4.dp))
             Text(
                 text = suffix,
-                fontSize = 12.5.sp,
-                lineHeight = 16.sp,
+                style = TallyType.helper,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.ink3,
                 modifier = Modifier.alignByBaseline(),

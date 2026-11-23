@@ -479,7 +479,7 @@ private fun InlineAddWords(
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 if (draft.text.isEmpty()) {
-                    Text("空格分隔，可一次加多个", fontSize = 12.5.sp, lineHeight = 16.sp, color = colors.ink3, maxLines = 1)
+                    Text("空格分隔，可一次加多个", style = TallyType.helper, color = colors.ink3, maxLines = 1)
                 }
                 BasicTextField(
                     value = draft.text,

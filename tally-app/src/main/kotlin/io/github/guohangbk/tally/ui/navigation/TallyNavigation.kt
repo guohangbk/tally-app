@@ -48,6 +48,7 @@ import io.github.guohangbk.tally.domain.Period
 import io.github.guohangbk.tally.domain.model.StatsBucket
 import io.github.guohangbk.tally.domain.model.StatsGranularity
 import io.github.guohangbk.tally.domain.model.StatsRequest
+import io.github.guohangbk.tally.domain.model.TallySkin
 import io.github.guohangbk.tally.ui.bill.BillEntryScreen
 import io.github.guohangbk.tally.ui.budget.BudgetHistoryScreen
 import io.github.guohangbk.tally.ui.budget.BudgetScreen
@@ -86,6 +87,7 @@ import io.github.guohangbk.tally.ui.settings.GuideScreen
 import io.github.guohangbk.tally.ui.settings.LicenseScreen
 import io.github.guohangbk.tally.ui.settings.NotificationSettingsScreen
 import io.github.guohangbk.tally.ui.settings.SettingsScreen
+import io.github.guohangbk.tally.ui.settings.ThemeScreen
 import io.github.guohangbk.tally.ui.stats.TallyStatsScreen
 import io.github.guohangbk.tally.ui.tag.TagDetailScreen
 import io.github.guohangbk.tally.ui.tag.TagsScreen
@@ -100,6 +102,8 @@ object Routes {
     /** 许可与依赖（设置 → 关于）：BUSL-1.1 源码可用许可 + 第三方依赖清单。 */
     const val LICENSE = "settings/license"
     const val SETTINGS = "settings"
+    /** 设置 → 主题：跟随系统夜间模式 + 10 套皮肤色卡。 */
+    const val THEME = "settings/theme"
     /** 提醒与通知独立一页（T-01）：四类开关与时刻都在这，设置主页只留一个入口。 */
     const val NOTIFICATIONS = "settings/notifications"
     /** 记账键盘（设置 → 记账偏好）：记账页备注下面那一排 chip 的开关，以后加「标签」也归它。 */
@@ -113,7 +117,7 @@ object Routes {
     const val SETTLE_POSTER = "ledger/settle/poster/{ledgerId}"
     const val CATEGORIES = "categories"
     const val BILL_NEW = "bill/new?l1={l1}&l2={l2}&type={type}&amount={amount}&note={note}" +
-        "&source={source}&sk={sk}&at={at}&kw={kw}&na={na}"
+        "&source={source}&sk={sk}&at={at}&kw={kw}&na={na}&ledger={ledger}"
     const val SEARCH = "search?ledgerId={ledgerId}&categoryL1={categoryL1}&categoryL2={categoryL2}&tags={tags}"
     /** 标签管理：胶囊墙，点胶囊出操作单，长按胶囊就地拖动排序。 */
     const val TAGS = "tags"
@@ -213,6 +217,7 @@ object Routes {
         occurredAt: Long? = null,
         keyword: String? = null,
         noteFromAi: Boolean = false,
+        ledgerId: String? = null,
     ): String {
         val base = "bill/new"
         val query = listOfNotNull(
@@ -226,6 +231,7 @@ object Routes {
             occurredAt?.let { "at=$it" },
             keyword?.takeIf { it.isNotBlank() }?.let { "kw=" + android.net.Uri.encode(it) },
             if (noteFromAi) "na=1" else null,
+            ledgerId?.takeIf { it.isNotBlank() }?.let { "ledger=$it" },
         )
         return if (query.isEmpty()) base else "$base?" + query.joinToString("&")
     }
@@ -247,7 +253,10 @@ fun TallyAppRoot() {
     // 看起来就是「闪一下初始化页 + 掉帧」。
     val settings by graph.preferences.settings.collectAsStateWithLifecycle(initialValue = null)
     AppGraphProvider(graph) {
-        TallyTheme(darkTheme = isDark(settings?.themeMode ?: ThemeMode.SYSTEM)) {
+        TallyTheme(
+            darkTheme = isDark(settings?.themeMode ?: ThemeMode.SYSTEM),
+            skin = settings?.themeSkin ?: TallySkin.INK,
+        ) {
             CompositionLocalProvider(LocalMoneyGrouping provides (settings?.showThousandsSeparator ?: true)) {
                 val loaded = settings
                 if (loaded == null) {
@@ -458,6 +467,7 @@ private fun TallyAppShell(
                                         source = materialSourceLabel(bill.source, bill.imageIndex),
                                         sourceKind = materialSourceKind(bill.source),
                                         occurredAt = bill.occurredAt,
+                                        ledgerId = bill.ledgerId,
                                         keyword = bill.keyword,
                                         noteFromAi = bill.noteFromAi,
                                     ),
@@ -588,12 +598,16 @@ private fun TallyAppShell(
                             onOpenBillKeypad = { navController.navigate(Routes.BILL_KEYPAD) },
                             onOpenRecycle = { navController.navigate(Routes.RECYCLE) },
                             onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                            onOpenTheme = { navController.navigate(Routes.THEME) },
                             onOpenGuide = { navController.navigate(Routes.GUIDE) },
                             onOpenLicense = { navController.navigate(Routes.LICENSE) },
                         )
                     }
                     composable(Routes.NOTIFICATIONS) {
                         NotificationSettingsScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(Routes.THEME) {
+                        ThemeScreen(onBack = { navController.popBackStack() })
                     }
                     composable(Routes.BILL_KEYPAD) {
                         BillKeypadSettingsScreen(
@@ -633,6 +647,7 @@ private fun TallyAppShell(
                             prefillSource = entry.arguments?.getString("source")?.ifEmpty { null },
                             prefillSourceKind = entry.arguments?.getString("sk")?.ifEmpty { null },
                             prefillOccurredAt = entry.arguments?.getString("at")?.toLongOrNull(),
+                            prefillLedgerId = entry.arguments?.getString("ledger")?.ifEmpty { null },
                             prefillKeyword = entry.arguments?.getString("kw")?.ifEmpty { null },
                             prefillNoteFromAi = entry.arguments?.getString("na") == "1",
                             onBack = {
@@ -829,6 +844,7 @@ private fun NavHostController.openChatDraft(
             },
             // 卡上写着「昨天」，跳进记账页却落回今天，等于把人刚确认的那一格又抹掉。
             occurredAt = draft.occurredAt,
+            ledgerId = draft.ledgerId,
         ),
     )
 }

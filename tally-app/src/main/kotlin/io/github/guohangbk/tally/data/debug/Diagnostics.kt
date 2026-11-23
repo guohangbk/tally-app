@@ -89,7 +89,9 @@ object Diagnostics {
             if (settings == null) {
                 append("偏好读不到\n")
             } else {
-                append("theme           = ").append(settings.themeMode).append('\n')
+                // 档与套分开写：报障时「深色没生效」和「皮肤没生效」是两回事。
+                append("theme_mode      = ").append(settings.themeMode).append('\n')
+                append("theme_skin      = ").append(settings.themeSkin.key).append('\n')
                 append("month_start_day = ").append(startDay?.toString() ?: "-").append('\n')
                 append("time_precision  = ").append(settings.timePrecision).append('\n')
                 append("reimburse       = ").append(settings.reimburseEnabled).append('\n')

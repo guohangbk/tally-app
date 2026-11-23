@@ -100,6 +100,7 @@ fun BillEntryScreen(
     prefillSource: String? = null,
     prefillSourceKind: String? = null,
     prefillOccurredAt: Long? = null,
+    prefillLedgerId: String? = null,
     prefillKeyword: String? = null,
     /** 带进来的备注是 AI 写的：保存时沉淀成 `LEARNED_AI`，其余一样。 */
     prefillNoteFromAi: Boolean = false,
@@ -120,6 +121,7 @@ fun BillEntryScreen(
             prefillSource = prefillSource,
             prefillSourceKind = prefillSourceKind,
             prefillOccurredAt = prefillOccurredAt,
+            prefillLedgerId = prefillLedgerId,
             prefillKeyword = prefillKeyword,
             noteFromAi = prefillNoteFromAi,
         )

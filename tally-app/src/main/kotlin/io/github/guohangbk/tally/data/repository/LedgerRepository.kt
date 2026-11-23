@@ -12,6 +12,8 @@ import io.github.guohangbk.tally.domain.model.TallyError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 
 /** 账本连同它的聚合口径，供 P07 列表直接展示。 */
@@ -83,17 +85,24 @@ class LedgerRepository(
         }
     }.distinctUntilChanged()
 
-    /** 首次启动创建「日常账本」并补齐全机默认分类。 */
-    suspend fun bootstrap(): LedgerEntity {
+    private val bootstrapGate = Mutex()
+
+    /**
+     * 首次启动创建「日常账本」并补齐全机默认分类。
+     *
+     * 启动路径上 Application、首页、账本页会同时要一次默认账本：没有这把锁时
+     * 「查默认 → 查全部 → 建一本」会并发跑两遍，首装就多出一本同名的日常账本。
+     */
+    suspend fun bootstrap(): LedgerEntity = bootstrapGate.withLock {
         categories.ensureDefaultTree()
-        ledgerDao.findDefault()?.let { return it }
+        ledgerDao.findDefault()?.let { return@withLock it }
         val all = ledgerDao.findAllOnce()
         val any = all.firstOrNull { !it.isArchived } ?: all.firstOrNull()
         if (any != null) {
             ledgerDao.setDefault(any.id, now())
-            return any
+            return@withLock any
         }
-        return create(name = DefaultCategoryTree.DEFAULT_LEDGER_NAME, iconKey = "ledger", asDefault = true)
+        create(name = DefaultCategoryTree.DEFAULT_LEDGER_NAME, iconKey = "ledger", asDefault = true)
     }
 
     val defaultLedger: Flow<LedgerEntity?> = ledgerDao.observeDefault()

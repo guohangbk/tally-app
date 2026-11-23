@@ -17,10 +17,15 @@ import io.github.guohangbk.tally.domain.ingest.IngestResult
 import io.github.guohangbk.tally.domain.ingest.IngestProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
@@ -33,6 +38,8 @@ data class ScannedBill(
     val source: IngestSource,
     /** 入队时刻：自动草稿靠它算 30 天过期。 */
     val createdAt: Long,
+    /** 入队时首页选中的账本：进记账页与落库都按它走。 */
+    val ledgerId: String? = null,
     /** 订单号：跨入口幂等按它认同一笔，卡上来源位并排写。 */
     val orderNo: String? = null,
     /** 自动草稿（通知 / 支付页抓到的）：批次含它时卡头是「收起」而不是「先不处理」。 */
@@ -65,7 +72,11 @@ data class ScannedBill(
 }
 
 /** 一张图什么都没认出来时，要能指名道姓地说清是哪一张、为什么。 */
-data class ScanFailure(val imageIndex: Int, val reason: String)
+data class ScanFailure(
+    val imageIndex: Int,
+    val reason: String,
+    val ledgerId: String? = null,
+)
 
 data class MaterialBatchUiState(
     val busy: Boolean = false,
@@ -109,8 +120,15 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
     private val state = MutableStateFlow(MaterialBatchUiState())
     val uiState: StateFlow<MaterialBatchUiState> = state.asStateFlow()
 
-    /** 落盘但还没处理完的笔数：首页那枚「待确认 N 笔」入口只认它。 */
-    val pendingCount: StateFlow<Int> = graph.pendingIngestStore.count
+    /** 当前账本里落盘但还没处理完的笔数：首页那枚「待确认 N 笔」入口只认它。 */
+    val pendingCount: StateFlow<Int> = combine(
+        graph.pendingIngestStore.entries,
+        graph.activeLedger,
+        graph.defaultLedgerId,
+    ) { entries, active, default ->
+        val ledger = active ?: default
+        if (ledger == null) 0 else entries.count { belongsTo(it, ledger, default) }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     /** 逐笔确认时的下一条：页面接住它自动跳进记账页，保存后由 [onManualSaved] 再给下一条。 */
     private val mutableNext = MutableStateFlow<ScannedBill?>(null)
@@ -132,6 +150,17 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         }
         // 上次没处理完的清单：进来就摆回卡上，一行都不丢。
         viewModelScope.launch { restorePending() }
+        // 切账本只展示这一本自己的待确认：旧账本的行从卡上撤掉，新账本的行再摆回来。
+        viewModelScope.launch {
+            combine(graph.activeLedger, graph.defaultLedgerId) { active, default -> active ?: default }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    if (state.value.busy || state.value.stage != null) return@collect
+                    clear()
+                    restorePending()
+                }
+        }
     }
 
     /** 相册多选。逐张识别。任何一张失败都不影响其余的，但一定要出现在 [MaterialBatchUiState.failures] 里。 */
@@ -173,10 +202,11 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
     ) {
         if (count <= 0) return
         val before = state.value
-        // 行号与图片序号都往后排：两批共用同一批号，卡头的「N 张图」和去重就串了。
-        val keyBase = (before.bills.maxOfOrNull { it.key } ?: -1) + 1
+        // 图片序号往后排：两批共用同一批号，卡头的「N 张图」和去重就串了。
         val imageBase = (before.bills.map { it.imageIndex } + before.failures.map { it.imageIndex })
             .maxOrNull()?.plus(1) ?: 0
+        // 这一批归哪本账：识别期间切账本也不该把旧草稿塞进新账本。
+        val ledgerId = effectiveLedgerId()
         editingKey = null
         fun publishStage(stage: IngestStage, done: Int, total: Int) {
             state.update {
@@ -215,7 +245,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 val material = read(progress)
                 val requests = when (material) {
                     is MaterialOutcome.Failure -> {
-                        failures += ScanFailure(imageBase, material.reason)
+                        failures += ScanFailure(imageBase, material.reason, ledgerId)
                         emptyList()
                     }
                     is MaterialOutcome.Ready -> material.requests.ifEmpty { listOf(material.request) }
@@ -234,7 +264,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                         result,
                         source,
                         imageBase + index,
-                        keyBase,
+                        ledgerId,
                         sources.getOrNull(index),
                         scanned,
                         failures,
@@ -259,7 +289,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 state.update { it.copy(busy = false, stage = null, failures = it.failures + failures) }
                 throw cancellation
             } catch (failure: Exception) {
-                failures += ScanFailure(imageBase, failure.message ?: "识别没有完成")
+                failures += ScanFailure(imageBase, failure.message ?: "识别没有完成", ledgerId)
                 state.update {
                     it.copy(
                         busy = false,
@@ -291,15 +321,15 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         result: IngestResult,
         source: IngestSource,
         imageIndex: Int,
-        /** 这一批的行号起点：上一批的行还留在卡上，行号不能从头来过。 */
-        keyBase: Int,
+        /** 这一批归属的账本：行号由清单统一发，不再从内存里数。 */
+        ledgerId: String?,
         imageBytes: ByteArray?,
         scanned: MutableList<ScannedBill>,
         failures: MutableList<ScanFailure>,
     ): Int {
         val rows = graph.ingestDrafts.rows(result, source)
         if (rows.isEmpty()) {
-            failures += ScanFailure(imageIndex, humanReason(result.reason))
+            failures += ScanFailure(imageIndex, humanReason(result.reason), ledgerId)
             return 0
         }
         var duplicates = 0
@@ -308,7 +338,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 duplicates += 1
                 return@forEach
             }
-            val key = keyBase + scanned.size
+            val key = graph.pendingIngestStore.reserveKeys(1)
             rowsByKey[key] = row
             if (imageBytes != null) imageBytesByKey[key] = imageBytes
             scanned += scannedOf(
@@ -343,6 +373,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         orderNo = orderNo,
         auto = auto,
         amountMinor = row.amountMinor,
+        ledgerId = row.ledgerId,
         type = runCatching { BillType.valueOf(row.type) }.getOrDefault(BillType.EXPENSE),
         occurredAt = row.occurredAt,
         categoryL1Id = row.categoryL1Id,
@@ -373,6 +404,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 imageIndex = bill.imageIndex,
                 checked = bill.checked,
                 source = bill.source.name,
+                ledgerId = bill.ledgerId,
                 createdAt = bill.createdAt,
                 orderNo = bill.orderNo,
                 auto = bill.auto,
@@ -382,7 +414,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         graph.pendingIngestStore.save(
             source = current.source.name,
             droppedCount = current.droppedCount,
-            failures = current.failures.map { PendingFailure(it.imageIndex, it.reason) },
+            failures = current.failures.map { PendingFailure(it.imageIndex, it.reason, it.ledgerId) },
             entries = entries,
         )
     }
@@ -394,20 +426,27 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
     private suspend fun restorePending(force: Boolean = false): Boolean {
         val batch = graph.pendingIngestStore.load()
         // 只认还能动的行：文件里若只剩「已经记过」那些，这一批就等于处理完了，顺手把文件也收掉。
-        val live = batch.entries.filterNot { it.row.duplicate }
-        if (batch.entries.isNotEmpty() && live.isEmpty()) {
+        val allLive = batch.entries.filterNot { it.row.duplicate }
+        if (batch.entries.isNotEmpty() && allLive.isEmpty()) {
             graph.pendingIngestStore.clear()
             return false
         }
+        val ledger = effectiveLedgerId() ?: return false
+        val live = allLive.filter { belongsTo(it, ledger, graph.cachedDefaultLedgerId) }
+        if (live.isEmpty()) return false
         // 已经开扫了就别再插队：这时 bills 还可能是空的，硬摆回去会盖掉正在跑的那一批。
         val current = state.value
         if (current.busy || current.stage != null) return false
-        if (!force && (live.isEmpty() || current.bills.isNotEmpty())) return false
+        if (!force && current.bills.isNotEmpty()) return false
         val existingKeys = current.bills.map { it.key }.toSet()
         val incoming = live.filter { it.key !in existingKeys }
         // 新进来的行才补进 rowsByKey，别覆盖内存里已经改过的那一份。
         incoming.forEach { entry -> rowsByKey.putIfAbsent(entry.key, entry.row) }
-        val source = runCatching { IngestSource.valueOf(batch.source) }.getOrDefault(IngestSource.SCREENSHOT)
+        val source = runCatching { IngestSource.valueOf(live.first().source) }
+            .getOrDefault(IngestSource.SCREENSHOT)
+        val failures = batch.failures
+            .filter { (it.ledgerId ?: graph.cachedDefaultLedgerId) == ledger }
+            .map { failure -> ScanFailure(failure.imageIndex, failure.reason, failure.ledgerId) }
         state.update {
             it.copy(
                 busy = false,
@@ -415,7 +454,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 source = source,
                 restored = true,
                 droppedCount = batch.droppedCount,
-                failures = batch.failures.map { failure -> ScanFailure(failure.imageIndex, failure.reason) },
+                failures = failures,
                 bills = current.bills + incoming.map { entry ->
                     scannedOf(
                         key = entry.key,
@@ -554,7 +593,7 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
                 val keys = mutableSetOf<Int>()
                 jobs.forEachIndexed { index, (bill, _) ->
                     if (saved.getOrNull(index) != null) keys += bill.key
-                    else failures += ScanFailure(bill.imageIndex, "这一笔没有写进去")
+                    else failures += ScanFailure(bill.imageIndex, "这一笔没有写进去", bill.ledgerId)
                 }
                 state.update {
                     it.copy(
@@ -576,9 +615,10 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         }
     }
 
-    /** 全部处理完、或用户明确不要这一批了：清单文件一起删掉。 */
+    /** 用户明确不要这一批了：只摘掉卡上正在展示的这几行，以前攒下的待确认不动。 */
     fun discard() {
-        viewModelScope.launch { graph.pendingIngestStore.clear() }
+        val keys = state.value.bills.map { it.key }.toSet()
+        viewModelScope.launch { graph.pendingIngestStore.removeKeys(keys) }
         clear()
     }
 
@@ -591,6 +631,12 @@ class MaterialBatchViewModel(private val graph: AppGraph) : ViewModel() {
         mutableNext.value = null
         state.value = MaterialBatchUiState()
     }
+
+    private fun effectiveLedgerId(): String? = graph.activeLedgerId ?: graph.cachedDefaultLedgerId
+
+    /** 老缓存里没有账本标记的行按默认账本算，跟「全部账本」下新识别出来的口径一致。 */
+    private fun belongsTo(entry: PendingIngestEntry, ledger: String, default: String?): Boolean =
+        (entry.ledgerId ?: entry.row.ledgerId ?: default) == ledger
 
     private fun gradeOrder(bill: ScannedBill): Int = when {
         bill.needsCategory || bill.dateUnresolved || bill.missing.isNotEmpty() -> 0

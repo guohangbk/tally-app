@@ -12,10 +12,17 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
+import io.github.guohangbk.tally.domain.model.TallySemantic
+import io.github.guohangbk.tally.domain.model.TallySkin
+import io.github.guohangbk.tally.domain.model.TallySkins
+import androidx.compose.runtime.remember
 
 /**
  * 「Ink & Jasmine」：日常记账是纸墨（骨白纸面 / 松烟正文 / 墨绿主操作 + 衬线数字），
  * 金晕只出现在小莉相关的建议、光晕与状态点上。不开小莉，界面里没有一丝金色。
+ *
+ * 纸面、正文、主操作这 9 个槽现在按皮肤取值（[TallySkins]），语义色不跟着换：
+ * 支出红、收入绿、小莉金、中性强调钉死在 [TallySemantic]，换肤只换纸和按钮。
  */
 @Immutable
 data class TallyColors(
@@ -52,53 +59,45 @@ data class TallyColors(
 
 private fun Color.tintedOn(base: Color, alpha: Float): Color = copy(alpha = alpha).compositeOver(base)
 
-private val LightColors = TallyColors(
-    isDark = false,
-    paper = Color(0xFFF6F3EB),
-    card = Color(0xFFFFFDF8),
-    ink = Color(0xFF16211D),
-    ink2 = Color(0xFF4C5A53),
-    ink3 = Color(0xFF8D978F),
-    line = Color(0xFF16211D).tintedOn(Color(0xFFF6F3EB), 0.10f),
-    brand = Color(0xFF1F4A38),
-    onBrand = Color(0xFFF6F3EB),
-    brandSurface = Color(0xFF1F4A38).tintedOn(Color(0xFFFFFDF8), 0.08f),
-    expense = Color(0xFFBF4E3B),
-    expenseSurface = Color(0xFFF6E4DF),
-    income = Color(0xFF1F4A38),
-    slate = Color(0xFF5E7A8A),
-    gold = Color(0xFFB98A34),
-    goldHi = Color(0xFFE8C57A),
-    glow = Color(0xFFF5E3BE),
-    onGlow = Color(0xFF7A5A18),
-    summaryBar = Color(0xFF16211D),
-    onSummaryBar = Color(0xFFF6F3EB),
-)
+/**
+ * 由皮肤 + 明暗档拼出整套 token。
+ *
+ * 三个槽不在色表里、这里现算：`line` 是正文压在纸面上的半透明，
+ * `brandSurface` 是主操作压在卡片上的浅底，`expenseSurface` 是支出色压在卡片上的浅底。
+ * 收进派生而不是写死，十套皮肤就不必各抄一遍——加一套只填 9 个实色。
+ */
+internal fun tallyColorsFor(skin: TallySkin, dark: Boolean): TallyColors {
+    val tone = TallySkins.tone(skin, dark)
+    val paper = Color(tone.paper)
+    val card = Color(tone.card)
+    val ink = Color(tone.ink)
+    val brand = Color(tone.brand)
+    val expense = Color(TallySemantic.expense(dark))
+    return TallyColors(
+        isDark = dark,
+        paper = paper,
+        card = card,
+        ink = ink,
+        ink2 = Color(tone.ink2),
+        ink3 = Color(tone.ink3),
+        line = ink.tintedOn(paper, if (dark) 0.12f else 0.10f),
+        brand = brand,
+        onBrand = Color(tone.onBrand),
+        brandSurface = brand.tintedOn(card, if (dark) 0.10f else 0.08f),
+        expense = expense,
+        expenseSurface = expense.tintedOn(card, 0.14f),
+        income = Color(TallySemantic.income(dark)),
+        slate = Color(TallySemantic.slate(dark)),
+        gold = Color(TallySemantic.gold(dark)),
+        goldHi = Color(TallySemantic.goldHi(dark)),
+        glow = if (dark) Color(TallySemantic.goldLight).tintedOn(card, 0.26f) else Color(TallySemantic.glowLight),
+        onGlow = Color(TallySemantic.onGlow(dark)),
+        summaryBar = Color(tone.summaryBar),
+        onSummaryBar = Color(tone.onSummaryBar),
+    )
+}
 
-private val DarkColors = TallyColors(
-    isDark = true,
-    paper = Color(0xFF131A17),
-    card = Color(0xFF1A2320),
-    ink = Color(0xFFE9E5DA),
-    ink2 = Color(0xFFB9C2BB),
-    ink3 = Color(0xFF93A09A),
-    line = Color(0xFFE9E5DA).tintedOn(Color(0xFF131A17), 0.12f),
-    brand = Color(0xFF7ECBA9),
-    onBrand = Color(0xFF131A17),
-    brandSurface = Color(0xFF7ECBA9).tintedOn(Color(0xFF1A2320), 0.10f),
-    expense = Color(0xFFE8917B),
-    expenseSurface = Color(0xFFE8917B).tintedOn(Color(0xFF1A2320), 0.14f),
-    income = Color(0xFF7ECBA9),
-    slate = Color(0xFF9FB6C2),
-    gold = Color(0xFFE8C57A),
-    goldHi = Color(0xFFF5E3BE),
-    glow = Color(0xFFB98A34).tintedOn(Color(0xFF1A2320), 0.26f),
-    onGlow = Color(0xFFE8C57A),
-    summaryBar = Color(0xFFE9E5DA),
-    onSummaryBar = Color(0xFF131A17),
-)
-
-val LocalTallyColors = staticCompositionLocalOf { LightColors }
+val LocalTallyColors = staticCompositionLocalOf { tallyColorsFor(TallySkin.INK, dark = false) }
 
 val TallyShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
@@ -122,8 +121,13 @@ object TallyElevation {
 }
 
 @Composable
-fun TallyTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val colors = if (darkTheme) DarkColors else LightColors
+fun TallyTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    skin: TallySkin = TallySkin.INK,
+    content: @Composable () -> Unit,
+) {
+    // 皮肤与明暗档是极少变的两个输入，按它们记忆：切账本、敲数字都不该重新拼一遍色表。
+    val colors = remember(darkTheme, skin) { tallyColorsFor(skin, darkTheme) }
     val scheme = if (darkTheme) {
         darkColorScheme(
             primary = colors.brand,
@@ -139,7 +143,7 @@ fun TallyTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable 
             outline = colors.ink3,
             outlineVariant = colors.line,
             error = colors.expense,
-            onError = Color(0xFF131A17),
+            onError = colors.paper,
         )
     } else {
         lightColorScheme(
@@ -156,7 +160,7 @@ fun TallyTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable 
             outline = colors.ink3,
             outlineVariant = colors.line,
             error = colors.expense,
-            onError = Color.White,
+            onError = colors.card,
         )
     }
     androidx.compose.material3.MaterialTheme(

@@ -28,6 +28,10 @@ class AiKeyVault(private val secrets: SecretVault) {
 
     fun clear(configId: String) = secrets.remove(referenceFor(configId))
 
+    /** 这把 Key 还在不在：备份恢复换了设备、或清了应用数据时，数据库里的引用会留下来。 */
+    fun has(configId: String): Boolean =
+        secrets.has(referenceFor(configId)) || (configId == LEGACY_CONFIG_ID && secrets.has(KEY_ENTRY))
+
     /** 三项齐全才拼得出可调用目标，否则视为未配置。 */
     fun targetOf(configId: String, baseUrl: String?, model: String?): AiTarget? {
         val key = read(configId) ?: return null

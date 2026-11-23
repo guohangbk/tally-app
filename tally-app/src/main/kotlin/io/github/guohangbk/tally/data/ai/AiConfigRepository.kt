@@ -51,21 +51,24 @@ class AiConfigRepository(
     private val client: AiClient,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
-    fun observeAll(): Flow<List<AiConfiguration>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
+    fun observeAll(): Flow<List<AiConfiguration>> =
+        dao.observeAll().map { rows -> rows.map { it.toDomain(keys.has(it.id)) } }
 
-    fun observe(): Flow<AiConfiguration?> = dao.observe().map { it?.toDomain() }
+    fun observe(): Flow<AiConfiguration?> = dao.observe().map { row ->
+        row?.let { it.toDomain(keys.has(it.id)) }
+    }
 
-    suspend fun current(): AiConfiguration? = dao.find()?.toDomain()
+    suspend fun current(): AiConfiguration? = dao.find()?.let { it.toDomain(keys.has(it.id)) }
 
     suspend fun isEnabled(): Boolean = preferences.settings.first().assistantEnabled
 
     /** 一次性读取「能不能用、为什么不能用」，给调用方做同步判断。 */
-    suspend fun availability(): AiAvailability = availabilityOf(dao.find()?.toDomain(), isEnabled())
+    suspend fun availability(): AiAvailability = availabilityOf(current(), isEnabled())
 
     /** 订阅式可用性：右臂三态与首页引导都读这一条，开关或配置一变就跟着走。 */
     fun observeAvailability(): Flow<AiAvailability> =
         combine(dao.observe(), preferences.settings) { config, settings ->
-            availabilityOf(config?.toDomain(), settings.assistantEnabled)
+            availabilityOf(config?.let { it.toDomain(keys.has(it.id)) }, settings.assistantEnabled)
         }
 
     suspend fun target(): AiTarget? {
@@ -196,15 +199,15 @@ private fun availabilityOf(config: AiConfiguration?, enabled: Boolean): AiAvaila
         lastTriedAt = config?.updatedAt ?: 0L,
     )
 
-private fun AiConfigEntity.toDomain(): AiConfiguration = AiConfiguration(
+private fun AiConfigEntity.toDomain(hasKey: Boolean): AiConfiguration = AiConfiguration(
     id = id,
     provider = provider,
     baseUrl = baseUrl.orEmpty(),
     model = model.orEmpty(),
     keyReference = keyReference,
     active = active,
-    // 备份包不含 API Key：恢复后状态列可能还是 READY，但没有 Key 就不可用，照实显示未配置。
-    status = if (keyReference.isNullOrBlank()) AiStatus.UNCONFIGURED else status.toAiStatus(),
+    // 备份包不含 API Key：恢复后状态列可能还是 READY、引用名也还在，但没有 Key 就不可用。
+    status = if (!hasKey || keyReference.isNullOrBlank()) AiStatus.UNCONFIGURED else status.toAiStatus(),
     visionCapable = visionCapable,
     lastError = lastError,
     consecutiveFailures = consecutiveFailures,

@@ -47,6 +47,8 @@ data class ChatBillDraft(
     val source: BillSource,
     /** 输入形态（文字 / 语音 / 图片）：卡上那个小标签读它，不再拿 [source] 兼当。null = 升级前的老卡。 */
     val inputKind: InputKind? = null,
+    /** 这张卡入队时首页选中的账本：改一笔时跟着带进记账页。 */
+    val ledgerId: String? = null,
     val merchant: String?,
     /** 订单号与图片指纹：从卡上「改」进记账页时带过去，存回来才认得出「这一笔记过」。 */
     val externalId: String? = null,

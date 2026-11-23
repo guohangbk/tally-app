@@ -7,6 +7,7 @@ import io.github.guohangbk.tally.data.preferences.TallySettings
 import io.github.guohangbk.tally.data.update.UpdateCheck
 import io.github.guohangbk.tally.di.AppGraph
 import io.github.guohangbk.tally.domain.model.TallyError
+import io.github.guohangbk.tally.domain.model.TallySkin
 import io.github.guohangbk.tally.domain.model.TimePrecision
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -115,6 +116,9 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun setThemeMode(mode: ThemeMode) = persist { graph.preferences.setThemeMode(mode) }
 
+    /** 换皮肤不弹提示：点色卡就是要看效果，每套都冒一次气泡反而盖住刚换上的颜色。 */
+    fun setThemeSkin(skin: TallySkin) = persist { graph.preferences.setThemeSkin(skin) }
+
     fun setTimePrecision(precision: TimePrecision) = persist { graph.preferences.setTimePrecision(precision) }
 
     /** 调试模式：设置 → 关于 → 版本，1.2 秒内连点 5 次开关，开启后每个页面右下角会出现控制台。 */
@@ -218,6 +222,7 @@ class SettingsViewModel(private val graph: AppGraph) : ViewModel() {
             graph.preferences.setAiQuickNoteEnabled(TallySettings.DEFAULT.aiQuickNoteEnabled)
             graph.preferences.setAutoSaveBillImage(TallySettings.DEFAULT.autoSaveBillImage)
             graph.preferences.setThemeMode(TallySettings.DEFAULT.themeMode)
+            graph.preferences.setThemeSkin(TallySettings.DEFAULT.themeSkin)
             graph.preferences.setShowCurrencySymbol(TallySettings.DEFAULT.showCurrencySymbol)
             graph.preferences.setShowThousandsSeparator(TallySettings.DEFAULT.showThousandsSeparator)
             graph.preferences.setTimePrecision(TallySettings.DEFAULT.timePrecision)

@@ -58,6 +58,7 @@ class TallyApplication : Application() {
             DebugLog.log("Perf", "app bootstrap(首次触库) +${System.currentTimeMillis() - bootAt}ms")
             graph.cachedDefaultLedgerId = defaultLedger.id
             graph.cachedDefaultLedgerName = defaultLedger.name
+            if (graph.activeLedgerId == null) graph.activeLedgerId = defaultLedger.id
             // 预热首页首帧要用的两条查询，把冷启动聚合成本挪到启动阶段，削掉打开后的空窗。
             // 必须排在补执行之前：首帧等的是这一笔，补执行只影响首帧之后刷新的数；
             // 补执行若确实生成了账单，Room 会失效重发，首页跟着刷新，不会停在旧数上。

@@ -177,8 +177,7 @@ fun ReimbursementScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "已选 ${state.selected.size} 笔 · ${formatAmount(state.selectedMinor)}",
-                        fontSize = 12.5.sp,
-                        lineHeight = 16.sp,
+                        style = TallyType.helper,
                         fontWeight = FontWeight.Bold,
                         color = colors.paper,
                     )

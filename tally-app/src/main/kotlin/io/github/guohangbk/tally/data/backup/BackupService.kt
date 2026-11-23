@@ -3,9 +3,13 @@ package io.github.guohangbk.tally.data.backup
 import android.content.Context
 import android.net.Uri
 import androidx.room.withTransaction
+import io.github.guohangbk.tally.data.ai.AiKeyVault
 import io.github.guohangbk.tally.data.db.TallyDatabase
 import io.github.guohangbk.tally.data.db.dao.BackupDao
 import io.github.guohangbk.tally.data.db.entity.AttachmentEntity
+import io.github.guohangbk.tally.data.db.entity.AiConfigEntity
+import io.github.guohangbk.tally.data.preferences.TallyPreferences
+import io.github.guohangbk.tally.domain.model.AiStatus
 import io.github.guohangbk.tally.domain.model.BackupManifest
 import io.github.guohangbk.tally.domain.model.BackupOptions
 import io.github.guohangbk.tally.domain.model.BackupResult
@@ -33,6 +37,8 @@ class BackupService(
     private val context: Context,
     private val database: TallyDatabase,
     private val backupDao: BackupDao,
+    private val aiKeys: AiKeyVault,
+    private val preferences: TallyPreferences,
     private val now: () -> Long = System::currentTimeMillis,
     // 跟设置页「关于」同一口径：版本取 APK 自己的，不手写一份。
     // 手写那份一定会被忘掉——上一版写死 "0.1.0"，恢复侧拿它判断「包是否来自更新的 App」就永远失效。
@@ -106,7 +112,7 @@ class BackupService(
             backupDao.insertImportBatches(snapshot.importBatches)
             backupDao.insertRecurringRules(snapshot.recurringRules)
             backupDao.insertInstallmentPlans(snapshot.installmentPlans)
-            backupDao.insertAiConfigs(snapshot.aiConfigs)
+            backupDao.insertAiConfigs(snapshot.aiConfigs.map(::restoredConfig))
             backupDao.insertAiConversations(snapshot.aiConversations)
             backupDao.insertAiMessages(snapshot.aiMessages)
             backupDao.insertAiMessageAttachments(snapshot.aiMessageAttachments)
@@ -117,6 +123,10 @@ class BackupService(
             backupDao.insertBillTags(snapshot.billTags)
             backupDao.insertAppSettings(snapshot.appSettings)
         }
+
+        // 备份里只有 Key 的引用名，没有 Key 本身；恢复后一把可用的都没有时，
+        // 不能让总开关停在「开」上，页面会显示成「生效中」其实调不通。
+        if (snapshot.aiConfigs.none { aiKeys.has(it.id) }) preferences.setAssistantEnabled(false)
 
         return RestoreResult(
             manifest = manifest,
@@ -129,6 +139,19 @@ class BackupService(
     fun readBytes(uri: Uri): ByteArray =
         context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             ?: throw IllegalArgumentException("无法读取该文件")
+
+    /** 这台设备上还留着这把 Key 才保留引用；换机恢复一律按「没配好」处理。 */
+    private fun restoredConfig(config: AiConfigEntity): AiConfigEntity =
+        if (aiKeys.has(config.id)) {
+            config
+        } else {
+            config.copy(
+                keyReference = null,
+                status = AiStatus.UNCONFIGURED.name,
+                lastError = null,
+                consecutiveFailures = 0,
+            )
+        }
 
     /** 覆盖式恢复的清空顺序：先子表后主表，避免中途出现悬空引用。 */
     private suspend fun clearAll() {

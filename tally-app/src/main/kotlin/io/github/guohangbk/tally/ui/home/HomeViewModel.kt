@@ -207,6 +207,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
                 DebugLog.log("Perf", since("bootstrap 完成 取数${System.currentTimeMillis() - queryAt}ms → ${default.name}"))
                 graph.cachedDefaultLedgerId = default.id
                 graph.cachedDefaultLedgerName = default.name
+                graph.activeLedgerId = default.id
                 ledgerId.value = default.id
                 loaded.value = true
                 DebugLog.log("Perf", since("loaded=true → 放行本月查询"))
@@ -219,6 +220,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
                 val default = graph.ledgerRepository.bootstrap()
                 graph.cachedDefaultLedgerId = default.id
                 graph.cachedDefaultLedgerName = default.name
+                graph.activeLedgerId = default.id
                 ledgerId.value = default.id
                 backToToday()
                 loaded.value = true
@@ -292,6 +294,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     }
 
     fun selectLedger(id: String?) {
+        graph.activeLedgerId = id
         ledgerId.value = id
     }
 

@@ -92,13 +92,14 @@ class NotificationIngestCoordinator(
                 "商户=${parsed.merchant != null} 单号=${parsed.orderNo != null} " +
                 "台账=${seen.size}条 → 新建待确认",
         )
-        val maxKey = pending.load().entries.maxOfOrNull { it.key } ?: -1
+        val keyBase = pending.reserveKeys(rows.size)
         val entries = rows.mapIndexed { index, row ->
             PendingIngestEntry(
-                key = maxKey + index + 1,
+                key = keyBase + index,
                 imageIndex = 0,
                 checked = true,
                 source = IngestSource.NOTIFICATION.name,
+                ledgerId = row.ledgerId,
                 createdAt = now(),
                 orderNo = parsed.orderNo,
                 auto = true,

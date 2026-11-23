@@ -42,7 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.guohangbk.tally.data.preferences.ThemeMode
 import io.github.guohangbk.tally.di.rememberAppGraph
 import io.github.guohangbk.tally.ui.common.tallyViewModel
 import io.github.guohangbk.tally.ui.design.InlineIcon
@@ -115,6 +114,8 @@ fun SettingsScreen(
     onOpenBillKeypad: () -> Unit,
     /** 提醒与通知独立一页（T-01）：这一页只管开关与时刻，声音与打扰等级归系统渠道。 */
     onOpenNotifications: () -> Unit,
+    /** 主题：跟随系统夜间模式 + 10 套皮肤色卡，从外观组那一行进来。 */
+    onOpenTheme: () -> Unit,
     /** 使用指南：把「怎么操作」和「按什么口径算」收在同一页，统计页右上角不再挂口径入口。 */
     onOpenGuide: () -> Unit,
     /** 许可与依赖：BUSL-1.1 是源码可用许可，不是开源，页上把这两个词分清楚。 */
@@ -185,16 +186,10 @@ fun SettingsScreen(
             Spacer(Modifier.height(4.dp))
 
             SettingsSection(title = "外观") {
-                SettingsChoiceRow(
-                    label = "主题",
-                    description = "深色只做同一套 token 的换色，不改布局",
-                    options = listOf(
-                        ThemeMode.SYSTEM to "跟随系统",
-                        ThemeMode.LIGHT to "浅色",
-                        ThemeMode.DARK to "深色",
-                    ),
-                    selected = settings.themeMode,
-                    onSelect = viewModel::setThemeMode,
+                // 三选 tab 收进「主题」这一页：色卡列表要占一整屏，塞在设置页里会把外观组撑变形。
+                SettingsThemeRow(
+                    skin = settings.themeSkin,
+                    onClick = onOpenTheme,
                 )
                 SettingsDivider()
                 SettingsSwitchRow(
